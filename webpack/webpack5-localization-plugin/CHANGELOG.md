@@ -1,6 +1,90 @@
 # Change Log - @rushstack/webpack5-localization-plugin
 
-This log was last generated on Wed, 01 Nov 2023 23:11:36 GMT and should not be manually modified.
+This log was last generated on Sat, 10 Feb 2024 01:40:49 GMT and should not be manually modified.
+
+## 0.8.0
+Sat, 10 Feb 2024 01:40:49 GMT
+
+### Minor changes
+
+- Export a `TrueHashPlugin` that performs what the `realContentHash` option does, but without validating the localization plugin's options.
+
+## 0.7.3
+Sat, 10 Feb 2024 01:29:22 GMT
+
+### Patches
+
+- Add support for the `output.hashSalt` option when the `realContentHashes` feature is enabled.
+
+## 0.7.2
+Thu, 08 Feb 2024 01:09:21 GMT
+
+_Version update only_
+
+## 0.7.1
+Wed, 07 Feb 2024 01:11:18 GMT
+
+_Version update only_
+
+## 0.7.0
+Mon, 05 Feb 2024 23:46:52 GMT
+
+### Minor changes
+
+- Include an option called `realContentHash` that updates "[contenthash]" hashes to the actual hashes of chunks.
+- Add a warning if `optimization.realContentHash` is set.
+
+## 0.6.4
+Thu, 25 Jan 2024 01:09:30 GMT
+
+_Version update only_
+
+## 0.6.3
+Tue, 23 Jan 2024 20:12:58 GMT
+
+_Version update only_
+
+## 0.6.2
+Tue, 23 Jan 2024 16:15:06 GMT
+
+_Version update only_
+
+## 0.6.1
+Tue, 16 Jan 2024 18:30:11 GMT
+
+_Version update only_
+
+## 0.6.0
+Thu, 04 Jan 2024 01:08:53 GMT
+
+### Minor changes
+
+- Introduce a `formatLocaleForFilename` option to customize how a locale (or the lack thereof) is rendered in file paths.
+
+## 0.5.16
+Wed, 03 Jan 2024 00:31:18 GMT
+
+_Version update only_
+
+## 0.5.15
+Wed, 20 Dec 2023 01:09:46 GMT
+
+_Version update only_
+
+## 0.5.14
+Thu, 07 Dec 2023 03:44:13 GMT
+
+_Version update only_
+
+## 0.5.13
+Tue, 05 Dec 2023 01:10:16 GMT
+
+_Version update only_
+
+## 0.5.12
+Fri, 10 Nov 2023 18:02:04 GMT
+
+_Version update only_
 
 ## 0.5.11
 Wed, 01 Nov 2023 23:11:36 GMT

@@ -1,6 +1,68 @@
 # Change Log - @rushstack/heft-lint-plugin
 
-This log was last generated on Wed, 01 Nov 2023 23:11:35 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+
+## 0.3.6
+Thu, 08 Feb 2024 01:09:21 GMT
+
+_Version update only_
+
+## 0.3.5
+Wed, 07 Feb 2024 01:11:18 GMT
+
+_Version update only_
+
+## 0.3.4
+Mon, 05 Feb 2024 23:46:52 GMT
+
+_Version update only_
+
+## 0.3.3
+Thu, 25 Jan 2024 01:09:30 GMT
+
+_Version update only_
+
+## 0.3.2
+Tue, 23 Jan 2024 20:12:58 GMT
+
+_Version update only_
+
+## 0.3.1
+Tue, 23 Jan 2024 16:15:05 GMT
+
+_Version update only_
+
+## 0.3.0
+Tue, 16 Jan 2024 18:30:10 GMT
+
+### Minor changes
+
+- Add support for TypeScript 5.3
+
+## 0.2.16
+Wed, 03 Jan 2024 00:31:18 GMT
+
+_Version update only_
+
+## 0.2.15
+Wed, 20 Dec 2023 01:09:46 GMT
+
+_Version update only_
+
+## 0.2.14
+Thu, 07 Dec 2023 03:44:13 GMT
+
+_Version update only_
+
+## 0.2.13
+Tue, 05 Dec 2023 01:10:16 GMT
+
+_Version update only_
+
+## 0.2.12
+Fri, 10 Nov 2023 18:02:04 GMT
+
+_Version update only_
 
 ## 0.2.11
 Wed, 01 Nov 2023 23:11:35 GMT

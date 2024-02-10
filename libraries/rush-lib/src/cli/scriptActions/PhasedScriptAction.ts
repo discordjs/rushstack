@@ -263,8 +263,11 @@ export class PhasedScriptAction extends BaseScriptAction<IPhasedCommandConfig> {
 
     if (!this._runsBeforeInstall) {
       // TODO: Replace with last-install.flag when "rush link" and "rush unlink" are removed
-      const lastLinkFlag: LastLinkFlag = LastLinkFlagFactory.getCommonTempFlag(this.rushConfiguration);
-      if (!lastLinkFlag.isValid()) {
+      const lastLinkFlag: LastLinkFlag = LastLinkFlagFactory.getCommonTempFlag(
+        this.rushConfiguration.defaultSubspace
+      );
+      // Only check for a valid link flag when subspaces is not enabled
+      if (!lastLinkFlag.isValid() && !this.rushConfiguration.subspacesFeatureEnabled) {
         const useWorkspaces: boolean =
           this.rushConfiguration.pnpmOptions && this.rushConfiguration.pnpmOptions.useWorkspaces;
         if (useWorkspaces) {
@@ -365,6 +368,9 @@ export class PhasedScriptAction extends BaseScriptAction<IPhasedCommandConfig> {
         terminal.writeVerboseLine(`Incremental strategy: output preservation`);
         // Explicitly disabling the build cache also disables legacy skip detection.
         new LegacySkipPlugin({
+          allowWarningsInSuccessfulBuild:
+            this.rushConfiguration.experimentsConfiguration.configuration
+              .buildSkipWithAllowWarningsInSuccessfulBuild,
           terminal,
           changedProjectsOnly,
           isIncrementalBuildAllowed: this._isIncrementalBuildAllowed

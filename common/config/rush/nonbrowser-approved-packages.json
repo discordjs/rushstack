@@ -15,6 +15,10 @@
       "allowedCategories": [ "tests" ]
     },
     {
+      "name": "@eslint/eslintrc",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@jest/core",
       "allowedCategories": [ "libraries" ]
     },
@@ -100,7 +104,7 @@
     },
     {
       "name": "@rushstack/eslint-patch",
-      "allowedCategories": [ "libraries" ]
+      "allowedCategories": [ "libraries", "tests" ]
     },
     {
       "name": "@rushstack/eslint-plugin",
@@ -331,16 +335,28 @@
       "allowedCategories": [ "libraries", "vscode-extensions" ]
     },
     {
-      "name": "@typescript-eslint/experimental-utils",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
       "name": "@typescript-eslint/parser",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
     },
     {
+      "name": "@typescript-eslint/rule-tester",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@typescript-eslint/types",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@typescript-eslint/typescript-estree",
       "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@typescript-eslint/utils",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@vscode/test-electron",
+      "allowedCategories": [ "vscode-extensions" ]
     },
     {
       "name": "@yarnpkg/lockfile",
@@ -440,10 +456,6 @@
     },
     {
       "name": "eslint",
-      "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
-    },
-    {
-      "name": "local-eslint-config",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
     },
     {
@@ -635,6 +647,10 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "local-eslint-config",
+      "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
+    },
+    {
       "name": "local-node-rig",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
     },
@@ -817,6 +833,10 @@
     {
       "name": "typescript",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
+    },
+    {
+      "name": "update-notifier",
+      "allowedCategories": [ "libraries" ]
     },
     {
       "name": "url-loader",

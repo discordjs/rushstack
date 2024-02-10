@@ -1,6 +1,80 @@
 # Change Log - @rushstack/package-extractor
 
-This log was last generated on Wed, 01 Nov 2023 23:11:35 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+
+## 0.6.26
+Thu, 08 Feb 2024 01:09:21 GMT
+
+_Version update only_
+
+## 0.6.25
+Wed, 07 Feb 2024 01:11:18 GMT
+
+_Version update only_
+
+## 0.6.24
+Mon, 05 Feb 2024 23:46:52 GMT
+
+_Version update only_
+
+## 0.6.23
+Thu, 25 Jan 2024 01:09:30 GMT
+
+_Version update only_
+
+## 0.6.22
+Tue, 23 Jan 2024 20:12:58 GMT
+
+_Version update only_
+
+## 0.6.21
+Tue, 23 Jan 2024 16:15:06 GMT
+
+_Version update only_
+
+## 0.6.20
+Tue, 16 Jan 2024 18:30:11 GMT
+
+_Version update only_
+
+## 0.6.19
+Wed, 03 Jan 2024 00:31:18 GMT
+
+_Version update only_
+
+## 0.6.18
+Wed, 20 Dec 2023 01:09:45 GMT
+
+_Version update only_
+
+## 0.6.17
+Tue, 12 Dec 2023 00:20:33 GMT
+
+### Patches
+
+- Fix an issue with the `folderToCopy` option, where the folder contents would be copied into a subfolder instead of into the target folder root.
+
+## 0.6.16
+Thu, 07 Dec 2023 03:44:13 GMT
+
+_Version update only_
+
+## 0.6.15
+Tue, 05 Dec 2023 01:10:16 GMT
+
+_Version update only_
+
+## 0.6.14
+Thu, 16 Nov 2023 01:09:56 GMT
+
+### Patches
+
+- Links that target a path outside of the source directory can now be ignored using "patternsToInclude" and "patternsToExclude" options
+
+## 0.6.13
+Fri, 10 Nov 2023 18:02:04 GMT
+
+_Version update only_
 
 ## 0.6.12
 Wed, 01 Nov 2023 23:11:35 GMT

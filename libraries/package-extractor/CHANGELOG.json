@@ -2,6 +2,303 @@
   "name": "@rushstack/package-extractor",
   "entries": [
     {
+      "version": "0.6.26",
+      "tag": "@rushstack/package-extractor_v0.6.26",
+      "date": "Thu, 08 Feb 2024 01:09:21 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.66.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.23`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.23`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.23`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.25",
+      "tag": "@rushstack/package-extractor_v0.6.25",
+      "date": "Wed, 07 Feb 2024 01:11:18 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.22`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.22`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.22`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.24",
+      "tag": "@rushstack/package-extractor_v0.6.24",
+      "date": "Mon, 05 Feb 2024 23:46:52 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.65.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.21`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.21`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.21`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.23",
+      "tag": "@rushstack/package-extractor_v0.6.23",
+      "date": "Thu, 25 Jan 2024 01:09:30 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.64.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.20`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.20`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.20`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.22",
+      "tag": "@rushstack/package-extractor_v0.6.22",
+      "date": "Tue, 23 Jan 2024 20:12:58 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.64.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.19`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.19`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.19`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.21",
+      "tag": "@rushstack/package-extractor_v0.6.21",
+      "date": "Tue, 23 Jan 2024 16:15:06 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.64.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.18`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.18`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.18`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.20",
+      "tag": "@rushstack/package-extractor_v0.6.20",
+      "date": "Tue, 16 Jan 2024 18:30:11 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.17`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.17`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.17`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.19",
+      "tag": "@rushstack/package-extractor_v0.6.19",
+      "date": "Wed, 03 Jan 2024 00:31:18 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.63.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.16`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.16`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.63.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.16`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.18",
+      "tag": "@rushstack/package-extractor_v0.6.18",
+      "date": "Wed, 20 Dec 2023 01:09:45 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.15`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.15`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.63.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.15`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.17",
+      "tag": "@rushstack/package-extractor_v0.6.17",
+      "date": "Tue, 12 Dec 2023 00:20:33 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix an issue with the `folderToCopy` option, where the folder contents would be copied into a subfolder instead of into the target folder root."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.16",
+      "tag": "@rushstack/package-extractor_v0.6.16",
+      "date": "Thu, 07 Dec 2023 03:44:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.62.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.14`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.14`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.63.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.14`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.15",
+      "tag": "@rushstack/package-extractor_v0.6.15",
+      "date": "Tue, 05 Dec 2023 01:10:16 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.13`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.13`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.63.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.13`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.14",
+      "tag": "@rushstack/package-extractor_v0.6.14",
+      "date": "Thu, 16 Nov 2023 01:09:56 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Links that target a path outside of the source directory can now be ignored using \"patternsToInclude\" and \"patternsToExclude\" options"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.6.13",
+      "tag": "@rushstack/package-extractor_v0.6.13",
+      "date": "Fri, 10 Nov 2023 18:02:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.7.12`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft-webpack5-plugin\" to `0.9.12`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.63.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/webpack-preserve-dynamic-require-plugin\" to `0.11.12`"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.6.12",
       "tag": "@rushstack/package-extractor_v0.6.12",
       "date": "Wed, 01 Nov 2023 23:11:35 GMT",

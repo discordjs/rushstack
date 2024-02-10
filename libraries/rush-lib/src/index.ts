@@ -10,6 +10,9 @@ export { ApprovedPackagesPolicy } from './api/ApprovedPackagesPolicy';
 
 export { RushConfiguration, ITryFindRushJsonLocationOptions } from './api/RushConfiguration';
 
+export { Subspace } from './api/Subspace';
+export { SubspacesConfiguration } from './api/SubspacesConfiguration';
+
 export {
   IPackageManagerOptionsJsonBase,
   IConfigurationEnvironment,
@@ -71,7 +74,12 @@ export { ApprovedPackagesItem, ApprovedPackagesConfiguration } from './api/Appro
 
 export { CommonVersionsConfiguration } from './api/CommonVersionsConfiguration';
 
-export { PackageJsonEditor, PackageJsonDependency, DependencyType } from './api/PackageJsonEditor';
+export {
+  PackageJsonEditor,
+  PackageJsonDependency,
+  DependencyType,
+  PackageJsonDependencyMeta
+} from './api/PackageJsonEditor';
 
 export { RepoStateFile } from './logic/RepoStateFile';
 

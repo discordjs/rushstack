@@ -1,6 +1,48 @@
 # Change Log - @rushstack/operation-graph
 
-This log was last generated on Thu, 28 Sep 2023 20:53:17 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Feb 2024 01:09:22 GMT and should not be manually modified.
+
+## 0.2.8
+Thu, 08 Feb 2024 01:09:22 GMT
+
+_Version update only_
+
+## 0.2.7
+Mon, 05 Feb 2024 23:46:52 GMT
+
+_Version update only_
+
+## 0.2.6
+Thu, 25 Jan 2024 01:09:30 GMT
+
+_Version update only_
+
+## 0.2.5
+Tue, 23 Jan 2024 20:12:58 GMT
+
+_Version update only_
+
+## 0.2.4
+Tue, 23 Jan 2024 16:15:05 GMT
+
+_Version update only_
+
+## 0.2.3
+Tue, 16 Jan 2024 18:30:10 GMT
+
+### Patches
+
+- Upgrade build dependencies
+
+## 0.2.2
+Wed, 03 Jan 2024 00:31:18 GMT
+
+_Version update only_
+
+## 0.2.1
+Thu, 07 Dec 2023 03:44:13 GMT
+
+_Version update only_
 
 ## 0.2.0
 Thu, 28 Sep 2023 20:53:17 GMT

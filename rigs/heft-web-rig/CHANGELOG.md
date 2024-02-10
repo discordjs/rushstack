@@ -1,6 +1,93 @@
 # Change Log - @rushstack/heft-web-rig
 
-This log was last generated on Wed, 01 Nov 2023 23:11:35 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+
+## 0.20.8
+Thu, 08 Feb 2024 01:09:21 GMT
+
+_Version update only_
+
+## 0.20.7
+Wed, 07 Feb 2024 01:11:18 GMT
+
+_Version update only_
+
+## 0.20.6
+Mon, 05 Feb 2024 23:46:52 GMT
+
+_Version update only_
+
+## 0.20.5
+Thu, 25 Jan 2024 23:03:58 GMT
+
+_Version update only_
+
+## 0.20.4
+Thu, 25 Jan 2024 01:09:30 GMT
+
+_Version update only_
+
+## 0.20.3
+Wed, 24 Jan 2024 07:38:34 GMT
+
+_Version update only_
+
+## 0.20.2
+Tue, 23 Jan 2024 20:12:58 GMT
+
+_Version update only_
+
+## 0.20.1
+Tue, 23 Jan 2024 16:15:06 GMT
+
+_Version update only_
+
+## 0.20.0
+Tue, 16 Jan 2024 18:30:10 GMT
+
+### Minor changes
+
+- Upgrade to TypeScript 5.3
+
+## 0.19.17
+Wed, 03 Jan 2024 00:31:18 GMT
+
+_Version update only_
+
+## 0.19.16
+Wed, 20 Dec 2023 01:09:45 GMT
+
+_Version update only_
+
+## 0.19.15
+Fri, 15 Dec 2023 01:10:06 GMT
+
+_Version update only_
+
+## 0.19.14
+Fri, 08 Dec 2023 20:48:44 GMT
+
+_Version update only_
+
+## 0.19.13
+Thu, 07 Dec 2023 03:44:13 GMT
+
+_Version update only_
+
+## 0.19.12
+Tue, 05 Dec 2023 01:10:16 GMT
+
+_Version update only_
+
+## 0.19.11
+Wed, 22 Nov 2023 01:45:18 GMT
+
+_Version update only_
+
+## 0.19.10
+Fri, 10 Nov 2023 18:02:04 GMT
+
+_Version update only_
 
 ## 0.19.9
 Wed, 01 Nov 2023 23:11:35 GMT

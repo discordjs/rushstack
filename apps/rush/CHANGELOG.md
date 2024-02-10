@@ -1,6 +1,80 @@
 # Change Log - @microsoft/rush
 
-This log was last generated on Wed, 01 Nov 2023 23:29:47 GMT and should not be manually modified.
+This log was last generated on Wed, 31 Jan 2024 22:49:17 GMT and should not be manually modified.
+
+## 5.113.4
+Wed, 31 Jan 2024 22:49:17 GMT
+
+### Updates
+
+- Introduce an explicit warning message during `rush install` or `rush update` about `dependenciesMeta` not being up-to-date.
+
+## 5.113.3
+Wed, 31 Jan 2024 22:25:55 GMT
+
+### Updates
+
+- Fix an issue where `rush update` would sometimes not correctly sync the `pnpm-lock.yaml` file back to `common/config/rush/` after a project's `package.json` has been updated.
+
+## 5.113.2
+Wed, 31 Jan 2024 18:45:33 GMT
+
+### Updates
+
+- Fix some minor issues when the experimental subspaces feature is enabled
+
+## 5.113.1
+Wed, 31 Jan 2024 07:07:50 GMT
+
+### Updates
+
+- (EXPERIMENTAL) Enable filtered installs of subspaces and add a "preventSelectingAllSubspaces" setting
+
+## 5.113.0
+Tue, 30 Jan 2024 22:58:52 GMT
+
+### Updates
+
+- Fix an issue where Rush does not detect changes to the `dependenciesMeta` field in project's `package.json` files, so may incorrectly skip updating/installation.
+- Add ability to enable IPC channels in `Utilities#executeLifeCycleCommand`.
+- Update `rush init` template to document the "buildSkipWithAllowWarningsInSuccessfulBuild" experiment
+- (BREAKING CHANGE) Begin removal of APIs for the deprecated "installation variants" feature, since subspaces are a more robust solution for that problem
+- (EXPERIMENTAL) Implement installation for the not-yet-released "subspaces" feature (GitHub #4230)
+
+## 5.112.2
+Tue, 12 Dec 2023 00:20:51 GMT
+
+### Updates
+
+- Bring back the erroneously removed `preminor` bump type for lockstepped packages.
+- Fix an issue where the contents of a folder set in the `"folderToCopy"` field of the `deploy.json` config file would be copied into a subfolder instead of into the root of the deploy folder.
+- (EXPERIMENTAL) Implemented config file loader for the not-yet-released "subspaces" feature (GitHub #4230)
+
+## 5.112.1
+Wed, 29 Nov 2023 08:59:31 GMT
+
+### Updates
+
+- Allow the device code credential options to be extended Azure authentication subclasses, used in advanced authentication scenarios.
+
+## 5.112.0
+Mon, 27 Nov 2023 23:36:11 GMT
+
+### Updates
+
+- Update the `@azure/identity` and `@azure/storage-blob` dependencies of `@rushstack/rush-azure-storage-build-cache-plugin` to eliminate an `EBADENGINE` error when installing Rush on Node 20.
+
+## 5.111.0
+Sat, 18 Nov 2023 00:06:20 GMT
+
+### Updates
+
+- Add experiment `buildSkipWithAllowWarningsInSuccessfulBuild` to allow skipping builds that succeeded with warnings in the previous run.
+
+## 5.110.2
+Thu, 16 Nov 2023 01:36:10 GMT
+
+_Version update only_
 
 ## 5.110.1
 Wed, 01 Nov 2023 23:29:47 GMT

@@ -507,6 +507,8 @@ Optional arguments:
 
 exports[`CommandLineHelp prints the help for each action: init 1`] = `
 "usage: rush init [-h] [--overwrite-existing] [--rush-example-repo]
+                 [--include-experiments]
+                 
 
 When invoked in an empty folder, this command provisions a standard set of 
 config file templates to start managing projects using Rush.
@@ -523,6 +525,10 @@ Optional arguments:
                         monorepo that illustrates many Rush features. This 
                         option is primarily intended for maintaining that 
                         example.
+  --include-experiments
+                        Include features that may not be complete features, 
+                        useful for demoing specific future features or 
+                        current work in progress features.
 "
 `;
 
@@ -570,8 +576,9 @@ exports[`CommandLineHelp prints the help for each action: install 1`] = `
 "usage: rush install [-h] [-p] [--bypass-policy] [--no-link]
                     [--network-concurrency COUNT] [--debug-package-manager]
                     [--max-install-attempts NUMBER] [--ignore-hooks]
-                    [--offline] [--variant VARIANT] [-t PROJECT] [-T PROJECT]
-                    [-f PROJECT] [-o PROJECT] [-i PROJECT] [-I PROJECT]
+                    [--offline] [--variant VARIANT] [--subspace SUBSPACE_NAME]
+                    [-t PROJECT] [-T PROJECT] [-f PROJECT] [-o PROJECT]
+                    [-i PROJECT] [-I PROJECT]
                     [--to-version-policy VERSION_POLICY_NAME]
                     [--from-version-policy VERSION_POLICY_NAME] [--check-only]
                     
@@ -622,6 +629,10 @@ Optional arguments:
   --variant VARIANT     Run command using a variant installation 
                         configuration. This parameter may alternatively be 
                         specified via the RUSH_VARIANT environment variable.
+  --subspace SUBSPACE_NAME
+                        (EXPERIMENTAL) Specifies a Rush subspace to be 
+                        installed. Requires the feature to be enabled in 
+                        subspaces.json.
   -t PROJECT, --to PROJECT
                         Normally all projects in the monorepo will be 
                         processed; adding this parameter will instead select 
@@ -1144,7 +1155,8 @@ exports[`CommandLineHelp prints the help for each action: update 1`] = `
 "usage: rush update [-h] [-p] [--bypass-policy] [--no-link]
                    [--network-concurrency COUNT] [--debug-package-manager]
                    [--max-install-attempts NUMBER] [--ignore-hooks]
-                   [--offline] [--variant VARIANT] [--full] [--recheck]
+                   [--offline] [--variant VARIANT] [--subspace SUBSPACE_NAME]
+                   [--full] [--recheck]
                    
 
 The \\"rush update\\" command installs the dependencies described in your package.
@@ -1192,6 +1204,10 @@ Optional arguments:
   --variant VARIANT     Run command using a variant installation 
                         configuration. This parameter may alternatively be 
                         specified via the RUSH_VARIANT environment variable.
+  --subspace SUBSPACE_NAME
+                        (EXPERIMENTAL) Specifies a Rush subspace to be 
+                        installed. Requires the feature to be enabled in 
+                        subspaces.json.
   --full                Normally \\"rush update\\" tries to preserve your 
                         existing installed versions and only makes the 
                         minimum updates needed to satisfy the package.json 
@@ -1312,9 +1328,9 @@ Optional arguments:
   --override-bump BUMPTYPE
                         Overrides the bump type in the version-policy.json 
                         for the specified version policy. Valid BUMPTYPE 
-                        values include: prerelease, patch, minor, major. This 
-                        setting only works for lock-step version policy in 
-                        bump action.
+                        values include: prerelease, patch, preminor, minor, 
+                        major. This setting only works for lock-step version 
+                        policy in bump action.
   --override-prerelease-id ID
                         Overrides the prerelease identifier in the version 
                         value of version-policy.json for the specified 

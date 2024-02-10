@@ -2,6 +2,97 @@
   "name": "@rushstack/eslint-config",
   "entries": [
     {
+      "version": "3.6.3",
+      "tag": "@rushstack/eslint-config_v3.6.3",
+      "date": "Wed, 07 Feb 2024 01:11:18 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-plugin\" to `0.15.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.6.2",
+      "tag": "@rushstack/eslint-config_v3.6.2",
+      "date": "Thu, 25 Jan 2024 23:03:57 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-patch\" to `1.7.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.6.1",
+      "tag": "@rushstack/eslint-config_v3.6.1",
+      "date": "Wed, 24 Jan 2024 07:38:34 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-patch\" to `1.7.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.6.0",
+      "tag": "@rushstack/eslint-config_v3.6.0",
+      "date": "Tue, 16 Jan 2024 18:30:10 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add support for TypeScript 5.3 with @typescript-eslint 6.19.x"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-patch\" to `1.7.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-plugin\" to `0.14.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-plugin-packlets\" to `0.9.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-plugin-security\" to `0.8.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.5.1",
+      "tag": "@rushstack/eslint-config_v3.5.1",
+      "date": "Fri, 15 Dec 2023 01:10:06 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-patch\" to `1.6.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.5.0",
+      "tag": "@rushstack/eslint-config_v3.5.0",
+      "date": "Wed, 22 Nov 2023 01:45:18 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Added eslint-bulk-suppressions to @rushstack/eslint-config dependencies, allowing it to be used in all projects that use rushstack's eslint-config"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/eslint-patch\" to `1.6.0`"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.4.1",
       "tag": "@rushstack/eslint-config_v3.4.1",
       "date": "Sun, 01 Oct 2023 02:56:30 GMT",

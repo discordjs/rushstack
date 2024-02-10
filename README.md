@@ -55,6 +55,7 @@ These GitHub repositories provide supplementary resources for Rush Stack:
 | [/apps/rundown](./apps/rundown/) | [![npm version](https://badge.fury.io/js/%40rushstack%2Frundown.svg)](https://badge.fury.io/js/%40rushstack%2Frundown) | [changelog](./apps/rundown/CHANGELOG.md) | [@rushstack/rundown](https://www.npmjs.com/package/@rushstack/rundown) |
 | [/apps/rush](./apps/rush/) | [![npm version](https://badge.fury.io/js/%40microsoft%2Frush.svg)](https://badge.fury.io/js/%40microsoft%2Frush) | [changelog](./apps/rush/CHANGELOG.md) | [@microsoft/rush](https://www.npmjs.com/package/@microsoft/rush) |
 | [/apps/trace-import](./apps/trace-import/) | [![npm version](https://badge.fury.io/js/%40rushstack%2Ftrace-import.svg)](https://badge.fury.io/js/%40rushstack%2Ftrace-import) | [changelog](./apps/trace-import/CHANGELOG.md) | [@rushstack/trace-import](https://www.npmjs.com/package/@rushstack/trace-import) |
+| [/eslint/eslint-bulk](./eslint/eslint-bulk/) | [![npm version](https://badge.fury.io/js/%40rushstack%2Feslint-bulk.svg)](https://badge.fury.io/js/%40rushstack%2Feslint-bulk) | [changelog](./eslint/eslint-bulk/CHANGELOG.md) | [@rushstack/eslint-bulk](https://www.npmjs.com/package/@rushstack/eslint-bulk) |
 | [/eslint/eslint-config](./eslint/eslint-config/) | [![npm version](https://badge.fury.io/js/%40rushstack%2Feslint-config.svg)](https://badge.fury.io/js/%40rushstack%2Feslint-config) | [changelog](./eslint/eslint-config/CHANGELOG.md) | [@rushstack/eslint-config](https://www.npmjs.com/package/@rushstack/eslint-config) |
 | [/eslint/eslint-patch](./eslint/eslint-patch/) | [![npm version](https://badge.fury.io/js/%40rushstack%2Feslint-patch.svg)](https://badge.fury.io/js/%40rushstack%2Feslint-patch) | [changelog](./eslint/eslint-patch/CHANGELOG.md) | [@rushstack/eslint-patch](https://www.npmjs.com/package/@rushstack/eslint-patch) |
 | [/eslint/eslint-plugin](./eslint/eslint-plugin/) | [![npm version](https://badge.fury.io/js/%40rushstack%2Feslint-plugin.svg)](https://badge.fury.io/js/%40rushstack%2Feslint-plugin) | [changelog](./eslint/eslint-plugin/CHANGELOG.md) | [@rushstack/eslint-plugin](https://www.npmjs.com/package/@rushstack/eslint-plugin) |
@@ -122,6 +123,7 @@ These GitHub repositories provide supplementary resources for Rush Stack:
 | [/build-tests-samples/heft-node-rig-tutorial](./build-tests-samples/heft-node-rig-tutorial/) | (Copy of sample project) Building this project is a regression test for Heft |
 | [/build-tests-samples/heft-serverless-stack-tutorial](./build-tests-samples/heft-serverless-stack-tutorial/) | (Copy of sample project) Building this project is a regression test for Heft |
 | [/build-tests-samples/heft-storybook-react-tutorial](./build-tests-samples/heft-storybook-react-tutorial/) | (Copy of sample project) Building this project is a regression test for Heft |
+| [/build-tests-samples/heft-storybook-react-tutorial-app](./build-tests-samples/heft-storybook-react-tutorial-app/) | Building this project is a regression test for heft-storybook-plugin |
 | [/build-tests-samples/heft-storybook-react-tutorial-storykit](./build-tests-samples/heft-storybook-react-tutorial-storykit/) | Storybook build dependencies for heft-storybook-react-tutorial |
 | [/build-tests-samples/heft-web-rig-app-tutorial](./build-tests-samples/heft-web-rig-app-tutorial/) | (Copy of sample project) Building this project is a regression test for Heft |
 | [/build-tests-samples/heft-web-rig-library-tutorial](./build-tests-samples/heft-web-rig-library-tutorial/) | (Copy of sample project) Building this project is a regression test for Heft |
@@ -129,6 +131,8 @@ These GitHub repositories provide supplementary resources for Rush Stack:
 | [/build-tests-samples/packlets-tutorial](./build-tests-samples/packlets-tutorial/) | (Copy of sample project) Building this project is a regression test for @rushstack/eslint-plugin-packlets |
 | [/build-tests/api-documenter-scenarios](./build-tests/api-documenter-scenarios/) | Building this project is a regression test for api-documenter |
 | [/build-tests/api-documenter-test](./build-tests/api-documenter-test/) | Building this project is a regression test for api-documenter |
+| [/build-tests/api-extractor-d-cts-test](./build-tests/api-extractor-d-cts-test/) | Building this project is a regression test for api-extractor |
+| [/build-tests/api-extractor-d-mts-test](./build-tests/api-extractor-d-mts-test/) | Building this project is a regression test for api-extractor |
 | [/build-tests/api-extractor-lib1-test](./build-tests/api-extractor-lib1-test/) | Building this project is a regression test for api-extractor |
 | [/build-tests/api-extractor-lib2-test](./build-tests/api-extractor-lib2-test/) | Building this project is a regression test for api-extractor |
 | [/build-tests/api-extractor-lib3-test](./build-tests/api-extractor-lib3-test/) | Building this project is a regression test for api-extractor |
@@ -141,6 +145,7 @@ These GitHub repositories provide supplementary resources for Rush Stack:
 | [/build-tests/eslint-7-7-test](./build-tests/eslint-7-7-test/) | This project contains a build test to validate ESLint 7.7.0 compatibility with the latest version of @rushstack/eslint-config (and by extension, the ESLint plugin) |
 | [/build-tests/eslint-7-test](./build-tests/eslint-7-test/) | This project contains a build test to validate ESLint 7 compatibility with the latest version of @rushstack/eslint-config (and by extension, the ESLint plugin) |
 | [/build-tests/eslint-8-test](./build-tests/eslint-8-test/) | This project contains a build test to validate ESLint 8 compatibility with the latest version of @rushstack/eslint-config (and by extension, the ESLint plugin) |
+| [/build-tests/eslint-bulk-suppressions-test](./build-tests/eslint-bulk-suppressions-test/) | Sample code to test eslint bulk suppressions |
 | [/build-tests/hashed-folder-copy-plugin-webpack5-test](./build-tests/hashed-folder-copy-plugin-webpack5-test/) | Building this project exercises @rushstack/hashed-folder-copy-plugin with Webpack 5. NOTE - THIS TEST IS CURRENTLY EXPECTED TO BE BROKEN |
 | [/build-tests/heft-copy-files-test](./build-tests/heft-copy-files-test/) | Building this project tests copying files with Heft |
 | [/build-tests/heft-example-plugin-01](./build-tests/heft-example-plugin-01/) | This is an example heft plugin that exposes hooks for other plugins |
@@ -174,7 +179,7 @@ These GitHub repositories provide supplementary resources for Rush Stack:
 | [/build-tests/rush-lib-declaration-paths-test](./build-tests/rush-lib-declaration-paths-test/) | This project ensures all of the paths in rush-lib/lib/... have imports that resolve correctly. If this project builds, all `lib/**/*.d.ts` files in the `@microsoft/rush-lib` package are valid. |
 | [/build-tests/rush-project-change-analyzer-test](./build-tests/rush-project-change-analyzer-test/) | This is an example project that uses rush-lib's ProjectChangeAnalyzer to  |
 | [/build-tests/rush-redis-cobuild-plugin-integration-test](./build-tests/rush-redis-cobuild-plugin-integration-test/) | Tests connecting to an redis server |
-| [/build-tests/set-webpack-public-path-plugin-webpack4-test](./build-tests/set-webpack-public-path-plugin-webpack4-test/) | Building this project tests the set-webpack-public-path-plugin using Webpack 4 |
+| [/build-tests/set-webpack-public-path-plugin-test](./build-tests/set-webpack-public-path-plugin-test/) | Building this project tests the set-webpack-public-path-plugin |
 | [/build-tests/ts-command-line-test](./build-tests/ts-command-line-test/) | Building this project is a regression test for ts-command-line |
 | [/eslint/local-eslint-config](./eslint/local-eslint-config/) | An ESLint configuration consumed projects inside the rushstack repo. |
 | [/libraries/rush-themed-ui](./libraries/rush-themed-ui/) | Rush Component Library: a set of themed components for rush projects |

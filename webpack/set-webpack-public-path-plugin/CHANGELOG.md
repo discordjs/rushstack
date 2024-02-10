@@ -1,6 +1,88 @@
 # Change Log - @rushstack/set-webpack-public-path-plugin
 
-This log was last generated on Wed, 01 Nov 2023 23:11:35 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Feb 2024 01:09:22 GMT and should not be manually modified.
+
+## 5.1.7
+Thu, 08 Feb 2024 01:09:21 GMT
+
+_Version update only_
+
+## 5.1.6
+Wed, 07 Feb 2024 01:11:18 GMT
+
+_Version update only_
+
+## 5.1.5
+Mon, 05 Feb 2024 23:46:52 GMT
+
+_Version update only_
+
+## 5.1.4
+Thu, 25 Jan 2024 01:09:30 GMT
+
+_Version update only_
+
+## 5.1.3
+Tue, 23 Jan 2024 20:12:58 GMT
+
+_Version update only_
+
+## 5.1.2
+Tue, 23 Jan 2024 16:15:06 GMT
+
+_Version update only_
+
+## 5.1.1
+Thu, 18 Jan 2024 05:07:01 GMT
+
+### Patches
+
+- Only emit an error about unsupported library types if the public path is actually used.
+
+## 5.1.0
+Thu, 18 Jan 2024 03:30:10 GMT
+
+### Minor changes
+
+- Add a second exported plugin (`SetPublicPathCurrentScriptPlugin`) that creates a wrapper around the runtime chunk and uses the `document.currentScript` API to get the current script's URL.
+
+## 5.0.1
+Tue, 16 Jan 2024 18:30:11 GMT
+
+_Version update only_
+
+## 5.0.0
+Fri, 12 Jan 2024 01:23:10 GMT
+
+### Breaking changes
+
+- Update the plugin to work with Webpack 5 and drop support for Webpack 4.
+- Remove old options, specifically `systemJs`, `urlPrefix`, `publicPath`, and `skipDetection`.
+
+## 4.1.16
+Wed, 03 Jan 2024 00:31:18 GMT
+
+_Version update only_
+
+## 4.1.15
+Wed, 20 Dec 2023 01:09:45 GMT
+
+_Version update only_
+
+## 4.1.14
+Thu, 07 Dec 2023 03:44:13 GMT
+
+_Version update only_
+
+## 4.1.13
+Tue, 05 Dec 2023 01:10:16 GMT
+
+_Version update only_
+
+## 4.1.12
+Fri, 10 Nov 2023 18:02:04 GMT
+
+_Version update only_
 
 ## 4.1.11
 Wed, 01 Nov 2023 23:11:35 GMT

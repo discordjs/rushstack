@@ -31,7 +31,7 @@ bower_components
 build/Release
 
 # Dependency directories
-node_modules/
+node_modules
 jspm_packages/
 
 # Optional npm cache directory
@@ -97,3 +97,4 @@ dist
 dist-storybook
 *.scss.ts
 *.sass.ts
+*.tsbuildinfo

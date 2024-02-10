@@ -1,6 +1,61 @@
 # Change Log - @rushstack/node-core-library
 
-This log was last generated on Thu, 28 Sep 2023 20:53:17 GMT and should not be manually modified.
+This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+
+## 3.66.0
+Thu, 08 Feb 2024 01:09:21 GMT
+
+### Minor changes
+
+- Add getStatistics() method to FileWriter instances
+
+### Patches
+
+- LockFile: prevent accidentaly deleting freshly created lockfile when multiple processes try to acquire the same lock on macOS/Linux
+
+## 3.65.0
+Mon, 05 Feb 2024 23:46:52 GMT
+
+### Minor changes
+
+- Inclue a `Text.reverse` API for reversing a string.
+
+## 3.64.2
+Thu, 25 Jan 2024 01:09:29 GMT
+
+### Patches
+
+- Improve 'bin' definition in `IPackageJson` type
+
+## 3.64.1
+Tue, 23 Jan 2024 20:12:57 GMT
+
+### Patches
+
+- Fix Executable.getProcessInfoBy* methods truncating the process name on MacOS
+
+## 3.64.0
+Tue, 23 Jan 2024 16:15:05 GMT
+
+### Minor changes
+
+- Add the `dependenciesMeta` property to the `INodePackageJson` interface.
+
+## 3.63.0
+Wed, 03 Jan 2024 00:31:18 GMT
+
+### Minor changes
+
+- Updates the `JsonFile` API to format JSON as JSON5 if an existing string is being updated to preserve the style of the existing JSON.
+
+## 3.62.0
+Thu, 07 Dec 2023 03:44:13 GMT
+
+### Minor changes
+
+- Add functions inside the `Executable` API to list all process trees (`getProcessInfoById`, `getProcessInfoByIdAsync`, `getProcessInfoByName`, and `getProcessInfoByNameAsync`).
+- Add functions inside the `Text` API to split iterables (or async iterables) that produce strings or buffers on newlines (`readLinesFromIterable` and `readLinesFromIterableAsync`).
+- Add the `waitForExitAsync` method inside the `Executable` API used to wait for a provided child process to exit.
 
 ## 3.61.0
 Thu, 28 Sep 2023 20:53:17 GMT
