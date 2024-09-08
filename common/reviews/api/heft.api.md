@@ -18,8 +18,8 @@ import { CommandLineStringListParameter } from '@rushstack/ts-command-line';
 import { CommandLineStringParameter } from '@rushstack/ts-command-line';
 import { IPackageJson } from '@rushstack/node-core-library';
 import { IRigConfig } from '@rushstack/rig-package';
-import { ITerminal } from '@rushstack/node-core-library';
-import { ITerminalProvider } from '@rushstack/node-core-library';
+import { ITerminal } from '@rushstack/terminal';
+import { ITerminalProvider } from '@rushstack/terminal';
 
 export { CommandLineChoiceListParameter }
 
@@ -53,6 +53,7 @@ export class HeftConfiguration {
     get projectPackageJson(): IPackageJson;
     get rigConfig(): IRigConfig;
     get rigPackageResolver(): IRigPackageResolver;
+    get slashNormalizedBuildFolderPath(): string;
     get tempFolderPath(): string;
     get terminalProvider(): ITerminalProvider;
 }
@@ -212,6 +213,7 @@ export interface IIncrementalCopyOperation extends ICopyOperation {
 
 // @public (undocumented)
 export interface IMetricsData {
+    bootDurationMs: number;
     command: string;
     commandParameters: Record<string, string>;
     encounteredError?: boolean;
@@ -221,6 +223,7 @@ export interface IMetricsData {
     machineProcessor: string;
     machineTotalMemoryMB: number;
     taskTotalExecutionMs: number;
+    totalUptimeMs: number;
 }
 
 // @internal (undocumented)

@@ -1,6 +1,167 @@
 # Change Log - @rushstack/ts-command-line
 
-This log was last generated on Wed, 01 Nov 2023 23:11:35 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 4.22.6
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 4.22.5
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 4.22.4
+Fri, 02 Aug 2024 17:26:42 GMT
+
+### Patches
+
+- Remove @internal so that subclasses can call _getArgumentParser
+
+## 4.22.3
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 4.22.2
+Wed, 17 Jul 2024 06:55:10 GMT
+
+_Version update only_
+
+## 4.22.1
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 4.22.0
+Thu, 30 May 2024 00:13:05 GMT
+
+### Minor changes
+
+- Eliminate a const enum from the public API.
+
+## 4.21.5
+Wed, 29 May 2024 02:03:51 GMT
+
+_Version update only_
+
+## 4.21.4
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 4.21.3
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 4.21.2
+Sat, 25 May 2024 04:54:08 GMT
+
+_Version update only_
+
+## 4.21.1
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 4.21.0
+Thu, 16 May 2024 15:10:22 GMT
+
+### Minor changes
+
+- Mark `onDefineParameters` and `onDefineUnscopedParameters` as deprecated and update README accordingly because defining parameters causes issues when the compiler targets >=es2022.
+
+## 4.20.1
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 4.20.0
+Wed, 15 May 2024 06:04:17 GMT
+
+### Minor changes
+
+- Rename `CommandLineParser.execute` to `CommandLineParser.executeAsync` and `CommandLineParser.executeWithoutErrorHandling` to `CommandLineParser.executeWithoutErrorHandlingAsync`. The old functions are marked as `@deprecated`.
+
+## 4.19.5
+Fri, 10 May 2024 05:33:34 GMT
+
+_Version update only_
+
+## 4.19.4
+Wed, 08 May 2024 22:23:50 GMT
+
+### Patches
+
+- Fix an issue where tab completions did not suggest parameter values.
+
+## 4.19.3
+Mon, 06 May 2024 15:11:05 GMT
+
+_Version update only_
+
+## 4.19.2
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 4.19.1
+Sun, 03 Mar 2024 20:58:12 GMT
+
+### Patches
+
+- Fix an issue where the `allowNonStandardEnvironmentVariableNames` parameter option had no effect.
+
+## 4.19.0
+Sat, 02 Mar 2024 02:22:23 GMT
+
+### Minor changes
+
+- Use more specific types for command line parameters' `kind` properties.
+- Allow parameters that may be backed by an environment variable to be marked as `required`.
+- Update the return type of `defineChoiceParameter`, `defineIntegerParameter`, and `defineStringParameter` respectively when the `defaultValue` option is provided to return `IRequiredCommandLineChoiceParameter`, `IRequiredCommandLineIntegerParameter`, and `IRequiredCommandLineStringParameter` respectively, as the value will definitely be defined in these cases.
+
+### Patches
+
+- Include a missing `readonly` modifier on the `value` properties of `IRequiredCommandLineChoiceParameter`, `IRequiredCommandLineIntegerParameter`, and `IRequiredCommandLineStringParameter`.
+
+## 4.18.1
+Fri, 01 Mar 2024 01:10:08 GMT
+
+### Patches
+
+- Add an "allowNonStandardEnvironmentVariableNames" option to remove naming restrictions on parameter environment variables
+
+## 4.18.0
+Wed, 28 Feb 2024 16:09:27 GMT
+
+### Minor changes
+
+- Allow choice parameters alternatives to be typed.
+- Update the return type of `defineChoiceParameter`, `defineIntegerParameter`, and `defineStringParameter` respectively when the `{ required: true }` option is set to a new type (`IRequiredCommandLineChoiceParameter`, `IRequiredCommandLineIntegerParameter`, and `IRequiredCommandLineStringParameter` respectively) with a required `value` property.
+
+## 4.17.4
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 4.17.3
+Wed, 21 Feb 2024 21:45:28 GMT
+
+### Patches
+
+- Replace the dependency on the `colors` package with `Colorize` from `@rushstack/terminal`.
+
+## 4.17.2
+Sat, 17 Feb 2024 06:24:35 GMT
+
+### Patches
+
+- Fix broken link to API documentation
 
 ## 4.17.1
 Wed, 01 Nov 2023 23:11:35 GMT

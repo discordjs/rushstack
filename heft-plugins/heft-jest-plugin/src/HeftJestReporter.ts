@@ -2,13 +2,8 @@
 // See LICENSE in the project root for license information.
 
 import * as path from 'path';
-import {
-  type ITerminal,
-  Colors,
-  InternalError,
-  Text,
-  type IColorableSequence
-} from '@rushstack/node-core-library';
+import { InternalError, Text } from '@rushstack/node-core-library';
+import { type ITerminal, Colorize } from '@rushstack/terminal';
 import type {
   Reporter,
   Test,
@@ -49,20 +44,30 @@ export default class HeftJestReporter implements Reporter {
     this._debugMode = options.debugMode;
   }
 
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   public async onTestStart(test: Test): Promise<void> {
     this._terminal.writeLine(
-      Colors.whiteBackground(Colors.black('START')),
+      Colorize.whiteBackground(Colorize.black('START')),
       ` ${this._getTestPath(test.path)}`
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   public async onTestResult(
     test: Test,
     testResult: TestResult,
     aggregatedResult: AggregatedResult
   ): Promise<void> {
     this._writeConsoleOutput(testResult);
-    const { numPassingTests, numFailingTests, failureMessage, testExecError, perfStats } = testResult;
+    const {
+      numPassingTests,
+      numFailingTests,
+      failureMessage,
+      testExecError,
+      perfStats,
+      memoryUsage,
+      snapshot: { updated: updatedSnapshots, added: addedSnapshots, unchecked: uncheckedSnapshots }
+    } = testResult;
 
     // Calculate the suite duration time from the test result. This is necessary because Jest doesn't
     // provide the duration on the 'test' object (at least not as of Jest 25), and other reporters
@@ -71,35 +76,42 @@ export default class HeftJestReporter implements Reporter {
     const duration: string = perfStats ? `${((perfStats.end - perfStats.start) / 1000).toFixed(3)}s` : '?';
 
     // calculate memoryUsage to MB reference -> https://jestjs.io/docs/cli#--logheapusage
-    const memUsage: string = testResult.memoryUsage
-      ? `, ${Math.floor(testResult.memoryUsage / 1000000)}MB heap size`
-      : '';
+    const memUsage: string = memoryUsage ? `, ${Math.floor(memoryUsage / 1000000)}MB heap size` : '';
 
     const message: string =
       ` ${this._getTestPath(test.path)} ` +
       `(duration: ${duration}, ${numPassingTests} passed, ${numFailingTests} failed${memUsage})`;
 
     if (numFailingTests > 0) {
-      this._terminal.writeLine(Colors.redBackground(Colors.black('FAIL')), message);
+      this._terminal.writeLine(Colorize.redBackground(Colorize.black('FAIL')), message);
     } else if (testExecError) {
-      this._terminal.writeLine(Colors.redBackground(Colors.black(`FAIL (${testExecError.type})`)), message);
+      this._terminal.writeLine(
+        Colorize.redBackground(Colorize.black(`FAIL (${testExecError.type})`)),
+        message
+      );
     } else {
-      this._terminal.writeLine(Colors.greenBackground(Colors.black('PASS')), message);
+      this._terminal.writeLine(Colorize.greenBackground(Colorize.black('PASS')), message);
     }
 
     if (failureMessage) {
       this._terminal.writeErrorLine(failureMessage);
     }
 
-    if (testResult.snapshot.updated) {
+    if (updatedSnapshots) {
       this._terminal.writeErrorLine(
-        `Updated ${this._formatWithPlural(testResult.snapshot.updated, 'snapshot', 'snapshots')}`
+        `Updated ${this._formatWithPlural(updatedSnapshots, 'snapshot', 'snapshots')}`
       );
     }
 
-    if (testResult.snapshot.added) {
+    if (addedSnapshots) {
       this._terminal.writeErrorLine(
-        `Added ${this._formatWithPlural(testResult.snapshot.added, 'snapshot', 'snapshots')}`
+        `Added ${this._formatWithPlural(addedSnapshots, 'snapshot', 'snapshots')}`
+      );
+    }
+
+    if (uncheckedSnapshots) {
+      this._terminal.writeWarningLine(
+        `${this._formatWithPlural(uncheckedSnapshots, 'snapshot was', 'snapshots were')} not checked`
       );
     }
   }
@@ -169,13 +181,14 @@ export default class HeftJestReporter implements Reporter {
     const PAD_LENGTH: number = 13; // "console.error" is the longest label
 
     const paddedLabel: string = '|' + label.padStart(PAD_LENGTH) + '|';
-    const prefix: IColorableSequence = debug ? Colors.yellow(paddedLabel) : Colors.cyan(paddedLabel);
+    const prefix: string = debug ? Colorize.yellow(paddedLabel) : Colorize.cyan(paddedLabel);
 
     for (const line of lines) {
       this._terminal.writeLine(prefix, ' ' + line);
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   public async onRunStart(
     aggregatedResult: AggregatedResult,
     options: ReporterOnStartOptions
@@ -188,20 +201,33 @@ export default class HeftJestReporter implements Reporter {
     );
   }
 
+  // eslint-disable-next-line @typescript-eslint/naming-convention
   public async onRunComplete(contexts: Set<TestContext>, results: AggregatedResult): Promise<void> {
-    const { numPassedTests, numFailedTests, numTotalTests, numRuntimeErrorTestSuites } = results;
+    const {
+      numPassedTests,
+      numFailedTests,
+      numTotalTests,
+      numRuntimeErrorTestSuites,
+      snapshot: { uncheckedKeysByFile: uncheckedSnapshotsByFile }
+    } = results;
 
     this._terminal.writeLine();
     this._terminal.writeLine('Tests finished:');
 
     const successesText: string = `  Successes: ${numPassedTests}`;
-    this._terminal.writeLine(numPassedTests > 0 ? Colors.green(successesText) : successesText);
+    this._terminal.writeLine(numPassedTests > 0 ? Colorize.green(successesText) : successesText);
 
     const failText: string = `  Failures: ${numFailedTests}`;
-    this._terminal.writeLine(numFailedTests > 0 ? Colors.red(failText) : failText);
+    this._terminal.writeLine(numFailedTests > 0 ? Colorize.red(failText) : failText);
 
     if (numRuntimeErrorTestSuites) {
-      this._terminal.writeLine(Colors.red(`  Failed test suites: ${numRuntimeErrorTestSuites}`));
+      this._terminal.writeLine(Colorize.red(`  Failed test suites: ${numRuntimeErrorTestSuites}`));
+    }
+
+    if (uncheckedSnapshotsByFile.length > 0) {
+      this._terminal.writeWarningLine(
+        `  Test suites with unchecked snapshots: ${uncheckedSnapshotsByFile.length}`
+      );
     }
 
     this._terminal.writeLine(`  Total: ${numTotalTests}`);

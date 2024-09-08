@@ -1,6 +1,67 @@
 # Change Log - @rushstack/eslint-config
 
-This log was last generated on Wed, 07 Feb 2024 01:11:18 GMT and should not be manually modified.
+This log was last generated on Wed, 14 Aug 2024 22:37:32 GMT and should not be manually modified.
+
+## 4.0.1
+Wed, 14 Aug 2024 22:37:32 GMT
+
+_Version update only_
+
+## 4.0.0
+Tue, 13 Aug 2024 18:17:05 GMT
+
+### Breaking changes
+
+- [BREAKING CHANGE] Bump "@typescript-eslint/eslint-plugin" to "~8.1.0" and "@typescript-eslint/eslint-parser" to "~8.1.0". Due to these changes, node@>=17.0.0 and eslint@^8.57.0 are now required due to breaking changes in the newer rules set.
+
+## 3.7.1
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 3.7.0
+Wed, 29 May 2024 00:10:52 GMT
+
+### Minor changes
+
+- Bump the `eslint-plugin-tsdoc` plugin.
+
+## 3.6.10
+Fri, 17 May 2024 00:10:40 GMT
+
+_Version update only_
+
+## 3.6.9
+Wed, 10 Apr 2024 21:59:39 GMT
+
+_Version update only_
+
+## 3.6.8
+Fri, 29 Mar 2024 05:46:41 GMT
+
+_Version update only_
+
+## 3.6.7
+Thu, 28 Mar 2024 18:11:12 GMT
+
+_Version update only_
+
+## 3.6.6
+Wed, 27 Mar 2024 19:47:21 GMT
+
+_Version update only_
+
+## 3.6.5
+Wed, 20 Mar 2024 02:09:14 GMT
+
+_Version update only_
+
+## 3.6.4
+Sat, 17 Feb 2024 06:24:35 GMT
+
+_Version update only_
 
 ## 3.6.3
 Wed, 07 Feb 2024 01:11:18 GMT

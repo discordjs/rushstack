@@ -6,7 +6,7 @@ import * as semver from 'semver';
 
 import { LockFile } from '@rushstack/node-core-library';
 import { Utilities } from '@microsoft/rush-lib/lib/utilities/Utilities';
-import { _LastInstallFlag, _RushGlobalFolder, type ILaunchOptions } from '@microsoft/rush-lib';
+import { _FlagFile, _RushGlobalFolder, type ILaunchOptions } from '@microsoft/rush-lib';
 
 import { RushCommandSelector } from './RushCommandSelector';
 import type { MinimalRushConfiguration } from './MinimalRushConfiguration';
@@ -30,11 +30,12 @@ export class RushVersionSelector {
     const isLegacyRushVersion: boolean = semver.lt(version, '4.0.0');
     const expectedRushPath: string = path.join(this._rushGlobalFolder.nodeSpecificPath, `rush-${version}`);
 
-    const installMarker: _LastInstallFlag = new _LastInstallFlag(expectedRushPath, {
+    const installMarker: _FlagFile = new _FlagFile(expectedRushPath, 'last-install', {
       node: process.versions.node
     });
 
-    if (!installMarker.isValid()) {
+    let installIsValid: boolean = await installMarker.isValidAsync();
+    if (!installIsValid) {
       // Need to install Rush
       console.log(`Rush version ${version} is not currently installed. Installing...`);
 
@@ -43,10 +44,11 @@ export class RushVersionSelector {
       console.log(`Trying to acquire lock for ${resourceName}`);
 
       const lock: LockFile = await LockFile.acquire(expectedRushPath, resourceName);
-      if (installMarker.isValid()) {
+      installIsValid = await installMarker.isValidAsync();
+      if (installIsValid) {
         console.log('Another process performed the installation.');
       } else {
-        Utilities.installPackageInDirectory({
+        await Utilities.installPackageInDirectoryAsync({
           directory: expectedRushPath,
           packageName: isLegacyRushVersion ? '@microsoft/rush' : '@microsoft/rush-lib',
           version: version,
@@ -65,7 +67,7 @@ export class RushVersionSelector {
         console.log(`Successfully installed Rush version ${version} in ${expectedRushPath}.`);
 
         // If we've made it here without exception, write the flag file
-        installMarker.create();
+        await installMarker.createAsync();
 
         lock.release();
       }
@@ -83,14 +85,9 @@ export class RushVersionSelector {
       require(path.join(expectedRushPath, 'node_modules', '@microsoft', 'rush', 'lib', 'start'));
     } else {
       // For newer rush-lib, RushCommandSelector can test whether "rushx" is supported or not
-      const rushCliEntrypoint: {} = require(path.join(
-        expectedRushPath,
-        'node_modules',
-        '@microsoft',
-        'rush-lib',
-        'lib',
-        'index'
-      ));
+      const rushCliEntrypoint: {} = require(
+        path.join(expectedRushPath, 'node_modules', '@microsoft', 'rush-lib', 'lib', 'index')
+      );
       RushCommandSelector.execute(this._currentPackageVersion, rushCliEntrypoint, executeOptions);
     }
   }

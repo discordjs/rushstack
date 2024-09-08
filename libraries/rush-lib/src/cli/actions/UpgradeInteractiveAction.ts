@@ -59,9 +59,9 @@ export class UpgradeInteractiveAction extends BaseRushAction {
     );
 
     const shouldMakeConsistent: boolean =
-      this.rushConfiguration.ensureConsistentVersions || this._makeConsistentFlag.value;
+      this.rushConfiguration.defaultSubspace.shouldEnsureConsistentVersions || this._makeConsistentFlag.value;
 
-    const { projects, depsToUpgrade } = await interactiveUpgrader.upgrade();
+    const { projects, depsToUpgrade } = await interactiveUpgrader.upgradeAsync();
 
     await packageJsonUpdater.doRushUpgradeAsync({
       projects: projects,

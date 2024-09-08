@@ -11,7 +11,8 @@ import {
   getRepoStateAsync,
   type IFileDiffStatus
 } from '@rushstack/package-deps-hash';
-import { Path, FileSystem, type ITerminal, Async } from '@rushstack/node-core-library';
+import { Path, FileSystem, Async } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../api/RushConfiguration';
 import { RushProjectConfiguration } from '../api/RushProjectConfiguration';
@@ -19,7 +20,7 @@ import { Git } from './Git';
 import { BaseProjectShrinkwrapFile } from './base/BaseProjectShrinkwrapFile';
 import type { RushConfigurationProject } from '../api/RushConfigurationProject';
 import { RushConstants } from './RushConstants';
-import type { LookupByPath } from './LookupByPath';
+import type { LookupByPath } from '@rushstack/lookup-by-path';
 import { PnpmShrinkwrapFile } from './pnpm/PnpmShrinkwrapFile';
 import { UNINITIALIZED } from '../utilities/Utilities';
 
@@ -221,7 +222,11 @@ export class ProjectChangeAnalyzer {
     const gitPath: string = this._git.getGitPathOrThrow();
     const repoRoot: string = getRepoRoot(rushConfiguration.rushJsonFolder);
 
-    const mergeCommit: string = this._git.getMergeBase(targetBranchName, terminal, shouldFetch);
+    // if the given targetBranchName is a commit, we assume it is the merge base
+    const IsTargetBranchACommit: boolean = await this._git.determineIfRefIsACommitAsync(targetBranchName);
+    const mergeCommit: string = IsTargetBranchACommit
+      ? targetBranchName
+      : await this._git.getMergeBaseAsync(targetBranchName, terminal, shouldFetch);
 
     const repoChanges: Map<string, IFileDiffStatus> = getRepoChanges(repoRoot, mergeCommit, gitPath);
 
@@ -252,7 +257,7 @@ export class ProjectChangeAnalyzer {
             throw new Error(`Unable to obtain current shrinkwrap file.`);
           }
 
-          const oldShrinkwrapText: string = this._git.getBlobContent({
+          const oldShrinkwrapText: string = await this._git.getBlobContentAsync({
             // <ref>:<path> syntax: https://git-scm.com/docs/gitrevisions
             blobSpec: `${mergeCommit}:${shrinkwrapFile}`,
             repositoryRoot: repoRoot
@@ -408,27 +413,27 @@ export class ProjectChangeAnalyzer {
         const additionalFilesToHash: string[] = [];
 
         if (this._rushConfiguration.packageManager === 'pnpm') {
-          const absoluteFilePathsToCheck: string[] = [];
-
-          for (const project of this._rushConfiguration.projects) {
-            const projectShrinkwrapFilePath: string =
-              BaseProjectShrinkwrapFile.getFilePathForProject(project);
-            absoluteFilePathsToCheck.push(projectShrinkwrapFilePath);
-            const relativeProjectShrinkwrapFilePath: string = Path.convertToSlashes(
-              path.relative(rootDir, projectShrinkwrapFilePath)
-            );
-
-            additionalFilesToHash.push(relativeProjectShrinkwrapFilePath);
-          }
-
-          await Async.forEachAsync(absoluteFilePathsToCheck, async (filePath: string) => {
-            if (!(await FileSystem.existsAsync(filePath))) {
-              throw new Error(
-                `A project dependency file (${filePath}) is missing. You may need to run ` +
-                  '"rush install" or "rush update".'
+          await Async.forEachAsync(
+            this._rushConfiguration.projects,
+            async (project: RushConfigurationProject) => {
+              const projectShrinkwrapFilePath: string =
+                BaseProjectShrinkwrapFile.getFilePathForProject(project);
+              if (!(await FileSystem.existsAsync(projectShrinkwrapFilePath))) {
+                // Missing shrinkwrap of subspace project is allowed because subspace projects can be partial installed
+                if (this._rushConfiguration.subspacesFeatureEnabled) {
+                  return;
+                }
+                throw new Error(
+                  `A project dependency file (${projectShrinkwrapFilePath}) is missing. You may need to run ` +
+                    '"rush install" or "rush update".'
+                );
+              }
+              const relativeProjectShrinkwrapFilePath: string = Path.convertToSlashes(
+                path.relative(rootDir, projectShrinkwrapFilePath)
               );
+              additionalFilesToHash.push(relativeProjectShrinkwrapFilePath);
             }
-          });
+          );
         }
 
         const hashes: Map<string, string> = await getRepoStateAsync(rootDir, additionalFilesToHash, gitPath);

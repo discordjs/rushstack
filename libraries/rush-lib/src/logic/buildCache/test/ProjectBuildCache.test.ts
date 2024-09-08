@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { StringBufferTerminalProvider, Terminal } from '@rushstack/node-core-library';
+import { StringBufferTerminalProvider, Terminal } from '@rushstack/terminal';
+
 import type { BuildCacheConfiguration } from '../../../api/BuildCacheConfiguration';
 import type { RushConfigurationProject } from '../../../api/RushConfigurationProject';
 import { ProjectChangeAnalyzer } from '../../ProjectChangeAnalyzer';
@@ -25,7 +26,7 @@ describe(ProjectBuildCache.name, () => {
       }
     } as unknown as ProjectChangeAnalyzer;
 
-    const subject: ProjectBuildCache | undefined = await ProjectBuildCache.tryGetProjectBuildCache({
+    const subject: ProjectBuildCache | undefined = await ProjectBuildCache.tryGetProjectBuildCacheAsync({
       buildCacheConfiguration: {
         buildCacheEnabled: options.hasOwnProperty('enabled') ? options.enabled : true,
         getCacheEntryId: (opts: IGenerateCacheEntryIdOptions) =>
@@ -50,7 +51,7 @@ describe(ProjectBuildCache.name, () => {
     return subject;
   }
 
-  describe(ProjectBuildCache.tryGetProjectBuildCache.name, () => {
+  describe(ProjectBuildCache.tryGetProjectBuildCacheAsync.name, () => {
     it('returns a ProjectBuildCache with a calculated cacheId value', async () => {
       const subject: ProjectBuildCache = (await prepareSubject({}))!;
       expect(subject['_cacheId']).toMatchInlineSnapshot(

@@ -1,13 +1,20 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
 import * as path from 'path';
 
-import { FileSystem, type IPackageJson, JsonFile, LockFile, NewlineKind } from '@rushstack/node-core-library';
-import { Utilities } from '../utilities/Utilities';
+import {
+  FileSystem,
+  type IPackageJson,
+  JsonFile,
+  LockFile,
+  NewlineKind,
+  PackageName,
+  type IParsedPackageNameOrError
+} from '@rushstack/node-core-library';
+import { Colorize } from '@rushstack/terminal';
 
-import { PackageName, type IParsedPackageNameOrError } from '@rushstack/node-core-library';
+import { Utilities } from '../utilities/Utilities';
 import type { RushConfiguration } from '../api/RushConfiguration';
 import { PackageJsonEditor } from '../api/PackageJsonEditor';
 import { InstallHelpers } from './installManager/InstallHelpers';
@@ -17,7 +24,7 @@ import { LastInstallFlag } from '../api/LastInstallFlag';
 import { RushCommandLineParser } from '../cli/RushCommandLineParser';
 import type { PnpmPackageManager } from '../api/packageManager/PnpmPackageManager';
 
-interface IAutoinstallerOptions {
+export interface IAutoinstallerOptions {
   autoinstallerName: string;
   rushConfiguration: RushConfiguration;
   rushGlobalFolder: RushGlobalFolder;
@@ -79,7 +86,7 @@ export class Autoinstaller {
       );
     }
 
-    await InstallHelpers.ensureLocalPackageManager(
+    await InstallHelpers.ensureLocalPackageManagerAsync(
       this._rushConfiguration,
       this._rushGlobalFolder,
       RushConstants.defaultMaxInstallAttempts,
@@ -118,7 +125,8 @@ export class Autoinstaller {
       // Example: ../common/autoinstallers/my-task/node_modules
       const nodeModulesFolder: string = `${autoinstallerFullPath}/${RushConstants.nodeModulesFolderName}`;
       const flagPath: string = `${nodeModulesFolder}/rush-autoinstaller.flag`;
-      const isLastInstallFlagDirty: boolean = !lastInstallFlag.isValid() || !FileSystem.exists(flagPath);
+      const isLastInstallFlagDirty: boolean =
+        !(await lastInstallFlag.isValidAsync()) || !FileSystem.exists(flagPath);
 
       if (isLastInstallFlagDirty || lock.dirtyWhenAcquired) {
         if (FileSystem.exists(nodeModulesFolder)) {
@@ -127,13 +135,16 @@ export class Autoinstaller {
         }
 
         // Copy: .../common/autoinstallers/my-task/.npmrc
-        Utilities.syncNpmrc(this._rushConfiguration.commonRushConfigFolder, autoinstallerFullPath);
+        Utilities.syncNpmrc({
+          sourceNpmrcFolder: this._rushConfiguration.commonRushConfigFolder,
+          targetNpmrcFolder: autoinstallerFullPath
+        });
 
         this._logIfConsoleOutputIsNotRestricted(
           `Installing dependencies under ${autoinstallerFullPath}...\n`
         );
 
-        Utilities.executeCommand({
+        await Utilities.executeCommandAsync({
           command: this._rushConfiguration.packageManagerToolFilename,
           args: ['install', '--frozen-lockfile'],
           workingDirectory: autoinstallerFullPath,
@@ -141,7 +152,7 @@ export class Autoinstaller {
         });
 
         // Create file: ../common/autoinstallers/my-task/.rush/temp/last-install.flag
-        lastInstallFlag.create();
+        await lastInstallFlag.createAsync();
 
         FileSystem.writeFile(
           flagPath,
@@ -159,7 +170,7 @@ export class Autoinstaller {
   }
 
   public async updateAsync(): Promise<void> {
-    await InstallHelpers.ensureLocalPackageManager(
+    await InstallHelpers.ensureLocalPackageManagerAsync(
       this._rushConfiguration,
       this._rushGlobalFolder,
       RushConstants.defaultMaxInstallAttempts,
@@ -209,9 +220,12 @@ export class Autoinstaller {
 
     this._logIfConsoleOutputIsNotRestricted();
 
-    Utilities.syncNpmrc(this._rushConfiguration.commonRushConfigFolder, this.folderFullPath);
+    Utilities.syncNpmrc({
+      sourceNpmrcFolder: this._rushConfiguration.commonRushConfigFolder,
+      targetNpmrcFolder: this.folderFullPath
+    });
 
-    Utilities.executeCommand({
+    await Utilities.executeCommandAsync({
       command: this._rushConfiguration.packageManagerToolFilename,
       args: ['install'],
       workingDirectory: this.folderFullPath,
@@ -221,8 +235,8 @@ export class Autoinstaller {
     this._logIfConsoleOutputIsNotRestricted();
 
     if (this._rushConfiguration.packageManager === 'npm') {
-      this._logIfConsoleOutputIsNotRestricted(colors.bold('Running "npm shrinkwrap"...'));
-      Utilities.executeCommand({
+      this._logIfConsoleOutputIsNotRestricted(Colorize.bold('Running "npm shrinkwrap"...'));
+      await Utilities.executeCommandAsync({
         command: this._rushConfiguration.packageManagerToolFilename,
         args: ['shrinkwrap'],
         workingDirectory: this.folderFullPath,
@@ -243,11 +257,11 @@ export class Autoinstaller {
     });
     if (oldFileContents !== newFileContents) {
       this._logIfConsoleOutputIsNotRestricted(
-        colors.green('The shrinkwrap file has been updated.') + '  Please commit the updated file:'
+        Colorize.green('The shrinkwrap file has been updated.') + '  Please commit the updated file:'
       );
       this._logIfConsoleOutputIsNotRestricted(`\n  ${this.shrinkwrapFilePath}`);
     } else {
-      this._logIfConsoleOutputIsNotRestricted(colors.green('Already up to date.'));
+      this._logIfConsoleOutputIsNotRestricted(Colorize.green('Already up to date.'));
     }
   }
 

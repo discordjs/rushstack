@@ -11,7 +11,7 @@
  *
  * @public
  */
-export const enum ConsoleMessageId {
+export enum ConsoleMessageId {
   /**
    * "Analysis will use the bundled TypeScript version ___"
    */
@@ -42,6 +42,11 @@ export const enum ConsoleMessageId {
    * "Writing package typings: ___"
    */
   WritingDtsRollup = 'console-writing-dts-rollup',
+
+  /**
+   * "Generating ___ API report: ___"
+   */
+  WritingApiReport = 'console-writing-api-report',
 
   /**
    * "You have changed the public API signature for this project.

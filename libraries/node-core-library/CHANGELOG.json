@@ -2,6 +2,254 @@
   "name": "@rushstack/node-core-library",
   "entries": [
     {
+      "version": "5.7.0",
+      "tag": "@rushstack/node-core-library_v5.7.0",
+      "date": "Wed, 21 Aug 2024 05:43:04 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Introduce a `Text.splitByNewLines` function."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.6.0",
+      "tag": "@rushstack/node-core-library_v5.6.0",
+      "date": "Mon, 12 Aug 2024 22:16:04 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add a `ignoreSchemaField` option to the `JsonSchema.validateObject` options to ignore `$schema` properties and add an options object argument to `JsonSchema.validateObjectWithCallback` with the same `ignoreSchemaField` option."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.5.1",
+      "tag": "@rushstack/node-core-library_v5.5.1",
+      "date": "Sat, 27 Jul 2024 00:10:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Include CHANGELOG.md in published releases again"
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.5.0",
+      "tag": "@rushstack/node-core-library_v5.5.0",
+      "date": "Tue, 16 Jul 2024 00:36:21 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add support for the `jsonSyntax` option to the `JsonFile.save`, `JsonFile.saveAsync`, and `JsonFile.stringify` functions."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.4.1",
+      "tag": "@rushstack/node-core-library_v5.4.1",
+      "date": "Thu, 30 May 2024 00:13:05 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Include missing `type` modifiers on type-only exports."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.4.0",
+      "tag": "@rushstack/node-core-library_v5.4.0",
+      "date": "Wed, 29 May 2024 02:03:50 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add a `throwOnSignal` option to the `Executable.waitForExitAsync` to control if that function should throw if the process is terminated with a signal."
+          },
+          {
+            "comment": "Add a `signal` property to the result of `Executable.waitForExitAsync` that includes a signal if the process was termianted by a signal."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.3.0",
+      "tag": "@rushstack/node-core-library_v5.3.0",
+      "date": "Tue, 28 May 2024 15:10:09 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Include typings for the the `\"files\"` field in `IPackageJson`."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.2.0",
+      "tag": "@rushstack/node-core-library_v5.2.0",
+      "date": "Tue, 28 May 2024 00:09:47 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Include typings for the `\"exports\"` and `\"typesVersions\"` fields in `IPackageJson`."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.1.0",
+      "tag": "@rushstack/node-core-library_v5.1.0",
+      "date": "Sat, 25 May 2024 04:54:07 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Update `JsonFile` to support loading JSON files that include object keys that are members of `Object.prototype`."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Fix an issue with `JsonSchema` where `\"uniqueItems\": true` would throw an error if the `\"item\"` type in the schema has `\"type\": \"object\"`."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.0.0",
+      "tag": "@rushstack/node-core-library_v5.0.0",
+      "date": "Thu, 23 May 2024 02:26:56 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "Replace z-schema with ajv for schema validation and add support for json-schema draft-07."
+          },
+          {
+            "comment": "Remove the deprecated `Async.sleep` function."
+          },
+          {
+            "comment": "Convert `FileConstants` and `FolderConstants` from enums to const objects."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Fix an issue where waitForExitAsync() might reject before all output was collected"
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.3.0",
+      "tag": "@rushstack/node-core-library_v4.3.0",
+      "date": "Wed, 15 May 2024 06:04:17 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Rename `Async.sleep` to `Async.sleepAsync`. The old function is marked as `@deprecated`."
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.2.1",
+      "tag": "@rushstack/node-core-library_v4.2.1",
+      "date": "Fri, 10 May 2024 05:33:33 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix a bug in `Async.forEachAsync` where weight wasn't respected."
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.2.0",
+      "tag": "@rushstack/node-core-library_v4.2.0",
+      "date": "Mon, 06 May 2024 15:11:04 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add a new `weighted: true` option to the `Async.forEachAsync` method that allows each element to specify how much of the allowed parallelism the callback uses."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Add a new `weighted: true` option to the `Async.mapAsync` method that allows each element to specify how much of the allowed parallelism the callback uses."
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.1.0",
+      "tag": "@rushstack/node-core-library_v4.1.0",
+      "date": "Wed, 10 Apr 2024 15:10:08 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add `writeBuffersToFile` and `writeBuffersToFileAsync` methods to `FileSystem` for efficient writing of concatenated files."
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.0.2",
+      "tag": "@rushstack/node-core-library_v4.0.2",
+      "date": "Wed, 21 Feb 2024 21:45:28 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Replace the dependency on the `colors` package with `Colorize` from `@rushstack/terminal`."
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.0.1",
+      "tag": "@rushstack/node-core-library_v4.0.1",
+      "date": "Tue, 20 Feb 2024 21:45:10 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Remove a no longer needed dependency on the `colors` package"
+          }
+        ]
+      }
+    },
+    {
+      "version": "4.0.0",
+      "tag": "@rushstack/node-core-library_v4.0.0",
+      "date": "Mon, 19 Feb 2024 21:54:27 GMT",
+      "comments": {
+        "major": [
+          {
+            "comment": "(BREAKING CHANGE) Remove the Terminal and related APIs (Colors, AsciEscape, etc). These have been moved into the @rushstack/terminal package. See https://github.com/microsoft/rushstack/pull/3176 for details."
+          },
+          {
+            "comment": "Remove deprecated `FileSystem.readFolder`, `FileSystem.readFolderAsync`, and `LegacyAdapters.sortStable` APIs."
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Graduate `Async` and `MinimumHeap` APIs from beta to public."
+          }
+        ]
+      }
+    },
+    {
+      "version": "3.66.1",
+      "tag": "@rushstack/node-core-library_v3.66.1",
+      "date": "Sat, 17 Feb 2024 06:24:35 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix broken link to API documentation"
+          }
+        ]
+      }
+    },
+    {
       "version": "3.66.0",
       "tag": "@rushstack/node-core-library_v3.66.0",
       "date": "Thu, 08 Feb 2024 01:09:21 GMT",

@@ -1,6 +1,211 @@
 # Change Log - @microsoft/api-extractor
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 7.47.7
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 7.47.6
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 7.47.5
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 7.47.4
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 7.47.3
+Wed, 24 Jul 2024 00:12:14 GMT
+
+### Patches
+
+- Fix an edge case when discarding the file extension from the "reportFileName" setting and improve its documentation
+
+## 7.47.2
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 7.47.1
+Tue, 16 Jul 2024 00:36:22 GMT
+
+_Version update only_
+
+## 7.47.0
+Mon, 03 Jun 2024 23:43:15 GMT
+
+### Minor changes
+
+- Add support for re-exporting modules using syntax such as `export * as ns from './file'` (GitHub #2780)
+
+## 7.46.2
+Thu, 30 May 2024 00:13:05 GMT
+
+### Patches
+
+- Include missing `type` modifiers on type-only exports.
+
+## 7.46.1
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 7.46.0
+Wed, 29 May 2024 00:10:52 GMT
+
+### Minor changes
+
+- Bump TSDoc dependencies.
+
+## 7.45.1
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 7.45.0
+Tue, 28 May 2024 00:09:47 GMT
+
+### Minor changes
+
+- Improve support for resolving the `tsdoc-metadata.json` to include the folder referenced by a `types` field in an `"exports"` field and an `"typesVersions"` field in addition to `"types"`, `"typings"`, and `"tsdocMetadata"` fields.
+
+## 7.44.1
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 7.44.0
+Fri, 24 May 2024 00:15:08 GMT
+
+### Minor changes
+
+- Add support for "variants" of API reports which include or exclude items by release tag
+
+## 7.43.8
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 7.43.7
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 7.43.6
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 7.43.5
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 7.43.4
+Fri, 10 May 2024 05:33:33 GMT
+
+_Version update only_
+
+## 7.43.3
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 7.43.2
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 7.43.1
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 7.43.0
+Tue, 19 Mar 2024 15:10:18 GMT
+
+### Minor changes
+
+- Upgrade the bundled compiler engine to TypeScript 5.4.2
+
+## 7.42.3
+Sun, 03 Mar 2024 20:58:12 GMT
+
+_Version update only_
+
+## 7.42.2
+Sat, 02 Mar 2024 02:22:23 GMT
+
+_Version update only_
+
+## 7.42.1
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 7.42.0
+Thu, 29 Feb 2024 07:11:45 GMT
+
+### Minor changes
+
+- Add glob support in `bundledPackages`
+
+### Patches
+
+- Don't mark items documented with {@inheritDoc} references to package-external items as "undocumented"
+
+## 7.41.1
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 7.41.0
+Sat, 24 Feb 2024 23:02:51 GMT
+
+### Minor changes
+
+- Replace const enums with conventional enums to allow for compatibility with JavaScript consumers.
+
+## 7.40.6
+Wed, 21 Feb 2024 21:45:28 GMT
+
+### Patches
+
+- Replace the dependency on the `colors` package with `Colorize` from `@rushstack/terminal`.
+
+## 7.40.5
+Wed, 21 Feb 2024 08:55:47 GMT
+
+### Patches
+
+- Fix an issue where imports were trimmed from external packages based when generating .d.ts rollups
+
+## 7.40.4
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 7.40.3
+Mon, 19 Feb 2024 21:54:27 GMT
+
+_Version update only_
+
+## 7.40.2
+Sat, 17 Feb 2024 06:24:34 GMT
+
+### Patches
+
+- Fix broken link to API documentation
 
 ## 7.40.1
 Thu, 08 Feb 2024 01:09:21 GMT

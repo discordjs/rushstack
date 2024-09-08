@@ -15,13 +15,16 @@ import { TSDocConfigFile } from '@microsoft/tsdoc-config';
 import { TSDocConfiguration } from '@microsoft/tsdoc';
 
 // @public
+export type ApiReportVariant = 'public' | 'beta' | 'alpha' | 'complete';
+
+// @public
 export class CompilerState {
     static create(extractorConfig: ExtractorConfig, options?: ICompilerStateCreateOptions): CompilerState;
     readonly program: unknown;
 }
 
 // @public
-export const enum ConsoleMessageId {
+export enum ConsoleMessageId {
     ApiReportCopied = "console-api-report-copied",
     ApiReportCreated = "console-api-report-created",
     ApiReportFolderMissing = "console-api-report-folder-missing",
@@ -32,6 +35,7 @@ export const enum ConsoleMessageId {
     FoundTSDocMetadata = "console-found-tsdoc-metadata",
     Preamble = "console-preamble",
     UsingCustomTSDocConfig = "console-using-custom-tsdoc-config",
+    WritingApiReport = "console-writing-api-report",
     WritingDocModelFile = "console-writing-doc-model-file",
     WritingDtsRollup = "console-writing-dts-rollup"
 }
@@ -44,7 +48,7 @@ export class Extractor {
     static get version(): string;
 }
 
-// @public
+// @public @sealed
 export class ExtractorConfig {
     readonly alphaTrimmedFilePath: string;
     readonly apiJsonFilePath: string;
@@ -74,8 +78,13 @@ export class ExtractorConfig {
     readonly projectFolder: string;
     readonly projectFolderUrl: string | undefined;
     readonly publicTrimmedFilePath: string;
-    readonly reportFilePath: string;
-    readonly reportTempFilePath: string;
+    readonly reportConfigs: readonly IExtractorConfigApiReport[];
+    // @deprecated
+    get reportFilePath(): string;
+    readonly reportFolder: string;
+    // @deprecated
+    get reportTempFilePath(): string;
+    readonly reportTempFolder: string;
     readonly rollupEnabled: boolean;
     readonly skipLibCheck: boolean;
     readonly testMode: boolean;
@@ -91,7 +100,7 @@ export class ExtractorConfig {
 }
 
 // @public
-export const enum ExtractorLogLevel {
+export enum ExtractorLogLevel {
     Error = "error",
     Info = "info",
     None = "none",
@@ -122,7 +131,7 @@ export class ExtractorMessage {
 }
 
 // @public
-export const enum ExtractorMessageCategory {
+export enum ExtractorMessageCategory {
     Compiler = "Compiler",
     Console = "console",
     Extractor = "Extractor",
@@ -130,7 +139,7 @@ export const enum ExtractorMessageCategory {
 }
 
 // @public
-export const enum ExtractorMessageId {
+export enum ExtractorMessageId {
     CyclicInheritDoc = "ae-cyclic-inherit-doc",
     DifferentReleaseTags = "ae-different-release-tags",
     ExtraReleaseTag = "ae-extra-release-tag",
@@ -176,6 +185,7 @@ export interface IConfigApiReport {
     reportFileName?: string;
     reportFolder?: string;
     reportTempFolder?: string;
+    reportVariants?: ApiReportVariant[];
 }
 
 // @public
@@ -237,6 +247,12 @@ export interface IConfigMessageReportingTable {
 export interface IConfigTsdocMetadata {
     enabled: boolean;
     tsdocMetadataFilePath?: string;
+}
+
+// @public
+export interface IExtractorConfigApiReport {
+    fileName: string;
+    variant: ApiReportVariant;
 }
 
 // @public

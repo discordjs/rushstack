@@ -1,6 +1,230 @@
 # Change Log - @rushstack/heft
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 0.67.0
+Wed, 21 Aug 2024 05:43:04 GMT
+
+### Minor changes
+
+- Add a `slashNormalizedBuildFolderPath` property to `HeftConfiguration`.
+
+## 0.66.26
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 0.66.25
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 0.66.24
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 0.66.23
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 0.66.22
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 0.66.21
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 0.66.20
+Tue, 16 Jul 2024 00:36:21 GMT
+
+### Patches
+
+- Update schemas/templates/heft.json to reflect new settings
+
+## 0.66.19
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 0.66.18
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 0.66.17
+Thu, 30 May 2024 00:13:05 GMT
+
+_Version update only_
+
+## 0.66.16
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 0.66.15
+Wed, 29 May 2024 00:10:52 GMT
+
+_Version update only_
+
+## 0.66.14
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.66.13
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 0.66.12
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 0.66.11
+Fri, 24 May 2024 00:15:08 GMT
+
+_Version update only_
+
+## 0.66.10
+Thu, 23 May 2024 02:26:56 GMT
+
+### Patches
+
+- Update schema definitions to conform to strict schema-type validation.
+
+## 0.66.9
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 0.66.8
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 0.66.7
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 0.66.6
+Fri, 10 May 2024 05:33:33 GMT
+
+_Version update only_
+
+## 0.66.5
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 0.66.4
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 0.66.3
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.66.2
+Tue, 19 Mar 2024 15:10:18 GMT
+
+_Version update only_
+
+## 0.66.1
+Fri, 15 Mar 2024 00:12:40 GMT
+
+### Patches
+
+- Fix internal error when run 'heft clean'
+
+## 0.66.0
+Tue, 05 Mar 2024 01:19:24 GMT
+
+### Minor changes
+
+- Add new metrics value `bootDurationMs` to track the boot overhead of Heft before the action starts executing the subtasks. Update the start time used to compute `taskTotalExecutionMs` to be the beginning of operation graph execution. Fix the value of `taskTotalExecutionMs` field to be in milliseconds instead of seconds. Add new metrics value `totalUptimeMs` to track how long watch mode sessions are kept alive.
+
+## 0.65.10
+Sun, 03 Mar 2024 20:58:12 GMT
+
+_Version update only_
+
+## 0.65.9
+Sat, 02 Mar 2024 02:22:23 GMT
+
+_Version update only_
+
+## 0.65.8
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 0.65.7
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 0.65.6
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 0.65.5
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 0.65.4
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 0.65.3
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 0.65.2
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 0.65.1
+Tue, 20 Feb 2024 21:45:10 GMT
+
+### Patches
+
+- Fix a recent regression causing `Error: Cannot find module 'colors/safe'` (GitHub #4525)
+- Remove a no longer needed dependency on the `chokidar` package
+
+## 0.65.0
+Tue, 20 Feb 2024 16:10:52 GMT
+
+### Minor changes
+
+- Add a built-in `set-environment-variables-plugin` task plugin to set environment variables.
+
+## 0.64.8
+Mon, 19 Feb 2024 21:54:26 GMT
+
+_Version update only_
+
+## 0.64.7
+Sat, 17 Feb 2024 06:24:34 GMT
+
+### Patches
+
+- Fix broken link to API documentation
 
 ## 0.64.6
 Thu, 08 Feb 2024 01:09:21 GMT

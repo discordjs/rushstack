@@ -1,14 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-jest.mock('colors/safe', () => {
-  const colors = jest.requireActual('colors/safe');
-  colors.enabled = true;
-  return colors;
-});
-
-import { JsonFile, StringBufferTerminalProvider, Terminal } from '@rushstack/node-core-library';
-import { PrintUtilities } from '@rushstack/terminal';
+import { JsonFile } from '@rushstack/node-core-library';
+import { PrintUtilities, StringBufferTerminalProvider, Terminal } from '@rushstack/terminal';
 
 import { CustomTipId, CustomTipsConfiguration, type ICustomTipsJson } from '../CustomTipsConfiguration';
 import { RushConfiguration } from '../RushConfiguration';
@@ -68,7 +62,7 @@ describe(CustomTipsConfiguration.name, () => {
         appendOutputLines(terminalProvider.getOutput(), 'normal output');
         appendOutputLines(terminalProvider.getErrorOutput(), 'error output');
         appendOutputLines(terminalProvider.getWarningOutput(), 'warning output');
-        appendOutputLines(terminalProvider.getVerbose(), 'verbose output');
+        appendOutputLines(terminalProvider.getVerboseOutput(), 'verbose output');
         appendOutputLines(terminalProvider.getDebugOutput(), 'debug output');
 
         expect(outputLines).toMatchSnapshot();

@@ -3,8 +3,7 @@
 
 import type * as argparse from 'argparse';
 
-import { CommandLineParameterProvider, type ICommandLineParserData } from './CommandLineParameterProvider';
-import type { ICommandLineParserOptions } from './CommandLineParser';
+import { CommandLineParameterProvider } from './CommandLineParameterProvider';
 import { CommandLineParserExitError } from './CommandLineParserExitError';
 
 /**
@@ -107,18 +106,10 @@ export abstract class CommandLineAction extends CommandLineParameterProvider {
   }
 
   /**
-   * This is called internally by CommandLineParser.execute()
-   * @internal
-   */
-  public _processParsedData(parserOptions: ICommandLineParserOptions, data: ICommandLineParserData): void {
-    super._processParsedData(parserOptions, data);
-  }
-
-  /**
    * Invoked by CommandLineParser.onExecute().
    * @internal
    */
-  public _execute(): Promise<void> {
+  public _executeAsync(): Promise<void> {
     return this.onExecute();
   }
 
@@ -126,7 +117,7 @@ export abstract class CommandLineAction extends CommandLineParameterProvider {
    * {@inheritDoc CommandLineParameterProvider._getArgumentParser}
    * @internal
    */
-  protected _getArgumentParser(): argparse.ArgumentParser {
+  public _getArgumentParser(): argparse.ArgumentParser {
     // override
     if (!this._argumentParser) {
       // We will improve this in the future
@@ -138,6 +129,9 @@ export abstract class CommandLineAction extends CommandLineParameterProvider {
 
   /**
    * Your subclass should implement this hook to perform the operation.
+   *
+   * @remarks
+   * In a future release, this function will be renamed to onExecuteAsync
    */
   protected abstract onExecute(): Promise<void>;
 }

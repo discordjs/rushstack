@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import * as path from 'path';
+import * as crypto from 'crypto';
 
 import { FileSystem } from '@rushstack/node-core-library';
 import type { RushConfiguration } from './RushConfiguration';
@@ -11,6 +12,10 @@ import { RushConstants } from '../logic/RushConstants';
 import { CommonVersionsConfiguration } from './CommonVersionsConfiguration';
 import { RepoStateFile } from '../logic/RepoStateFile';
 import type { PnpmPackageManager } from './packageManager/PnpmPackageManager';
+import { PnpmOptionsConfiguration } from '../logic/pnpm/PnpmOptionsConfiguration';
+import type { IPackageJson } from '@rushstack/node-core-library';
+import { SubspacePnpmfileConfiguration } from '../logic/pnpm/SubspacePnpmfileConfiguration';
+import type { ISubspacePnpmfileShimSettings } from '../logic/pnpm/IPnpmfile';
 
 /**
  * @internal
@@ -22,11 +27,14 @@ export interface ISubspaceOptions {
 }
 
 interface ISubspaceDetail {
-  subspaceConfigFolder: string;
-  subspaceTempFolder: string;
+  subspaceConfigFolderPath: string;
+  subspacePnpmPatchesFolderPath: string;
+  subspaceTempFolderPath: string;
   tempShrinkwrapFilename: string;
   tempShrinkwrapPreinstallFilename: string;
 }
+
+interface IPackageJsonLite extends Omit<IPackageJson, 'version'> {}
 
 /**
  * This represents the subspace configurations for a repository, based on the "subspaces.json"
@@ -42,6 +50,10 @@ export class Subspace {
 
   private _detail: ISubspaceDetail | undefined;
 
+  private _cachedPnpmOptions: PnpmOptionsConfiguration | undefined = undefined;
+  // If true, then _cachedPnpmOptions has been initialized.
+  private _cachedPnpmOptionsInitialized: boolean = false;
+
   public constructor(options: ISubspaceOptions) {
     this.subspaceName = options.subspaceName;
     this._rushConfiguration = options.rushConfiguration;
@@ -56,19 +68,55 @@ export class Subspace {
     return this._projects;
   }
 
+  /**
+   * Returns the parsed contents of the pnpm-config.json config file.
+   * @beta
+   */
+  public getPnpmOptions(): PnpmOptionsConfiguration | undefined {
+    if (!this._cachedPnpmOptionsInitialized) {
+      // Calculate these outside the try/catch block since their error messages shouldn't be annotated:
+      const subspaceConfigFolder: string = this.getSubspaceConfigFolderPath();
+      const subspaceTempFolder: string = this.getSubspaceTempFolderPath();
+      try {
+        this._cachedPnpmOptions = PnpmOptionsConfiguration.loadFromJsonFileOrThrow(
+          `${subspaceConfigFolder}/${RushConstants.pnpmConfigFilename}`,
+          subspaceTempFolder
+        );
+        this._cachedPnpmOptionsInitialized = true;
+      } catch (e) {
+        if (FileSystem.isNotExistError(e as Error)) {
+          this._cachedPnpmOptions = undefined;
+          this._cachedPnpmOptionsInitialized = true;
+        } else {
+          throw new Error(
+            `The subspace "${this.subspaceName}" has an invalid pnpm-config.json file:\n` + e.message
+          );
+        }
+      }
+    }
+    return this._cachedPnpmOptions;
+  }
+
   private _ensureDetail(): ISubspaceDetail {
     if (!this._detail) {
       const rushConfiguration: RushConfiguration = this._rushConfiguration;
-      let subspaceConfigFolder: string;
+      let subspaceConfigFolderPath: string;
+      let subspacePnpmPatchesFolderPath: string;
 
       if (rushConfiguration.subspacesFeatureEnabled) {
+        if (!rushConfiguration.pnpmOptions.useWorkspaces) {
+          throw new Error(
+            `The Rush subspaces feature is enabled.  You must set useWorkspaces=true in pnpm-config.json.`
+          );
+        }
+
         // If this subspace doesn't have a configuration folder, check if it is in the project folder itself
         // if the splitWorkspaceCompatibility option is enabled in the subspace configuration
 
         // Example: C:\MyRepo\common\config\subspaces\my-subspace
         const standardSubspaceConfigFolder: string = `${rushConfiguration.commonFolder}/config/subspaces/${this.subspaceName}`;
 
-        subspaceConfigFolder = standardSubspaceConfigFolder;
+        subspaceConfigFolderPath = standardSubspaceConfigFolder;
 
         if (this._splitWorkspaceCompatibility && this.subspaceName.startsWith('split_')) {
           if (FileSystem.exists(standardSubspaceConfigFolder + '/pnpm-lock.yaml')) {
@@ -86,35 +134,52 @@ export class Subspace {
           }
           const project: RushConfigurationProject = this._projects[0];
 
-          subspaceConfigFolder = `${project.projectFolder}/subspace/${this.subspaceName}`;
+          subspaceConfigFolderPath = `${project.projectFolder}/subspace/${this.subspaceName}`;
+
+          // Ensure that this project does not have it's own pnpmfile.cjs or .npmrc file
+          if (FileSystem.exists(`${project.projectFolder}/.npmrc`)) {
+            throw new Error(
+              `The project level configuration file ${project.projectFolder}/.npmrc is no longer valid. Please use a ${subspaceConfigFolderPath}/.npmrc file instead.`
+            );
+          }
+          if (FileSystem.exists(`${project.projectFolder}/.pnpmfile.cjs`)) {
+            throw new Error(
+              `The project level configuration file ${project.projectFolder}/.pnpmfile.cjs is no longer valid. Please use a ${subspaceConfigFolderPath}/.pnpmfile.cjs file instead.`
+            );
+          }
         }
 
-        if (!FileSystem.exists(subspaceConfigFolder)) {
+        if (!FileSystem.exists(subspaceConfigFolderPath)) {
           throw new Error(
             `The configuration folder for the "${this.subspaceName}" subspace does not exist: ` +
-              subspaceConfigFolder
+              subspaceConfigFolderPath
           );
         }
+
+        subspacePnpmPatchesFolderPath = `${subspaceConfigFolderPath}/${RushConstants.pnpmPatchesCommonFolderName}`;
       } else {
         // Example: C:\MyRepo\common\config\rush
-        subspaceConfigFolder = rushConfiguration.commonRushConfigFolder;
+        subspaceConfigFolderPath = rushConfiguration.commonRushConfigFolder;
+        // Example: C:\MyRepo\common\pnpm-patches
+        subspacePnpmPatchesFolderPath = `${rushConfiguration.commonFolder}/${RushConstants.pnpmPatchesCommonFolderName}`;
       }
 
       // Example: C:\MyRepo\common\temp
       const commonTempFolder: string =
         EnvironmentConfiguration.rushTempFolderOverride || rushConfiguration.commonTempFolder;
 
-      let subspaceTempFolder: string;
+      let subspaceTempFolderPath: string;
       if (rushConfiguration.subspacesFeatureEnabled) {
         // Example: C:\MyRepo\common\temp\my-subspace
-        subspaceTempFolder = path.join(commonTempFolder, this.subspaceName);
+        subspaceTempFolderPath = path.join(commonTempFolder, this.subspaceName);
       } else {
         // Example: C:\MyRepo\common\temp
-        subspaceTempFolder = commonTempFolder;
+        subspaceTempFolderPath = commonTempFolder;
       }
 
       // Example: C:\MyRepo\common\temp\my-subspace\pnpm-lock.yaml
-      const tempShrinkwrapFilename: string = subspaceTempFolder + `/${rushConfiguration.shrinkwrapFilename}`;
+      const tempShrinkwrapFilename: string =
+        subspaceTempFolderPath + `/${rushConfiguration.shrinkwrapFilename}`;
 
       /// From "C:\MyRepo\common\temp\pnpm-lock.yaml" --> "C:\MyRepo\common\temp\pnpm-lock-preinstall.yaml"
       const parsedPath: path.ParsedPath = path.parse(tempShrinkwrapFilename);
@@ -124,8 +189,9 @@ export class Subspace {
       );
 
       this._detail = {
-        subspaceConfigFolder,
-        subspaceTempFolder,
+        subspaceConfigFolderPath,
+        subspacePnpmPatchesFolderPath,
+        subspaceTempFolderPath,
         tempShrinkwrapFilename,
         tempShrinkwrapPreinstallFilename
       };
@@ -139,8 +205,19 @@ export class Subspace {
    * Example: `common/config/subspaces/my-subspace`
    * @beta
    */
-  public getSubspaceConfigFolder(): string {
-    return this._ensureDetail().subspaceConfigFolder;
+  public getSubspaceConfigFolderPath(): string {
+    return this._ensureDetail().subspaceConfigFolderPath;
+  }
+
+  /**
+   * Returns the full path of the folder containing this subspace's configuration files such as `pnpm-lock.yaml`.
+   *
+   * Example: `common/config/subspaces/my-subspace/pnpm-patches` (subspaces feature enabled)
+   * Example: `common/config/pnpm-patches` (subspaces feature disabled)
+   * @beta
+   */
+  public getSubspacePnpmPatchesFolderPath(): string {
+    return this._ensureDetail().subspacePnpmPatchesFolderPath;
   }
 
   /**
@@ -149,8 +226,8 @@ export class Subspace {
    * Example: `common/temp/subspaces/my-subspace`
    * @beta
    */
-  public getSubspaceTempFolder(): string {
-    return this._ensureDetail().subspaceTempFolder;
+  public getSubspaceTempFolderPath(): string {
+    return this._ensureDetail().subspaceTempFolderPath;
   }
 
   /**
@@ -189,35 +266,64 @@ export class Subspace {
    * @beta
    */
   public getCommonVersionsFilePath(): string {
-    return this._ensureDetail().subspaceConfigFolder + '/' + RushConstants.commonVersionsFilename;
+    return this._ensureDetail().subspaceConfigFolderPath + '/' + RushConstants.commonVersionsFilename;
   }
 
   /**
-   * Gets the settings from the common-versions.json config file for a specific variant.
-   * @param variant - The name of the current variant in use by the active command.
+   * Gets the path to the pnpm-config.json config file for this subspace.
+   *
+   * Example: `C:\MyRepo\common\subspaces\my-subspace\pnpm-config.json`
+   * @beta
+   */
+  public getPnpmConfigFilePath(): string {
+    return this._ensureDetail().subspaceConfigFolderPath + '/' + RushConstants.pnpmConfigFilename;
+  }
+
+  /**
+   * Gets the settings from the common-versions.json config file.
    * @beta
    */
   public getCommonVersions(): CommonVersionsConfiguration {
     const commonVersionsFilename: string = this.getCommonVersionsFilePath();
     if (!this._commonVersionsConfiguration) {
-      this._commonVersionsConfiguration = CommonVersionsConfiguration.loadFromFile(commonVersionsFilename);
+      this._commonVersionsConfiguration = CommonVersionsConfiguration.loadFromFile(
+        commonVersionsFilename,
+        this._rushConfiguration
+      );
     }
     return this._commonVersionsConfiguration;
   }
 
   /**
-   * Gets the path to the repo-state.json file for a specific variant.
-   * @param variant - The name of the current variant in use by the active command.
+   * Gets the ensureConsistentVersions property from the common-versions.json config file,
+   * or from the rush.json file if it isn't defined in common-versions.json
    * @beta
    */
-  public getRepoStateFilePath(): string {
-    return this._ensureDetail().subspaceConfigFolder + '/' + RushConstants.repoStateFilename;
+  public get shouldEnsureConsistentVersions(): boolean {
+    // If the subspaces feature is enabled, or the ensureConsistentVersions field is defined, return the value of the field
+    if (
+      this._rushConfiguration.subspacesFeatureEnabled ||
+      this.getCommonVersions().ensureConsistentVersions !== undefined
+    ) {
+      return !!this.getCommonVersions().ensureConsistentVersions;
+    }
+
+    // Fallback to ensureConsistentVersions in rush.json if subspaces is not enabled,
+    // or if the setting is not defined in the common-versions.json file
+    return this._rushConfiguration.ensureConsistentVersions;
   }
 
   /**
-   * Gets the contents from the repo-state.json file for a specific variant.
+   * Gets the path to the repo-state.json file.
+   * @beta
+   */
+  public getRepoStateFilePath(): string {
+    return this._ensureDetail().subspaceConfigFolderPath + '/' + RushConstants.repoStateFilename;
+  }
+
+  /**
+   * Gets the contents from the repo-state.json file.
    * @param subspaceName - The name of the subspace in use by the active command.
-   * @param variant - The name of the current variant in use by the active command.
    * @beta
    */
   public getRepoState(): RepoStateFile {
@@ -226,12 +332,11 @@ export class Subspace {
   }
 
   /**
-   * Gets the committed shrinkwrap file name for a specific variant.
-   * @param variant - The name of the current variant in use by the active command.
+   * Gets the committed shrinkwrap file name.
    * @beta
    */
   public getCommittedShrinkwrapFilename(): string {
-    const subspaceConfigFolderPath: string = this.getSubspaceConfigFolder();
+    const subspaceConfigFolderPath: string = this.getSubspaceConfigFolderPath();
     return path.join(subspaceConfigFolderPath, this._rushConfiguration.shrinkwrapFilename);
   }
 
@@ -243,12 +348,12 @@ export class Subspace {
    * @beta
    */
   public getPnpmfilePath(): string {
-    const subspaceConfigFolderPath: string = this.getSubspaceConfigFolder();
+    const subspaceConfigFolderPath: string = this.getSubspaceConfigFolderPath();
 
-    return path.join(
-      subspaceConfigFolderPath,
-      (this._rushConfiguration.packageManagerWrapper as PnpmPackageManager).pnpmfileFilename
-    );
+    const pnpmFilename: string = (this._rushConfiguration.packageManagerWrapper as PnpmPackageManager)
+      .pnpmfileFilename;
+
+    return path.join(subspaceConfigFolderPath, pnpmFilename);
   }
 
   /**
@@ -262,5 +367,94 @@ export class Subspace {
   /** @internal */
   public _addProject(project: RushConfigurationProject): void {
     this._projects.push(project);
+  }
+
+  /**
+   * Returns hash value of injected dependencies in related package.json.
+   * @beta
+   */
+  public getPackageJsonInjectedDependenciesHash(): string | undefined {
+    const allPackageJson: IPackageJsonLite[] = [];
+
+    const relatedProjects: RushConfigurationProject[] = [];
+    const subspacePnpmfileShimSettings: ISubspacePnpmfileShimSettings =
+      SubspacePnpmfileConfiguration.getSubspacePnpmfileShimSettings(this._rushConfiguration, this);
+
+    for (const rushProject of this.getProjects()) {
+      const injectedDependencies: Array<string> =
+        subspacePnpmfileShimSettings?.subspaceProjects[rushProject.packageName]?.injectedDependencies || [];
+      if (injectedDependencies.length === 0) {
+        continue;
+      }
+
+      const injectedDependencySet: Set<string> = new Set(injectedDependencies);
+
+      for (const dependencyProject of rushProject.dependencyProjects) {
+        if (injectedDependencySet.has(dependencyProject.packageName)) {
+          relatedProjects.push(dependencyProject);
+        }
+      }
+    }
+
+    // this means no injected dependencies found for current subspace
+    if (relatedProjects.length === 0) {
+      return undefined;
+    }
+
+    const allWorkspaceProjectSet: Set<string> = new Set(
+      this._rushConfiguration.projects.map((rushProject) => rushProject.packageName)
+    );
+
+    // get all related package.json
+    while (relatedProjects.length > 0) {
+      const rushProject: RushConfigurationProject = relatedProjects.pop()!;
+      // collect fields that could update the `pnpm-lock.yaml`
+      const {
+        name,
+        bin,
+        dependencies,
+        devDependencies,
+        peerDependencies,
+        optionalDependencies,
+        dependenciesMeta,
+        peerDependenciesMeta,
+        resolutions
+      } = rushProject.packageJson;
+
+      // special handing for peerDependencies
+      // for workspace packages, the version range is meaningless here.
+      if (peerDependencies) {
+        for (const packageName of Object.keys(peerDependencies)) {
+          if (allWorkspaceProjectSet.has(packageName)) {
+            peerDependencies[packageName] = 'workspace:*';
+          }
+        }
+      }
+
+      allPackageJson.push({
+        name,
+        bin,
+        dependencies,
+        devDependencies,
+        peerDependencies,
+        optionalDependencies,
+        dependenciesMeta,
+        peerDependenciesMeta,
+        resolutions
+      });
+
+      relatedProjects.push(...rushProject.dependencyProjects);
+    }
+
+    const collator: Intl.Collator = new Intl.Collator('en');
+    allPackageJson.sort((pa, pb) => collator.compare(pa.name, pb.name));
+    const hash: crypto.Hash = crypto.createHash('sha1');
+    for (const packageFile of allPackageJson) {
+      hash.update(JSON.stringify(packageFile));
+    }
+
+    const packageJsonInjectedDependenciesHash: string = hash.digest('hex');
+
+    return packageJsonInjectedDependenciesHash;
   }
 }

@@ -16,7 +16,7 @@
    * path segment in the "$schema" field for all your Rush config files.  This will ensure
    * correct error-underlining and tab-completion for editors such as VS Code.
    */
-  "rushVersion": "5.113.4",
+  "rushVersion": "5.129.7",
 
   /**
    * The next field selects which package manager should be installed and determines its version.
@@ -26,7 +26,7 @@
    * Specify one of: "pnpmVersion", "npmVersion", or "yarnVersion".  See the Rush documentation
    * for details about these alternatives.
    */
-  "pnpmVersion": "8.7.6",
+  "pnpmVersion": "8.15.9",
 
   // "npmVersion": "6.14.15",
   // "yarnVersion": "1.9.4",
@@ -42,7 +42,7 @@
    * LTS schedule: https://nodejs.org/en/about/releases/
    * LTS versions: https://nodejs.org/en/download/releases/
    */
-  "nodeSupportedVersionRange": ">=16.13.0 <17.0.0 || >=18.15.0 <19.0.0 || >=20.9.0 <21.0.0",
+  "nodeSupportedVersionRange": ">=18.15.0 <19.0.0 || >=20.9.0 <21.0.0",
 
   /**
    * If the version check above fails, Rush will display a message showing the current
@@ -63,20 +63,7 @@
    * pre-LTS versions in preparation for supporting the first LTS version, you can use this setting
    * to disable Rush's warning.
    */
-  "suppressNodeLtsWarning": false,
-
-  /**
-   * If you would like the version specifiers for your dependencies to be consistent, then
-   * uncomment this line. This is effectively similar to running "rush check" before any
-   * of the following commands:
-   *
-   *   rush install, rush update, rush link, rush version, rush publish
-   *
-   * In some cases you may want this turned on, but need to allow certain packages to use a different
-   * version. In those cases, you will need to add an entry to the "allowedAlternativeVersions"
-   * section of the common-versions.json.
-   */
-  "ensureConsistentVersions": true,
+  // "suppressNodeLtsWarning": false,
 
   /**
    * Large monorepos can become intimidating for newcomers if project folder paths don't follow
@@ -272,37 +259,6 @@
   },
 
   /**
-   * Installation variants allow you to maintain a parallel set of configuration files that can be
-   * used to build the entire monorepo with an alternate set of dependencies.  For example, suppose
-   * you upgrade all your projects to use a new release of an important framework, but during a transition period
-   * you intend to maintain compatibility with the old release.  In this situation, you probably want your
-   * CI validation to build the entire repo twice: once with the old release, and once with the new release.
-   *
-   * Rush "installation variants" correspond to sets of config files located under this folder:
-   *
-   *   common/config/rush/variants/<variant_name>
-   *
-   * The variant folder can contain an alternate common-versions.json file.  Its "preferredVersions" field can be used
-   * to select older versions of dependencies (within a loose SemVer range specified in your package.json files).
-   * To install a variant, run "rush install --variant <variant_name>".
-   *
-   * For more details and instructions, see this article:  https://rushjs.io/pages/advanced/installation_variants/
-   */
-  "variants": [
-    // {
-    //   /**
-    //    * The folder name for this variant.
-    //    */
-    //   "variantName": "old-sdk",
-    //
-    //   /**
-    //    * An informative description
-    //    */
-    //   "description": "Build this repo using the previous release of the SDK"
-    // }
-  ],
-
-  /**
    * Rush can collect anonymous telemetry about everyday developer activity such as
    * success/failure of installs, builds, and other operations.  You can use this to identify
    * problems with your toolchain or Rush itself.  THIS TELEMETRY IS NOT SHARED WITH MICROSOFT.
@@ -348,6 +304,13 @@
     //    * The path to the project folder, relative to the rush.json config file.
     //    */
     //   "projectFolder": "apps/my-app",
+    //
+    //   /**
+    //    * This field is only used if "subspacesEnabled" is true in subspaces.json.
+    //    * It specifies the subspace that this project belongs to.  If omitted, then the
+    //    * project belongs to the "default" subspace.
+    //    */
+    //   // "subspaceName": "my-subspace",
     //
     //   /**
     //    * An optional category for usage in the "browser-approved-packages.json"
@@ -421,7 +384,6 @@
     //    */
     //   // "tags": [ "1.0.0-release", "frontend-team" ]
     // },
-
     // "apps" folder (alphabetical order)
     {
       "packageName": "@microsoft/api-documenter",
@@ -529,6 +491,20 @@
       "tags": ["api-extractor-tests"]
     },
     {
+      "packageName": "api-extractor-lib4-test",
+      "projectFolder": "build-tests/api-extractor-lib4-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false,
+      "tags": ["api-extractor-tests"]
+    },
+    {
+      "packageName": "api-extractor-lib5-test",
+      "projectFolder": "build-tests/api-extractor-lib5-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false,
+      "tags": ["api-extractor-tests"]
+    },
+    {
       "packageName": "api-extractor-scenarios",
       "projectFolder": "build-tests/api-extractor-scenarios",
       "reviewCategory": "tests",
@@ -567,19 +543,22 @@
       "packageName": "eslint-7-7-test",
       "projectFolder": "build-tests/eslint-7-7-test",
       "reviewCategory": "tests",
-      "shouldPublish": false
+      "shouldPublish": false,
+      "cyclicDependencyProjects": ["@rushstack/eslint-config"]
     },
     {
       "packageName": "eslint-7-11-test",
       "projectFolder": "build-tests/eslint-7-11-test",
       "reviewCategory": "tests",
-      "shouldPublish": false
+      "shouldPublish": false,
+      "cyclicDependencyProjects": ["@rushstack/eslint-config"]
     },
     {
       "packageName": "eslint-7-test",
       "projectFolder": "build-tests/eslint-7-test",
       "reviewCategory": "tests",
-      "shouldPublish": false
+      "shouldPublish": false,
+      "cyclicDependencyProjects": ["@rushstack/eslint-config"]
     },
     {
       "packageName": "eslint-8-test",
@@ -592,6 +571,13 @@
       "projectFolder": "build-tests/eslint-bulk-suppressions-test",
       "reviewCategory": "tests",
       "shouldPublish": false
+    },
+    {
+      "packageName": "eslint-bulk-suppressions-test-legacy",
+      "projectFolder": "build-tests/eslint-bulk-suppressions-test-legacy",
+      "reviewCategory": "tests",
+      "shouldPublish": false,
+      "cyclicDependencyProjects": ["@rushstack/eslint-config"]
     },
     {
       "packageName": "package-extractor-test-01",
@@ -863,10 +849,32 @@
       "shouldPublish": false
     },
     {
-      "packageName": "install-test-workspace",
-      "projectFolder": "build-tests/install-test-workspace",
+      "packageName": "rush-lib-test",
+      "projectFolder": "build-tests-subspace/rush-lib-test",
       "reviewCategory": "tests",
-      "shouldPublish": false
+      "shouldPublish": false,
+      "subspaceName": "build-tests-subspace"
+    },
+    {
+      "packageName": "rush-sdk-test",
+      "projectFolder": "build-tests-subspace/rush-sdk-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false,
+      "subspaceName": "build-tests-subspace"
+    },
+    {
+      "packageName": "typescript-newest-test",
+      "projectFolder": "build-tests-subspace/typescript-newest-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false,
+      "subspaceName": "build-tests-subspace"
+    },
+    {
+      "packageName": "typescript-v4-test",
+      "projectFolder": "build-tests-subspace/typescript-v4-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false,
+      "subspaceName": "build-tests-subspace"
     },
     {
       "packageName": "localization-plugin-test-01",
@@ -955,6 +963,12 @@
       "cyclicDependencyProjects": ["@rushstack/heft-node-rig"]
     },
     {
+      "packageName": "@rushstack/heft-localization-typings-plugin",
+      "projectFolder": "heft-plugins/heft-localization-typings-plugin",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
       "packageName": "@rushstack/heft-sass-plugin",
       "projectFolder": "heft-plugins/heft-sass-plugin",
       "reviewCategory": "libraries",
@@ -1032,6 +1046,12 @@
       "shouldPublish": true
     },
     {
+      "packageName": "@rushstack/lookup-by-path",
+      "projectFolder": "libraries/lookup-by-path",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
       "packageName": "@rushstack/module-minifier",
       "projectFolder": "libraries/module-minifier",
       "reviewCategory": "libraries",
@@ -1098,7 +1118,8 @@
       "packageName": "@rushstack/terminal",
       "projectFolder": "libraries/terminal",
       "reviewCategory": "libraries",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "decoupledLocalDependencies": ["@rushstack/heft-node-rig", "@rushstack/heft"]
     },
     {
       "packageName": "@rushstack/tree-pattern",
@@ -1203,6 +1224,12 @@
       "versionPolicyName": "rush"
     },
     {
+      "packageName": "@rushstack/rush-resolver-cache-plugin",
+      "projectFolder": "rush-plugins/rush-resolver-cache-plugin",
+      "reviewCategory": "libraries",
+      "versionPolicyName": "rush"
+    },
+    {
       "packageName": "@rushstack/rush-serve-plugin",
       "projectFolder": "rush-plugins/rush-serve-plugin",
       "reviewCategory": "libraries",
@@ -1269,6 +1296,12 @@
       "projectFolder": "webpack/webpack-deep-imports-plugin",
       "reviewCategory": "libraries",
       "shouldPublish": false // for now
+    },
+    {
+      "packageName": "@rushstack/webpack-workspace-resolve-plugin",
+      "projectFolder": "webpack/webpack-workspace-resolve-plugin",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
     },
     {
       "packageName": "@rushstack/set-webpack-public-path-plugin",

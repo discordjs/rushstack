@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type { ITerminal } from '@rushstack/node-core-library';
-import { PrintUtilities } from '@rushstack/terminal';
-import colors from 'colors/safe';
+import type { ITerminal } from '@rushstack/terminal';
+import { Colorize, PrintUtilities } from '@rushstack/terminal';
+
 import type { IPhase } from '../../api/CommandLineConfiguration';
 import type {
   ICreateOperationsContext,
@@ -79,7 +79,6 @@ const TIMELINE_CHART_SYMBOLS: Record<OperationStatus, string> = {
   [OperationStatus.Ready]: '?',
   [OperationStatus.Queued]: '?',
   [OperationStatus.Executing]: '?',
-  [OperationStatus.RemoteExecuting]: '?',
   [OperationStatus.Success]: '#',
   [OperationStatus.SuccessWithWarning]: '!',
   [OperationStatus.Failure]: '!',
@@ -89,22 +88,28 @@ const TIMELINE_CHART_SYMBOLS: Record<OperationStatus, string> = {
   [OperationStatus.NoOp]: '%'
 };
 
+const COBUILD_REPORTABLE_STATUSES: Set<OperationStatus> = new Set([
+  OperationStatus.Success,
+  OperationStatus.SuccessWithWarning,
+  OperationStatus.Failure,
+  OperationStatus.Blocked
+]);
+
 /**
  * Timeline - colorizer for each operation status
  */
 const TIMELINE_CHART_COLORIZER: Record<OperationStatus, (string: string) => string> = {
-  [OperationStatus.Waiting]: colors.yellow,
-  [OperationStatus.Ready]: colors.yellow,
-  [OperationStatus.Queued]: colors.yellow,
-  [OperationStatus.Executing]: colors.yellow,
-  [OperationStatus.RemoteExecuting]: colors.yellow,
-  [OperationStatus.Success]: colors.green,
-  [OperationStatus.SuccessWithWarning]: colors.yellow,
-  [OperationStatus.Failure]: colors.red,
-  [OperationStatus.Blocked]: colors.red,
-  [OperationStatus.Skipped]: colors.green,
-  [OperationStatus.FromCache]: colors.green,
-  [OperationStatus.NoOp]: colors.gray
+  [OperationStatus.Waiting]: Colorize.yellow,
+  [OperationStatus.Ready]: Colorize.yellow,
+  [OperationStatus.Queued]: Colorize.yellow,
+  [OperationStatus.Executing]: Colorize.yellow,
+  [OperationStatus.Success]: Colorize.green,
+  [OperationStatus.SuccessWithWarning]: Colorize.yellow,
+  [OperationStatus.Failure]: Colorize.red,
+  [OperationStatus.Blocked]: Colorize.red,
+  [OperationStatus.Skipped]: Colorize.green,
+  [OperationStatus.FromCache]: Colorize.green,
+  [OperationStatus.NoOp]: Colorize.gray
 };
 
 interface ITimelineRecord {
@@ -232,7 +237,7 @@ export function _printTimeline({ terminal, result, cobuildConfiguration }: IPrin
 
   function getChartSymbol(record: ITimelineRecord): string {
     const { isExecuteByOtherCobuildRunner, status } = record;
-    if (isExecuteByOtherCobuildRunner) {
+    if (isExecuteByOtherCobuildRunner && COBUILD_REPORTABLE_STATUSES.has(status)) {
       hasCobuildSymbol = true;
       return 'C';
     }
@@ -251,11 +256,11 @@ export function _printTimeline({ terminal, result, cobuildConfiguration }: IPrin
     const length: number = endIdx - startIdx + 1;
 
     const chart: string =
-      colors.gray('-'.repeat(startIdx)) +
+      Colorize.gray('-'.repeat(startIdx)) +
       TIMELINE_CHART_COLORIZER[status](getChartSymbol(record).repeat(length)) +
-      colors.gray('-'.repeat(chartWidth - endIdx));
+      Colorize.gray('-'.repeat(chartWidth - endIdx));
     terminal.writeLine(
-      `${colors.cyan(name.padStart(longestNameLength))} ${chart} ${colors.white(
+      `${Colorize.cyan(name.padStart(longestNameLength))} ${chart} ${Colorize.white(
         durationString.padStart(longestDurationLength) + 's'
       )}`
     );
@@ -307,7 +312,7 @@ export function _printTimeline({ terminal, result, cobuildConfiguration }: IPrin
     }
 
     for (const [phase, duration] of durationByPhase.entries()) {
-      terminal.writeLine(`  ${colors.cyan(phase.name.padStart(maxPhaseName))} ${duration.toFixed(1)}s`);
+      terminal.writeLine(`  ${Colorize.cyan(phase.name.padStart(maxPhaseName))} ${duration.toFixed(1)}s`);
     }
   }
 

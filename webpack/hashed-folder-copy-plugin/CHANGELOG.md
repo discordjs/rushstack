@@ -1,6 +1,211 @@
 # Change Log - @rushstack/hashed-folder-copy-plugin
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 1.0.56
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 1.0.55
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 1.0.54
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 1.0.53
+Sat, 27 Jul 2024 00:10:27 GMT
+
+_Version update only_
+
+## 1.0.52
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 1.0.51
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 1.0.50
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 1.0.49
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 1.0.48
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 1.0.47
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 1.0.46
+Thu, 30 May 2024 00:13:05 GMT
+
+_Version update only_
+
+## 1.0.45
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 1.0.44
+Wed, 29 May 2024 00:10:52 GMT
+
+_Version update only_
+
+## 1.0.43
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 1.0.42
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 1.0.41
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 1.0.40
+Fri, 24 May 2024 00:15:08 GMT
+
+_Version update only_
+
+## 1.0.39
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 1.0.38
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 1.0.37
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 1.0.36
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 1.0.35
+Fri, 10 May 2024 05:33:34 GMT
+
+_Version update only_
+
+## 1.0.34
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 1.0.33
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 1.0.32
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 1.0.31
+Tue, 19 Mar 2024 15:10:18 GMT
+
+_Version update only_
+
+## 1.0.30
+Fri, 15 Mar 2024 00:12:40 GMT
+
+_Version update only_
+
+## 1.0.29
+Tue, 05 Mar 2024 01:19:24 GMT
+
+_Version update only_
+
+## 1.0.28
+Sun, 03 Mar 2024 20:58:13 GMT
+
+_Version update only_
+
+## 1.0.27
+Sat, 02 Mar 2024 02:22:24 GMT
+
+_Version update only_
+
+## 1.0.26
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 1.0.25
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 1.0.24
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 1.0.23
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 1.0.22
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 1.0.21
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 1.0.20
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 1.0.19
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 1.0.18
+Tue, 20 Feb 2024 16:10:53 GMT
+
+_Version update only_
+
+## 1.0.17
+Mon, 19 Feb 2024 21:54:27 GMT
+
+_Version update only_
+
+## 1.0.16
+Sat, 17 Feb 2024 06:24:35 GMT
+
+_Version update only_
 
 ## 1.0.15
 Thu, 08 Feb 2024 01:09:21 GMT

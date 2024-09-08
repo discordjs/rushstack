@@ -1,6 +1,297 @@
 # Change Log - @rushstack/heft-web-rig
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Mon, 26 Aug 2024 02:00:11 GMT and should not be manually modified.
+
+## 0.24.30
+Mon, 26 Aug 2024 02:00:11 GMT
+
+_Version update only_
+
+## 0.24.29
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 0.24.28
+Wed, 14 Aug 2024 22:37:32 GMT
+
+_Version update only_
+
+## 0.24.27
+Tue, 13 Aug 2024 18:17:05 GMT
+
+_Version update only_
+
+## 0.24.26
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 0.24.25
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 0.24.24
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 0.24.23
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 0.24.22
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 0.24.21
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 0.24.20
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 0.24.19
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 0.24.18
+Tue, 11 Jun 2024 00:21:28 GMT
+
+_Version update only_
+
+## 0.24.17
+Fri, 07 Jun 2024 15:10:25 GMT
+
+_Version update only_
+
+## 0.24.16
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 0.24.15
+Thu, 30 May 2024 00:13:05 GMT
+
+_Version update only_
+
+## 0.24.14
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 0.24.13
+Wed, 29 May 2024 00:10:52 GMT
+
+_Version update only_
+
+## 0.24.12
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.24.11
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 0.24.10
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 0.24.9
+Fri, 24 May 2024 00:15:08 GMT
+
+_Version update only_
+
+## 0.24.8
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 0.24.7
+Fri, 17 May 2024 00:10:40 GMT
+
+_Version update only_
+
+## 0.24.6
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 0.24.5
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 0.24.4
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 0.24.3
+Fri, 10 May 2024 05:33:34 GMT
+
+_Version update only_
+
+## 0.24.2
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 0.24.1
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 0.24.0
+Wed, 10 Apr 2024 21:59:39 GMT
+
+### Minor changes
+
+- Bump ESLint to ~8.57.0.
+
+## 0.23.6
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.23.5
+Fri, 29 Mar 2024 05:46:41 GMT
+
+_Version update only_
+
+## 0.23.4
+Thu, 28 Mar 2024 22:42:23 GMT
+
+_Version update only_
+
+## 0.23.3
+Thu, 28 Mar 2024 18:11:12 GMT
+
+_Version update only_
+
+## 0.23.2
+Wed, 27 Mar 2024 19:47:21 GMT
+
+_Version update only_
+
+## 0.23.1
+Wed, 20 Mar 2024 02:09:14 GMT
+
+_Version update only_
+
+## 0.23.0
+Tue, 19 Mar 2024 15:10:18 GMT
+
+### Minor changes
+
+- Upgrade to TypeScript 5.4
+
+## 0.22.9
+Fri, 15 Mar 2024 00:12:40 GMT
+
+_Version update only_
+
+## 0.22.8
+Tue, 05 Mar 2024 01:19:24 GMT
+
+_Version update only_
+
+## 0.22.7
+Sun, 03 Mar 2024 20:58:13 GMT
+
+_Version update only_
+
+## 0.22.6
+Sat, 02 Mar 2024 02:22:24 GMT
+
+_Version update only_
+
+## 0.22.5
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 0.22.4
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 0.22.3
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 0.22.2
+Mon, 26 Feb 2024 16:10:56 GMT
+
+_Version update only_
+
+## 0.22.1
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 0.22.0
+Thu, 22 Feb 2024 06:31:58 GMT
+
+### Minor changes
+
+- Update the "asset/resource" rule to include file extensions for font assets
+
+## 0.21.5
+Thu, 22 Feb 2024 05:54:17 GMT
+
+_Version update only_
+
+## 0.21.4
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 0.21.3
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 0.21.2
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 0.21.1
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 0.21.0
+Tue, 20 Feb 2024 16:10:52 GMT
+
+### Minor changes
+
+- Include the `set-environment-variables-plugin` plugin from the `@rushstack/heft` package to set the `BROWSERSLIST_IGNORE_OLD_DATA` environment variable to `1` to suppress the warning printed when the `browserslist` package decides it's out of date.
+- Rename the `sass-typings` task in the "library" profile to `sass`, which more accurately describes what the task does and matches what's in the "app" profile.
+
+## 0.20.10
+Mon, 19 Feb 2024 21:54:27 GMT
+
+_Version update only_
+
+## 0.20.9
+Sat, 17 Feb 2024 06:24:35 GMT
+
+_Version update only_
 
 ## 0.20.8
 Thu, 08 Feb 2024 01:09:21 GMT

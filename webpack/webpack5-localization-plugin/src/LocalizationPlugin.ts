@@ -30,6 +30,7 @@ import type { IAssetPathOptions } from './webpackInterfaces';
 import { markEntity, getMark } from './utilities/EntityMarker';
 import { processLocalizedAsset, processNonLocalizedAsset } from './AssetProcessor';
 import { getHashFunction, type HashFn, updateAssetHashes } from './trueHashes';
+import { chunkIsJs } from './utilities/chunkUtilities';
 
 /**
  * @public
@@ -294,7 +295,7 @@ export class LocalizationPlugin implements WebpackPluginInstance {
         {
           name: PLUGIN_NAME,
           // Generating derived assets, but explicitly want to create them *after* asset optimization
-          stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE - 1
+          stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_DEV_TOOLING - 1
         },
         async (): Promise<void> => {
           const locales: Set<string> = new Set(this._resolvedLocalizedStrings.keys());
@@ -309,6 +310,10 @@ export class LocalizationPlugin implements WebpackPluginInstance {
           const localizedChunkNames: string[] = [];
 
           for (const chunk of chunks) {
+            if (!chunkIsJs(chunk, chunkGraph)) {
+              continue;
+            }
+
             const isLocalized: boolean = _chunkHasLocalizedModules(
               chunkGraph,
               chunk,
@@ -408,7 +413,7 @@ export class LocalizationPlugin implements WebpackPluginInstance {
 
             if (callback) {
               try {
-                callback(localizationStats);
+                callback(localizationStats, compilation);
               } catch (e) {
                 /* swallow errors from the callback */
               }

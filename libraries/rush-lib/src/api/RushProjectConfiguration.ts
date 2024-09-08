@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { AlreadyReportedError, Async, type ITerminal, Path } from '@rushstack/node-core-library';
+import { AlreadyReportedError, Async, Path } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 import { ConfigurationFile, InheritanceType } from '@rushstack/heft-config-file';
 import { RigConfig } from '@rushstack/rig-package';
 
@@ -39,6 +40,40 @@ export interface IRushProjectJson {
   disableBuildCacheForProject?: boolean;
 
   operationSettings?: IOperationSettings[];
+}
+
+/** @alpha */
+export interface IRushPhaseSharding {
+  /**
+   * The number of shards to create.
+   */
+  count: number;
+
+  /**
+   * The format of the argument to pass to the command to indicate the shard index and count.
+   *
+   * @defaultValue `--shard={shardIndex}/{shardCount}`
+   */
+  shardArgumentFormat?: string;
+
+  /**
+   * An optional argument to pass to the command to indicate the output folder for the shard.
+   *  It must end with `{shardIndex}`.
+   *
+   * @defaultValue `--shard-output-folder=.rush/operations/{phaseName}/shards/{shardIndex}`.
+   */
+  outputFolderArgumentFormat?: string;
+
+  /**
+   * Configuration for the shard operation. All other configuration applies to the collator operation.
+   */
+  shardOperationSettings?: {
+    /**
+     * How many concurrency units this operation should take up during execution. The maximum concurrent units is
+     *  determined by the -p flag.
+     */
+    weight?: number;
+  };
 }
 
 /**
@@ -91,6 +126,20 @@ export interface IOperationSettings {
    * calculating final hash value when reading and writing the build cache
    */
   dependsOnAdditionalFiles?: string[];
+
+  /**
+   * An optional config object for sharding the operation. If specified, the operation will be sharded
+   * into multiple invocations. The `count` property specifies the number of shards to create. The
+   * `shardArgumentFormat` property specifies the format of the argument to pass to the command to
+   * indicate the shard index and count. The default value is `--shard={shardIndex}/{shardCount}`.
+   */
+  sharding?: IRushPhaseSharding;
+
+  /**
+   * How many concurrency units this operation should take up during execution. The maximum concurrent units is
+   *  determined by the -p flag.
+   */
+  weight?: number;
 }
 
 interface IOldRushProjectJson {
@@ -292,12 +341,18 @@ export class RushProjectConfiguration {
    * Examines the list of source files for the project and the target phase and returns a reason
    * why the project cannot enable the build cache for that phase, or undefined if it is safe to so do.
    */
-  public getCacheDisabledReason(trackedFileNames: Iterable<string>, phaseName: string): string | undefined {
+  public getCacheDisabledReason(
+    trackedFileNames: Iterable<string>,
+    phaseName: string,
+    isNoOp: boolean
+  ): string | undefined {
+    // Skip no-op operations as they won't have any output/cacheable things.
+    if (isNoOp) {
+      return undefined;
+    }
     if (this.disableBuildCacheForProject) {
       return 'Caching has been disabled for this project.';
     }
-
-    const normalizedProjectRelativeFolder: string = Path.convertToSlashes(this.project.projectRelativeFolder);
 
     const operationSettings: IOperationSettings | undefined =
       this.operationSettingsByOperationName.get(phaseName);
@@ -313,6 +368,7 @@ export class RushProjectConfiguration {
     if (!outputFolderNames) {
       return;
     }
+    const normalizedProjectRelativeFolder: string = Path.convertToSlashes(this.project.projectRelativeFolder);
 
     const normalizedOutputFolders: string[] = outputFolderNames.map(
       (outputFolderName) => `${normalizedProjectRelativeFolder}/${outputFolderName}/`
@@ -333,6 +389,32 @@ export class RushProjectConfiguration {
         `and are considered project output: ${inputOutputFiles.join(', ')}`
       );
     }
+  }
+
+  /**
+   * Source of truth for whether a project is unable to use the build cache for a given phase.
+   * As some operations may not have a rush-project.json file defined at all, but may be no-op operations
+   *  we'll want to ignore those completely.
+   */
+  public static getCacheDisabledReasonForProject(options: {
+    projectConfiguration: RushProjectConfiguration | undefined;
+    trackedFileNames: Iterable<string>;
+    phaseName: string;
+    isNoOp: boolean;
+  }): string | undefined {
+    const { projectConfiguration, trackedFileNames, phaseName, isNoOp } = options;
+    if (isNoOp) {
+      return undefined;
+    }
+
+    if (!projectConfiguration) {
+      return (
+        `Project does not have a ${RushConstants.rushProjectConfigFilename} configuration file, ` +
+        'or one provided by a rig, so it does not support caching.'
+      );
+    }
+
+    return projectConfiguration.getCacheDisabledReason(trackedFileNames, phaseName, isNoOp);
   }
 
   /**

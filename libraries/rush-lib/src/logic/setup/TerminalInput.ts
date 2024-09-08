@@ -3,8 +3,8 @@
 
 import * as readline from 'readline';
 import * as process from 'process';
-import colors from 'colors/safe';
-import { AnsiEscape } from '@rushstack/node-core-library';
+
+import { AnsiEscape, Colorize } from '@rushstack/terminal';
 
 import { KeyboardLoop } from './KeyboardLoop';
 
@@ -36,8 +36,8 @@ class YesNoKeyboardLoop extends KeyboardLoop {
   }
 
   protected onStart(): void {
-    this.stderr.write(colors.green('==>') + ' ');
-    this.stderr.write(colors.bold(this.options.message));
+    this.stderr.write(Colorize.green('==>') + ' ');
+    this.stderr.write(Colorize.bold(this.options.message));
     let optionSuffix: string = '';
     switch (this.options.defaultValue) {
       case true:
@@ -50,7 +50,7 @@ class YesNoKeyboardLoop extends KeyboardLoop {
         optionSuffix = '(y/n)';
         break;
     }
-    this.stderr.write(' ' + colors.bold(optionSuffix) + ' ');
+    this.stderr.write(' ' + Colorize.bold(optionSuffix) + ' ');
   }
 
   protected onKeypress(character: string, key: readline.Key): void {
@@ -107,7 +107,7 @@ class PasswordKeyboardLoop extends KeyboardLoop {
 
     readline.cursorTo(this.stderr, 0);
     readline.clearLine(this.stderr, 1);
-    const prefix: string = colors.green('==>') + ' ' + colors.bold(this._options.message) + ' ';
+    const prefix: string = Colorize.green('==>') + ' ' + Colorize.bold(this._options.message) + ' ';
 
     this.stderr.write(prefix);
     let lineStartIndex: number = prefix.lastIndexOf('\n');
@@ -204,7 +204,7 @@ class PasswordKeyboardLoop extends KeyboardLoop {
 }
 
 export class TerminalInput {
-  private static async _readLine(): Promise<string> {
+  private static async _readLineAsync(): Promise<string> {
     const readlineInterface: readline.Interface = readline.createInterface({ input: process.stdin });
     try {
       return await new Promise((resolve, reject) => {
@@ -217,21 +217,21 @@ export class TerminalInput {
     }
   }
 
-  public static async promptYesNo(options: IPromptYesNoOptions): Promise<boolean> {
+  public static async promptYesNoAsync(options: IPromptYesNoOptions): Promise<boolean> {
     const keyboardLoop: YesNoKeyboardLoop = new YesNoKeyboardLoop(options);
     await keyboardLoop.startAsync();
     return keyboardLoop.result!;
   }
 
-  public static async promptLine(options: IPromptLineOptions): Promise<string> {
+  public static async promptLineAsync(options: IPromptLineOptions): Promise<string> {
     const stderr: NodeJS.WriteStream = process.stderr;
-    stderr.write(colors.green('==>') + ' ');
-    stderr.write(colors.bold(options.message));
+    stderr.write(Colorize.green('==>') + ' ');
+    stderr.write(Colorize.bold(options.message));
     stderr.write(' ');
-    return await TerminalInput._readLine();
+    return await TerminalInput._readLineAsync();
   }
 
-  public static async promptPasswordLine(options: IPromptLineOptions): Promise<string> {
+  public static async promptPasswordLineAsync(options: IPromptLineOptions): Promise<string> {
     const keyboardLoop: PasswordKeyboardLoop = new PasswordKeyboardLoop(options);
     await keyboardLoop.startAsync();
     return keyboardLoop.result;

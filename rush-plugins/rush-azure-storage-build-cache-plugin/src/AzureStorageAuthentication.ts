@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type { DeviceCodeCredential } from '@azure/identity';
+import type { TokenCredential } from '@azure/identity';
 import {
   BlobServiceClient,
   ContainerSASPermissions,
@@ -9,7 +9,7 @@ import {
   type SASQueryParameters,
   type ServiceGetUserDelegationKeyResponse
 } from '@azure/storage-blob';
-import type { ITerminal } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 import {
   AzureAuthenticationBase,
   type ICredentialResult,
@@ -57,13 +57,13 @@ export class AzureStorageAuthentication extends AzureAuthenticationBase {
     return cacheIdParts;
   }
 
-  protected async _getCredentialFromDeviceCodeAsync(
+  protected async _getCredentialFromTokenAsync(
     terminal: ITerminal,
-    deviceCodeCredential: DeviceCodeCredential
+    tokenCredential: TokenCredential
   ): Promise<ICredentialResult> {
     const blobServiceClient: BlobServiceClient = new BlobServiceClient(
       this._storageAccountUrl,
-      deviceCodeCredential
+      tokenCredential
     );
 
     const startsOn: Date = new Date();

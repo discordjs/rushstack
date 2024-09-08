@@ -11,7 +11,6 @@ export interface IPolicyValidatorOptions {
   bypassPolicyAllowed?: boolean;
   bypassPolicy?: boolean;
   allowShrinkwrapUpdates?: boolean;
-  shrinkwrapVariant?: string;
 }
 
 export async function validatePolicyAsync(
@@ -20,7 +19,7 @@ export async function validatePolicyAsync(
   options: IPolicyValidatorOptions
 ): Promise<void> {
   if (!options.bypassPolicy) {
-    GitEmailPolicy.validate(rushConfiguration, options);
+    await GitEmailPolicy.validateAsync(rushConfiguration, options);
     await EnvironmentPolicy.validateAsync(rushConfiguration, options);
     if (!options.allowShrinkwrapUpdates) {
       // Don't validate the shrinkwrap if updates are allowed, as it's likely to change

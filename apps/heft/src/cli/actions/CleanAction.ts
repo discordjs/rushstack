@@ -6,7 +6,7 @@ import {
   type CommandLineFlagParameter,
   type CommandLineStringListParameter
 } from '@rushstack/ts-command-line';
-import type { ITerminal } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 import { OperationStatus } from '@rushstack/operation-graph';
 
 import type { IHeftAction, IHeftActionOptions } from './IHeftAction';
@@ -80,6 +80,8 @@ export class CleanAction extends CommandLineAction implements IHeftAction {
     const { heftConfiguration } = this._internalHeftSession;
     const abortSignal: AbortSignal = ensureCliAbortSignal(this._terminal);
 
+    // Record this as the start of task execution.
+    this._metricsCollector.setStartTime();
     initializeHeft(heftConfiguration, this._terminal, this._verboseFlag.value);
     await runWithLoggingAsync(
       this._cleanFilesAsync.bind(this),

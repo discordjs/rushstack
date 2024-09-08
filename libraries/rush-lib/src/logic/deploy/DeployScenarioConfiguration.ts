@@ -2,10 +2,12 @@
 // See LICENSE in the project root for license information.
 
 import * as path from 'path';
-import { FileSystem, JsonFile, JsonSchema, Colors, type ITerminal } from '@rushstack/node-core-library';
+import { FileSystem, JsonFile, JsonSchema } from '@rushstack/node-core-library';
+import { Colorize, type ITerminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../../api/RushConfiguration';
 import schemaJson from '../../schemas/deploy-scenario.schema.json';
+import { RushConstants } from '../RushConstants';
 
 // Describes IDeployScenarioJson.projectSettings
 export interface IDeployScenarioProjectJson {
@@ -104,7 +106,7 @@ export class DeployScenarioConfiguration {
       throw new Error('The scenario config file was not found: ' + scenarioFilePath);
     }
 
-    terminal.writeLine(Colors.cyan(`Loading deployment scenario: ${scenarioFilePath}`));
+    terminal.writeLine(Colorize.cyan(`Loading deployment scenario: ${scenarioFilePath}`));
 
     const deployScenarioJson: IDeployScenarioJson = JsonFile.loadAndValidate(
       scenarioFilePath,
@@ -123,14 +125,14 @@ export class DeployScenarioConfiguration {
       if (!rushConfiguration.getProjectByName(projectSetting.projectName)) {
         throw new Error(
           `The "projectSettings" section refers to the project name "${projectSetting.projectName}"` +
-            ` which was not found in rush.json`
+            ` which was not found in ${RushConstants.rushJsonFilename}`
         );
       }
       for (const additionalProjectsToInclude of projectSetting.additionalProjectsToInclude || []) {
         if (!rushConfiguration.getProjectByName(projectSetting.projectName)) {
           throw new Error(
             `The "additionalProjectsToInclude" setting refers to the` +
-              ` project name "${additionalProjectsToInclude}" which was not found in rush.json`
+              ` project name "${additionalProjectsToInclude}" which was not found in ${RushConstants.rushJsonFilename}`
           );
         }
       }

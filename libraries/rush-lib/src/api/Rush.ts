@@ -3,12 +3,8 @@
 
 import * as path from 'path';
 
-import {
-  InternalError,
-  type IPackageJson,
-  type ITerminalProvider,
-  PackageJsonLookup
-} from '@rushstack/node-core-library';
+import { InternalError, type IPackageJson, PackageJsonLookup } from '@rushstack/node-core-library';
+import type { ITerminalProvider } from '@rushstack/terminal';
 
 import '../utilities/SetRushLibPath';
 
@@ -98,7 +94,7 @@ export class Rush {
       builtInPluginConfigurations: options.builtInPluginConfigurations
     });
     // eslint-disable-next-line no-console
-    parser.execute().catch(console.error); // CommandLineParser.execute() should never reject the promise
+    parser.executeAsync().catch(console.error); // CommandLineParser.executeAsync() should never reject the promise
   }
 
   /**
@@ -109,7 +105,8 @@ export class Rush {
   public static launchRushX(launcherVersion: string, options: ILaunchOptions): void {
     options = Rush._normalizeLaunchOptions(options);
     Rush._assignRushInvokedFolder();
-    RushXCommandLine.launchRushX(launcherVersion, options);
+    // eslint-disable-next-line no-console
+    RushXCommandLine.launchRushXAsync(launcherVersion, options).catch(console.error); // CommandLineParser.executeAsync() should never reject the promise
   }
 
   /**

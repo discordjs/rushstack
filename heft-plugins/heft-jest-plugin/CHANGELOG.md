@@ -1,6 +1,229 @@
 # Change Log - @rushstack/heft-jest-plugin
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 0.12.9
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 0.12.8
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 0.12.7
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 0.12.6
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 0.12.5
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 0.12.4
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 0.12.3
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 0.12.2
+Tue, 16 Jul 2024 00:36:22 GMT
+
+_Version update only_
+
+## 0.12.1
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 0.12.0
+Tue, 11 Jun 2024 00:21:28 GMT
+
+### Minor changes
+
+- Update the test reporter to report unchecked snapshots.
+
+## 0.11.39
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 0.11.38
+Thu, 30 May 2024 00:13:05 GMT
+
+_Version update only_
+
+## 0.11.37
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 0.11.36
+Wed, 29 May 2024 00:10:52 GMT
+
+_Version update only_
+
+## 0.11.35
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.11.34
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 0.11.33
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 0.11.32
+Fri, 24 May 2024 00:15:09 GMT
+
+_Version update only_
+
+## 0.11.31
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 0.11.30
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 0.11.29
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 0.11.28
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 0.11.27
+Fri, 10 May 2024 05:33:34 GMT
+
+_Version update only_
+
+## 0.11.26
+Wed, 08 May 2024 22:23:51 GMT
+
+_Version update only_
+
+## 0.11.25
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 0.11.24
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.11.23
+Tue, 19 Mar 2024 15:10:18 GMT
+
+_Version update only_
+
+## 0.11.22
+Fri, 15 Mar 2024 00:12:40 GMT
+
+_Version update only_
+
+## 0.11.21
+Tue, 05 Mar 2024 01:19:24 GMT
+
+_Version update only_
+
+## 0.11.20
+Sun, 03 Mar 2024 20:58:13 GMT
+
+_Version update only_
+
+## 0.11.19
+Sat, 02 Mar 2024 02:22:24 GMT
+
+_Version update only_
+
+## 0.11.18
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 0.11.17
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 0.11.16
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 0.11.15
+Mon, 26 Feb 2024 16:10:56 GMT
+
+### Patches
+
+- Make `@rushstack/terminal` a dependency because the reporter has a runtime dependency on that package.
+
+## 0.11.14
+Thu, 22 Feb 2024 05:54:17 GMT
+
+### Patches
+
+- Add a missing dependency on `@rushstack/terminal`
+
+## 0.11.13
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 0.11.12
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 0.11.11
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 0.11.10
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 0.11.9
+Tue, 20 Feb 2024 16:10:53 GMT
+
+_Version update only_
+
+## 0.11.8
+Mon, 19 Feb 2024 21:54:26 GMT
+
+_Version update only_
+
+## 0.11.7
+Sat, 17 Feb 2024 06:24:35 GMT
+
+_Version update only_
 
 ## 0.11.6
 Thu, 08 Feb 2024 01:09:21 GMT

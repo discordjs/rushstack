@@ -7,9 +7,12 @@ import { BaseInstallAction } from './BaseInstallAction';
 import type { IInstallManagerOptions } from '../../logic/base/BaseInstallManagerTypes';
 import type { RushCommandLineParser } from '../RushCommandLineParser';
 import { SelectionParameterSet } from '../parsing/SelectionParameterSet';
+import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
+import type { Subspace } from '../../api/Subspace';
 
 export class InstallAction extends BaseInstallAction {
   private readonly _checkOnlyParameter: CommandLineFlagParameter;
+  private readonly _resolutionOnlyParameter: CommandLineFlagParameter | undefined;
 
   public constructor(parser: RushCommandLineParser) {
     super({
@@ -30,20 +33,34 @@ export class InstallAction extends BaseInstallAction {
     });
 
     this._selectionParameters = new SelectionParameterSet(this.rushConfiguration, this, {
-      // Include lockfile processing since this expands the selection, and we need to select
-      // at least the same projects selected with the same query to "rush build"
-      includeExternalDependencies: true,
-      // Disable filtering because rush-project.json is riggable and therefore may not be available
-      enableFiltering: false
+      gitOptions: {
+        // Include lockfile processing since this expands the selection, and we need to select
+        // at least the same projects selected with the same query to "rush build"
+        includeExternalDependencies: true,
+        // Disable filtering because rush-project.json is riggable and therefore may not be available
+        enableFiltering: false
+      },
+      includeSubspaceSelector: true
     });
 
     this._checkOnlyParameter = this.defineFlagParameter({
       parameterLongName: '--check-only',
       description: `Only check the validity of the shrinkwrap file without performing an install.`
     });
+
+    if (this.rushConfiguration?.packageManager === 'pnpm') {
+      this._resolutionOnlyParameter = this.defineFlagParameter({
+        parameterLongName: '--resolution-only',
+        description: `Only perform dependency resolution, useful for ensuring peer dependendencies are up to date. Note that this flag is only supported when using the pnpm package manager.`
+      });
+    }
   }
 
-  protected async buildInstallOptionsAsync(): Promise<IInstallManagerOptions> {
+  protected async buildInstallOptionsAsync(): Promise<Omit<IInstallManagerOptions, 'subspace'>> {
+    const selectedProjects: Set<RushConfigurationProject> =
+      (await this._selectionParameters?.getSelectedProjectsAsync(this._terminal)) ??
+      new Set(this.rushConfiguration.projects);
+
     return {
       debug: this.parser.isDebug,
       allowShrinkwrapUpdates: false,
@@ -55,15 +72,19 @@ export class InstallAction extends BaseInstallAction {
       offline: this._offlineParameter.value!,
       networkConcurrency: this._networkConcurrencyParameter.value,
       collectLogFile: this._debugPackageManagerParameter.value!,
-      variant: this._variant.value,
       // Because the 'defaultValue' option on the _maxInstallAttempts parameter is set,
       // it is safe to assume that the value is not null
       maxInstallAttempts: this._maxInstallAttempts.value!,
       // These are derived independently of the selection for command line brevity
-      pnpmFilterArguments: await this._selectionParameters!.getPnpmFilterArgumentsAsync(this._terminal),
+      selectedProjects,
+      pnpmFilterArgumentValues:
+        (await this._selectionParameters?.getPnpmFilterArgumentValuesAsync(this._terminal)) ?? [],
       checkOnly: this._checkOnlyParameter.value,
-      subspace: this.getTargetSubspace(),
-      beforeInstallAsync: () => this.rushSession.hooks.beforeInstall.promise(this)
+      resolutionOnly: this._resolutionOnlyParameter?.value,
+      beforeInstallAsync: (subspace: Subspace) =>
+        this.rushSession.hooks.beforeInstall.promise(this, subspace),
+      afterInstallAsync: (subspace: Subspace) => this.rushSession.hooks.afterInstall.promise(this, subspace),
+      terminal: this._terminal
     };
   }
 }

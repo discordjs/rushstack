@@ -1,19 +1,13 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
-
 import type {
   CommandLineFlagParameter,
   CommandLineIntegerParameter,
-  CommandLineStringParameter
+  IRequiredCommandLineIntegerParameter
 } from '@rushstack/ts-command-line';
-import {
-  ConsoleTerminalProvider,
-  type ITerminal,
-  Terminal,
-  AlreadyReportedError
-} from '@rushstack/node-core-library';
+import { AlreadyReportedError } from '@rushstack/node-core-library';
+import { type ITerminal, Colorize } from '@rushstack/terminal';
 
 import { BaseRushAction, type IBaseRushActionOptions } from './BaseRushAction';
 import { Event } from '../../api/EventHooks';
@@ -24,27 +18,32 @@ import { SetupChecks } from '../../logic/SetupChecks';
 import { StandardScriptUpdater } from '../../logic/StandardScriptUpdater';
 import { Stopwatch } from '../../utilities/Stopwatch';
 import { VersionMismatchFinder } from '../../logic/versionMismatch/VersionMismatchFinder';
-import { Variants } from '../../api/Variants';
 import { RushConstants } from '../../logic/RushConstants';
-import type { SelectionParameterSet } from '../parsing/SelectionParameterSet';
+import { SUBSPACE_LONG_ARG_NAME, type SelectionParameterSet } from '../parsing/SelectionParameterSet';
 import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
 import type { Subspace } from '../../api/Subspace';
+
+/**
+ * Temporary data structure used by `BaseInstallAction.runAsync()`
+ */
+interface ISubspaceInstallationData {
+  selectedProjects: Set<RushConfigurationProject>;
+  pnpmFilterArgumentValues: string[];
+}
 
 /**
  * This is the common base class for InstallAction and UpdateAction.
  */
 export abstract class BaseInstallAction extends BaseRushAction {
   protected readonly _terminal: ITerminal;
-  protected readonly _variant: CommandLineStringParameter;
   protected readonly _purgeParameter: CommandLineFlagParameter;
   protected readonly _bypassPolicyParameter: CommandLineFlagParameter;
   protected readonly _noLinkParameter: CommandLineFlagParameter;
   protected readonly _networkConcurrencyParameter: CommandLineIntegerParameter;
   protected readonly _debugPackageManagerParameter: CommandLineFlagParameter;
-  protected readonly _maxInstallAttempts: CommandLineIntegerParameter;
+  protected readonly _maxInstallAttempts: IRequiredCommandLineIntegerParameter;
   protected readonly _ignoreHooksParameter: CommandLineFlagParameter;
   protected readonly _offlineParameter: CommandLineFlagParameter;
-  protected readonly _subspaceParameter: CommandLineStringParameter;
   /*
    * Subclasses can initialize the _selectionParameters property in order for
    * the parameters to be written to the telemetry file
@@ -54,7 +53,7 @@ export abstract class BaseInstallAction extends BaseRushAction {
   public constructor(options: IBaseRushActionOptions) {
     super(options);
 
-    this._terminal = new Terminal(new ConsoleTerminalProvider({ verboseEnabled: options.parser.isDebug }));
+    this._terminal = options.parser.terminal;
 
     this._purgeParameter = this.defineFlagParameter({
       parameterLongName: '--purge',
@@ -63,7 +62,7 @@ export abstract class BaseInstallAction extends BaseRushAction {
     });
     this._bypassPolicyParameter = this.defineFlagParameter({
       parameterLongName: RushConstants.bypassPolicyFlagLongName,
-      description: 'Overrides enforcement of the "gitPolicy" rules from rush.json (use honorably!)'
+      description: `Overrides enforcement of the "gitPolicy" rules from ${RushConstants.rushJsonFilename} (use honorably!)`
     });
     this._noLinkParameter = this.defineFlagParameter({
       parameterLongName: '--no-link',
@@ -95,7 +94,9 @@ export abstract class BaseInstallAction extends BaseRushAction {
     });
     this._ignoreHooksParameter = this.defineFlagParameter({
       parameterLongName: '--ignore-hooks',
-      description: `Skips execution of the "eventHooks" scripts defined in rush.json. Make sure you know what you are skipping.`
+      description:
+        `Skips execution of the "eventHooks" scripts defined in ${RushConstants.rushJsonFilename}. ` +
+        'Make sure you know what you are skipping.'
     });
     this._offlineParameter = this.defineFlagParameter({
       parameterLongName: '--offline',
@@ -104,72 +105,72 @@ export abstract class BaseInstallAction extends BaseRushAction {
         ` if the necessary NPM packages cannot be obtained from the local cache.` +
         ` For details, see the documentation for PNPM's "--offline" parameter.`
     });
-    this._variant = this.defineStringParameter(Variants.VARIANT_PARAMETER);
-    this._subspaceParameter = this.defineStringParameter({
-      parameterLongName: '--subspace',
-      argumentName: 'SUBSPACE_NAME',
-      description:
-        '(EXPERIMENTAL) Specifies a Rush subspace to be installed. Requires the feature to be enabled in subspaces.json.'
-    });
   }
 
-  protected abstract buildInstallOptionsAsync(): Promise<IInstallManagerOptions>;
-
-  protected getTargetSubspace(): Subspace {
-    const parameterValue: string | undefined = this._subspaceParameter.value;
-    if (parameterValue && !this.rushConfiguration.subspacesFeatureEnabled) {
-      // eslint-disable-next-line no-console
-      console.log();
-      // eslint-disable-next-line no-console
-      console.log(
-        colors.red(
-          `The "--subspace" parameter can only be passed if "subspacesEnabled" is set to true in subspaces.json.`
-        )
-      );
-      throw new AlreadyReportedError();
-    }
-    const selectedSubspace: Subspace | undefined = parameterValue
-      ? this.rushConfiguration.getSubspace(parameterValue)
-      : this.rushConfiguration.defaultSubspace;
-    return selectedSubspace;
-  }
+  protected abstract buildInstallOptionsAsync(): Promise<Omit<IInstallManagerOptions, 'subspace'>>;
 
   protected async runAsync(): Promise<void> {
-    const installManagerOptions: IInstallManagerOptions = await this.buildInstallOptionsAsync();
+    const installManagerOptions: Omit<IInstallManagerOptions, 'subspace'> =
+      await this.buildInstallOptionsAsync();
+
+    if (this.rushConfiguration._hasVariantsField) {
+      this._terminal.writeLine(
+        Colorize.yellow(
+          `Warning: Please remove the obsolete "variants" field from your ${RushConstants.rushJsonFilename} ` +
+            'file. Installation variants have been replaced by the new Rush subspaces feature. ' +
+            'In the next major release, Rush will fail to execute if this field is present.'
+        )
+      );
+    }
 
     // If we are doing a filtered install and subspaces is enabled, we need to find the affected subspaces and install for all of them.
     let selectedSubspaces: ReadonlySet<Subspace> | undefined;
+    const subspaceInstallationDataBySubspace: Map<Subspace, ISubspaceInstallationData> = new Map();
     if (this.rushConfiguration.subspacesFeatureEnabled) {
-      if (installManagerOptions.pnpmFilterArguments.length) {
-        // Selecting a set of subspaces
-        const selectedProjects: Set<RushConfigurationProject> | undefined =
-          await this._selectionParameters?.getSelectedProjectsAsync(this._terminal);
-        if (selectedProjects) {
-          selectedSubspaces = this.rushConfiguration.getSubspacesForProjects(selectedProjects);
-        } else {
-          throw new Error('The specified filter arguments resulted in no projects being selected.');
-        }
-        // Remove the filter arguments as we already have the selected subspaces
-        installManagerOptions.pnpmFilterArguments = [];
-      } else if (this._subspaceParameter.value) {
-        // Selecting a single subspace
-        const selectedSubspace: Subspace = this.rushConfiguration.getSubspace(this._subspaceParameter.value);
-        selectedSubspaces = new Set<Subspace>([selectedSubspace]);
+      // Selecting all subspaces if preventSelectingAllSubspaces is not enabled in subspaces.json
+      if (
+        this.rushConfiguration.subspacesConfiguration?.preventSelectingAllSubspaces &&
+        !this._selectionParameters?.didUserSelectAnything()
+      ) {
+        this._terminal.writeLine();
+        this._terminal.writeLine(
+          Colorize.red(
+            `The subspaces preventSelectingAllSubspaces configuration is enabled, which enforces installation for a specified set of subspace,` +
+              ` passed by the "${SUBSPACE_LONG_ARG_NAME}" parameter or selected from targeted projects using any project selector.`
+          )
+        );
+        throw new AlreadyReportedError();
+      }
+
+      const { selectedProjects } = installManagerOptions;
+
+      if (selectedProjects.size === this.rushConfiguration.projects.length) {
+        // Optimization for the common case, equivalent to the logic below
+        selectedSubspaces = new Set<Subspace>(this.rushConfiguration.subspaces);
       } else {
-        // Selecting all subspaces if preventSelectingAllSubspaces is not enabled in subspaces.json
-        if (!this.rushConfiguration.subspacesConfiguration?.preventSelectingAllSubspaces) {
-          selectedSubspaces = new Set<Subspace>(this.rushConfiguration.subspaces);
-        } else {
-          // eslint-disable-next-line no-console
-          console.log();
-          // eslint-disable-next-line no-console
-          console.log(
-            colors.red(
-              `The subspaces preventSelectingAllSubspaces configuration is enabled, which enforces installation for a specified set of subspace,` +
-                ` passed by the "--subspace" parameter or selected from targeted projects using any project selector.`
-            )
-          );
-          throw new AlreadyReportedError();
+        selectedSubspaces = this.rushConfiguration.getSubspacesForProjects(selectedProjects);
+        for (const selectedSubspace of selectedSubspaces) {
+          let subspaceSelectedProjects: Set<RushConfigurationProject>;
+          let pnpmFilterArgumentValues: string[];
+          if (selectedSubspace.getPnpmOptions()?.alwaysFullInstall) {
+            subspaceSelectedProjects = new Set(selectedSubspace.getProjects());
+            pnpmFilterArgumentValues = [];
+          } else {
+            // This may involve filtered installs. Go through each project, add its subspace's pnpm filter arguments
+            subspaceSelectedProjects = new Set();
+            pnpmFilterArgumentValues = [];
+            for (const project of selectedSubspace.getProjects()) {
+              if (selectedProjects.has(project)) {
+                subspaceSelectedProjects.add(project);
+                pnpmFilterArgumentValues.push(project.packageName);
+              }
+            }
+          }
+
+          subspaceInstallationDataBySubspace.set(selectedSubspace, {
+            selectedProjects: subspaceSelectedProjects,
+            pnpmFilterArgumentValues
+          });
         }
       }
     }
@@ -178,14 +179,11 @@ export abstract class BaseInstallAction extends BaseRushAction {
       // Check each subspace for version inconsistencies
       for (const subspace of selectedSubspaces) {
         VersionMismatchFinder.ensureConsistentVersions(this.rushConfiguration, this._terminal, {
-          variant: this._variant.value,
           subspace
         });
       }
     } else {
-      VersionMismatchFinder.ensureConsistentVersions(this.rushConfiguration, this._terminal, {
-        variant: this._variant.value
-      });
+      VersionMismatchFinder.ensureConsistentVersions(this.rushConfiguration, this._terminal);
     }
 
     const stopwatch: Stopwatch = Stopwatch.start();
@@ -223,9 +221,7 @@ export abstract class BaseInstallAction extends BaseRushAction {
       }
     }
 
-    // Because the 'defaultValue' option on the _maxInstallAttempts parameter is set,
-    // it is safe to assume that the value is not null
-    if (this._maxInstallAttempts.value! < 1) {
+    if (this._maxInstallAttempts.value < 1) {
       throw new Error(`The value of "${this._maxInstallAttempts.longName}" must be positive and nonzero.`);
     }
 
@@ -238,14 +234,49 @@ export abstract class BaseInstallAction extends BaseRushAction {
     try {
       if (selectedSubspaces) {
         // Run the install for each affected subspace
-        for (const selectedSubspace of selectedSubspaces) {
-          installManagerOptions.subspace = selectedSubspace;
+        for (const subspace of selectedSubspaces) {
+          const subspaceInstallationData: ISubspaceInstallationData | undefined =
+            subspaceInstallationDataBySubspace.get(subspace);
           // eslint-disable-next-line no-console
-          console.log(colors.green(`Installing for subspace: ${selectedSubspace.subspaceName}`));
-          await this._doInstall(installManagerFactoryModule, purgeManager, installManagerOptions);
+          console.log(Colorize.green(`Installing for subspace: ${subspace.subspaceName}`));
+          let installManagerOptionsForInstall: IInstallManagerOptions;
+          if (subspaceInstallationData) {
+            const { selectedProjects, pnpmFilterArgumentValues } = subspaceInstallationData;
+            installManagerOptionsForInstall = {
+              ...installManagerOptions,
+              selectedProjects,
+              // IMPORTANT: SelectionParameterSet.getPnpmFilterArgumentValuesAsync() already calculated
+              // installManagerOptions.pnpmFilterArgumentValues using PNPM CLI operators such as "...my-app".
+              // But with subspaces, "pnpm install" can only see the subset of projects in subspace's temp workspace,
+              // therefore an operator like "--filter ...my-app" will malfunction.  As a workaround, here we are
+              // overwriting installManagerOptions.pnpmFilterArgumentValues with a flat last of project names that
+              // were calculated by Rush.
+              //
+              // TODO: If the flat list produces too many "--filter" arguments, invoking "pnpm install" will exceed
+              // the maximum command length and fail on Windows OS.  Once this is solved, we can eliminate the
+              // redundant logic from SelectionParameterSet.getPnpmFilterArgumentValuesAsync().
+              pnpmFilterArgumentValues,
+              subspace
+            };
+          } else {
+            installManagerOptionsForInstall = {
+              ...installManagerOptions,
+              subspace
+            };
+          }
+
+          await this._doInstallAsync(
+            installManagerFactoryModule,
+            purgeManager,
+            installManagerOptionsForInstall
+          );
         }
       } else {
-        await this._doInstall(installManagerFactoryModule, purgeManager, installManagerOptions);
+        // Simple case when subspacesFeatureEnabled=false
+        await this._doInstallAsync(installManagerFactoryModule, purgeManager, {
+          ...installManagerOptions,
+          subspace: this.rushConfiguration.defaultSubspace
+        });
       }
     } catch (error) {
       installSuccessful = false;
@@ -267,7 +298,7 @@ export abstract class BaseInstallAction extends BaseRushAction {
       // eslint-disable-next-line no-console
       console.log(
         '\n' +
-          colors.yellow(
+          Colorize.yellow(
             'Rush refreshed some files in the "common/scripts" folder.' +
               '  Please commit this change to Git.'
           )
@@ -276,11 +307,11 @@ export abstract class BaseInstallAction extends BaseRushAction {
 
     // eslint-disable-next-line no-console
     console.log(
-      '\n' + colors.green(`Rush ${this.actionName} finished successfully. (${stopwatch.toString()})`)
+      '\n' + Colorize.green(`Rush ${this.actionName} finished successfully. (${stopwatch.toString()})`)
     );
   }
 
-  private async _doInstall(
+  private async _doInstallAsync(
     installManagerFactoryModule: typeof import('../../logic/InstallManagerFactory'),
     purgeManager: PurgeManager,
     installManagerOptions: IInstallManagerOptions
@@ -298,7 +329,7 @@ export abstract class BaseInstallAction extends BaseRushAction {
 
   private _collectTelemetry(
     stopwatch: Stopwatch,
-    installManagerOptions: IInstallManagerOptions,
+    installManagerOptions: Omit<IInstallManagerOptions, 'subspace'>,
     success: boolean
   ): void {
     if (this.parser.telemetry) {

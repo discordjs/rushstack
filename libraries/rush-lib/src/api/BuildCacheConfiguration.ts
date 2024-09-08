@@ -7,9 +7,9 @@ import {
   JsonSchema,
   FileSystem,
   type JsonObject,
-  AlreadyReportedError,
-  type ITerminal
+  AlreadyReportedError
 } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from './RushConfiguration';
 import { FileSystemBuildCacheProvider } from '../logic/buildCache/FileSystemBuildCacheProvider';
@@ -27,6 +27,20 @@ import schemaJson from '../schemas/build-cache.schema.json';
 export interface IBaseBuildCacheJson {
   buildCacheEnabled: boolean;
   cacheProvider: string;
+  /**
+   * Used to specify the cache entry ID format. If this property is set, it must
+   * contain a `[hash]` token. It may also contain one of the following tokens:
+   * - `[projectName]`
+   * - `[projectName:normalize]`
+   * - `[phaseName]`
+   * - `[phaseName:normalize]`
+   * - `[phaseName:trimPrefix]`
+   * - `[os]`
+   * - `[arch]`
+   * @privateRemarks
+   * NOTE: If you update this comment, make sure to update build-cache.json in the "rush init" template.
+   * The token parser is in CacheEntryId.ts
+   */
   cacheEntryNamePattern?: string;
 }
 

@@ -7,6 +7,8 @@ import { BaseInstallAction } from './BaseInstallAction';
 import type { IInstallManagerOptions } from '../../logic/base/BaseInstallManagerTypes';
 import type { RushCommandLineParser } from '../RushCommandLineParser';
 import { SelectionParameterSet } from '../parsing/SelectionParameterSet';
+import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
+import type { Subspace } from '../../api/Subspace';
 
 export class UpdateAction extends BaseInstallAction {
   private readonly _fullParameter: CommandLineFlagParameter;
@@ -35,11 +37,14 @@ export class UpdateAction extends BaseInstallAction {
     if (this.rushConfiguration?.subspacesFeatureEnabled) {
       // Partial update is supported only when subspaces is enabled.
       this._selectionParameters = new SelectionParameterSet(this.rushConfiguration, this, {
-        // Include lockfile processing since this expands the selection, and we need to select
-        // at least the same projects selected with the same query to "rush build"
-        includeExternalDependencies: true,
-        // Disable filtering because rush-project.json is riggable and therefore may not be available
-        enableFiltering: false
+        gitOptions: {
+          // Include lockfile processing since this expands the selection, and we need to select
+          // at least the same projects selected with the same query to "rush build"
+          includeExternalDependencies: true,
+          // Disable filtering because rush-project.json is riggable and therefore may not be available
+          enableFiltering: false
+        },
+        includeSubspaceSelector: true
       });
     }
 
@@ -74,7 +79,11 @@ export class UpdateAction extends BaseInstallAction {
     return super.runAsync();
   }
 
-  protected async buildInstallOptionsAsync(): Promise<IInstallManagerOptions> {
+  protected async buildInstallOptionsAsync(): Promise<Omit<IInstallManagerOptions, 'subspace'>> {
+    const selectedProjects: Set<RushConfigurationProject> =
+      (await this._selectionParameters?.getSelectedProjectsAsync(this._terminal)) ??
+      new Set(this.rushConfiguration.projects);
+
     return {
       debug: this.parser.isDebug,
       allowShrinkwrapUpdates: true,
@@ -86,17 +95,18 @@ export class UpdateAction extends BaseInstallAction {
       offline: this._offlineParameter.value!,
       networkConcurrency: this._networkConcurrencyParameter.value,
       collectLogFile: this._debugPackageManagerParameter.value!,
-      variant: this._variant.value,
       // Because the 'defaultValue' option on the _maxInstallAttempts parameter is set,
       // it is safe to assume that the value is not null
       maxInstallAttempts: this._maxInstallAttempts.value!,
       // These are derived independently of the selection for command line brevity
-      pnpmFilterArguments:
-        (await this._selectionParameters?.getPnpmFilterArgumentsAsync(this._terminal)) || [],
+      selectedProjects,
+      pnpmFilterArgumentValues:
+        (await this._selectionParameters?.getPnpmFilterArgumentValuesAsync(this._terminal)) ?? [],
       checkOnly: false,
-      subspace: this.getTargetSubspace(),
-
-      beforeInstallAsync: () => this.rushSession.hooks.beforeInstall.promise(this)
+      beforeInstallAsync: (subspace: Subspace) =>
+        this.rushSession.hooks.beforeInstall.promise(this, subspace),
+      afterInstallAsync: (subspace: Subspace) => this.rushSession.hooks.afterInstall.promise(this, subspace),
+      terminal: this._terminal
     };
   }
 }

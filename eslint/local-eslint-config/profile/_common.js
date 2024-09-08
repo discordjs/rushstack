@@ -1,6 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
+const macros = require('@rushstack/eslint-config/profile/_macros');
+const { namingConventionRuleOptions } = require('@rushstack/eslint-config/profile/_common');
+
 function buildRules(profile) {
   let profileMixins;
   switch (profile) {
@@ -42,6 +45,23 @@ function buildRules(profile) {
         // The settings below revise the defaults specified in the extended configurations.
         files: ['*.ts', '*.tsx'],
         rules: {
+          // Rationale: Backslashes are platform-specific and will cause breaks on non-Windows
+          // platforms.
+          '@rushstack/no-backslash-imports': 'error',
+
+          // Rationale: Avoid consuming dependencies which would not otherwise be present when
+          // the package is published.
+          '@rushstack/no-external-local-imports': 'error',
+
+          // Rationale: Consumption of transitive dependencies can be problematic when the dependency
+          // is updated or removed from the parent package. Enforcing consumption of only direct dependencies
+          // ensures that the package is exactly what we expect it to be.
+          '@rushstack/no-transitive-dependency-imports': 'warn',
+
+          // Rationale: Using the simplest possible import syntax is preferred and makes it easier to
+          // understand where the dependency is coming from.
+          '@rushstack/normalized-imports': 'warn',
+
           // Rationale: Use of `void` to explicitly indicate that a floating promise is expected
           // and allowed.
           '@typescript-eslint/no-floating-promises': ['error', { ignoreVoid: true }],
@@ -82,7 +102,7 @@ function buildRules(profile) {
           radix: 'error',
 
           // Rationale: Including the `type` annotation in the import statement for imports
-          // only used as types prevents the import from being omitted in the compiled output.
+          // only used as types prevents the import from being emitted in the compiled output.
           '@typescript-eslint/consistent-type-imports': [
             'warn',
             { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }
@@ -99,6 +119,36 @@ function buildRules(profile) {
               ' Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.',
               ' See LICENSE in the project root for license information.'
             ]
+          ],
+
+          // Docs: https://github.com/typescript-eslint/typescript-eslint/blob/main/packages/eslint-plugin/docs/rules/naming-convention.md
+          '@typescript-eslint/naming-convention': [
+            'warn',
+            ...macros.expandNamingConventionSelectors([
+              ...namingConventionRuleOptions,
+              {
+                selectors: ['method'],
+                modifiers: ['async'],
+                enforceLeadingUnderscoreWhenPrivate: true,
+
+                format: null,
+                custom: {
+                  regex: '^_?[a-zA-Z]\\w*Async$',
+                  match: true
+                },
+                leadingUnderscore: 'allow',
+
+                filter: {
+                  regex: [
+                    // Specifically allow ts-command-line's "onExecute" function.
+                    '^onExecute$'
+                  ]
+                    .map((x) => `(${x})`)
+                    .join('|'),
+                  match: false
+                }
+              }
+            ])
           ],
 
           ...profileMixins

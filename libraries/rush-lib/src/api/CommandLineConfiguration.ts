@@ -169,7 +169,7 @@ const DEFAULT_REBUILD_COMMAND_JSON: IBulkCommandJson = {
   description:
     'This command assumes that the package.json file for each project contains' +
     ' a "scripts" entry for "npm run build" that performs a full clean build.' +
-    ' Rush invokes this script to build each project that is registered in rush.json.' +
+    ` Rush invokes this script to build each project that is registered in ${RushConstants.rushJsonFilename}.` +
     ' Projects are built in parallel where possible, but always respecting the dependency' +
     ' graph for locally linked projects.  The number of simultaneous processes will be' +
     ' based on the number of machine cores unless overridden by the --parallelism flag.' +
@@ -184,6 +184,16 @@ interface ICommandLineConfigurationOptions {
    * If true, do not include default build and rebuild commands.
    */
   doNotIncludeDefaultBuildCommands?: boolean;
+}
+
+/**
+ * This function replaces colons (":") with underscores ("_").
+ *
+ * ts-command-line restricts command names to lowercase letters, numbers, underscores, and colons.
+ * Replacing colons with underscores produces a filesystem-safe name.
+ */
+function _normalizeNameForLogFilenameIdentifiers(name: string): string {
+  return name.replace(/:/g, '_'); // Replace colons with underscores to be filesystem-safe
 }
 
 /**
@@ -256,7 +266,7 @@ export class CommandLineConfiguration {
         const processedPhase: IPhase = {
           name: phase.name,
           isSynthetic: false,
-          logFilenameIdentifier: this._normalizeNameForLogFilenameIdentifiers(phase.name),
+          logFilenameIdentifier: _normalizeNameForLogFilenameIdentifiers(phase.name),
           associatedParameters: new Set(),
           dependencies: {
             self: new Set(),
@@ -672,22 +682,12 @@ export class CommandLineConfiguration {
     (this.additionalPathFolders as string[]).unshift(pathFolder);
   }
 
-  /**
-   * This function replaces colons (":") with underscores ("_").
-   *
-   * ts-command-line restricts command names to lowercase letters, numbers, underscores, and colons.
-   * Replacing colons with underscores produces a filesystem-safe name.
-   */
-  private _normalizeNameForLogFilenameIdentifiers(name: string): string {
-    return name.replace(/:/g, '_'); // Replace colons with underscores to be filesystem-safe
-  }
-
   private _translateBulkCommandToPhasedCommand(command: IBulkCommandJson): IPhasedCommandConfig {
     const phaseName: string = command.name;
     const phase: IPhase = {
       name: phaseName,
       isSynthetic: true,
-      logFilenameIdentifier: this._normalizeNameForLogFilenameIdentifiers(command.name),
+      logFilenameIdentifier: _normalizeNameForLogFilenameIdentifiers(command.name),
       associatedParameters: new Set(),
       dependencies: {
         self: new Set(),

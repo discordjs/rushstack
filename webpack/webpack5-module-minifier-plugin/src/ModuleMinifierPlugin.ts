@@ -183,8 +183,8 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
       typeof this._sourceMap === 'boolean'
         ? this._sourceMap
         : typeof devtool === 'string'
-        ? devtool.endsWith('source-map')
-        : mode === 'production' && devtool !== false;
+          ? devtool.endsWith('source-map')
+          : mode === 'production' && devtool !== false;
 
     this._optionsForHash.sourceMap = useSourceMaps;
     const binaryConfig: Buffer = Buffer.from(JSON.stringify(this._optionsForHash), 'utf-8');
@@ -419,7 +419,7 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
 
       // The optimizeChunkModules hook is the last async hook that occurs before chunk rendering
       compilation.hooks.optimizeChunkModules.tapPromise(PLUGIN_NAME, async () => {
-        minifierConnection = await minifier.connect();
+        minifierConnection = await minifier.connectAsync();
 
         submittedModules.clear();
       });
@@ -446,7 +446,14 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
             if (isJSAsset.test(assetName)) {
               ++pendingMinificationRequests;
 
-              const rawCode: string = asset.source() as string;
+              const { source: wrappedCodeRaw, map } = useSourceMaps
+                ? asset.sourceAndMap()
+                : {
+                    source: asset.source(),
+                    map: undefined
+                  };
+
+              const rawCode: string = wrappedCodeRaw.toString();
               const nameForMap: string = `(chunks)/${assetName}`;
 
               const hash: string = hashCodeFragment(rawCode);
@@ -473,7 +480,7 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
                             nameForMap, // File
                             minifierMap!, // Base source map
                             rawCode, // Source from before transform
-                            undefined, // Source Map from before transform
+                            map, // Source Map from before transform
                             true // Remove original source
                           )
                         : new RawSource(minified);
@@ -526,7 +533,7 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
         }
 
         // Handle any error from the minifier.
-        await minifierConnection?.disconnect();
+        await minifierConnection?.disconnectAsync();
 
         // All assets and modules have been minified, hand them off to be rehydrated
         await this.hooks.rehydrateAssets.promise(

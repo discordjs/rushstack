@@ -9,8 +9,9 @@ import * as os from 'os';
 import * as path from 'path';
 import type { IPackageJson } from '@rushstack/node-core-library';
 import { syncNpmrc, type ILogger } from '../utilities/npmrcUtilities';
+import type { RushConstants } from '../logic/RushConstants';
 
-export const RUSH_JSON_FILENAME: string = 'rush.json';
+export const RUSH_JSON_FILENAME: typeof RushConstants.rushJsonFilename = 'rush.json';
 const RUSH_TEMP_FOLDER_ENV_VARIABLE_NAME: string = 'RUSH_TEMP_FOLDER';
 const INSTALL_RUN_LOCKFILE_PATH_VARIABLE: 'INSTALL_RUN_LOCKFILE_PATH' = 'INSTALL_RUN_LOCKFILE_PATH';
 const INSTALLED_FLAG_FILENAME: string = 'installed.flag';
@@ -52,7 +53,7 @@ let _npmPath: string | undefined = undefined;
 export function getNpmPath(): string {
   if (!_npmPath) {
     try {
-      if (os.platform() === 'win32') {
+      if (_isWindows()) {
         // We're on Windows
         const whereOutput: string = childProcess.execSync('where npm', { stdio: [] }).toString();
         const lines: string[] = whereOutput.split(os.EOL).filter((line) => !!line);
@@ -165,7 +166,11 @@ function _resolvePackageVersion(
       const rushTempFolder: string = _getRushTempFolder(rushCommonFolder);
       const sourceNpmrcFolder: string = path.join(rushCommonFolder, 'config', 'rush');
 
-      syncNpmrc(sourceNpmrcFolder, rushTempFolder, undefined, logger);
+      syncNpmrc({
+        sourceNpmrcFolder,
+        targetNpmrcFolder: rushTempFolder,
+        logger
+      });
 
       const npmPath: string = getNpmPath();
 
@@ -186,13 +191,17 @@ function _resolvePackageVersion(
       // ```
       //
       // if only a single version matches.
-      const npmVersionSpawnResult: childProcess.SpawnSyncReturns<Buffer> = childProcess.spawnSync(
-        npmPath,
+
+      const spawnSyncOptions: childProcess.SpawnSyncOptions = {
+        cwd: rushTempFolder,
+        stdio: [],
+        shell: _isWindows()
+      };
+      const platformNpmPath: string = _getPlatformPath(npmPath);
+      const npmVersionSpawnResult: childProcess.SpawnSyncReturns<Buffer | string> = childProcess.spawnSync(
+        platformNpmPath,
         ['view', `${name}@${version}`, 'version', '--no-update-notifier', '--json'],
-        {
-          cwd: rushTempFolder,
-          stdio: []
-        }
+        spawnSyncOptions
       );
 
       if (npmVersionSpawnResult.status !== 0) {
@@ -242,7 +251,7 @@ export function findRushJsonFolder(): string {
     } while (basePath !== (tempPath = path.dirname(basePath))); // Exit the loop when we hit the disk root
 
     if (!_rushJsonFolder) {
-      throw new Error('Unable to find rush.json.');
+      throw new Error(`Unable to find ${RUSH_JSON_FILENAME}.`);
     }
   }
 
@@ -349,10 +358,12 @@ function _installPackage(
   try {
     logger.info(`Installing ${name}...`);
     const npmPath: string = getNpmPath();
-    const result: childProcess.SpawnSyncReturns<Buffer> = childProcess.spawnSync(npmPath, [command], {
+    const platformNpmPath: string = _getPlatformPath(npmPath);
+    const result: childProcess.SpawnSyncReturns<Buffer> = childProcess.spawnSync(platformNpmPath, [command], {
       stdio: 'inherit',
       cwd: packageInstallFolder,
-      env: process.env
+      env: process.env,
+      shell: _isWindows()
     });
 
     if (result.status !== 0) {
@@ -370,8 +381,19 @@ function _installPackage(
  */
 function _getBinPath(packageInstallFolder: string, binName: string): string {
   const binFolderPath: string = path.resolve(packageInstallFolder, NODE_MODULES_FOLDER_NAME, '.bin');
-  const resolvedBinName: string = os.platform() === 'win32' ? `${binName}.cmd` : binName;
+  const resolvedBinName: string = _isWindows() ? `${binName}.cmd` : binName;
   return path.resolve(binFolderPath, resolvedBinName);
+}
+
+/**
+ * Returns a cross-platform path - windows must enclose any path containing spaces within double quotes.
+ */
+function _getPlatformPath(platformPath: string): string {
+  return _isWindows() && platformPath.includes(' ') ? `"${platformPath}"` : platformPath;
+}
+
+function _isWindows(): boolean {
+  return os.platform() === 'win32';
 }
 
 /**
@@ -408,7 +430,11 @@ export function installAndRun(
     _cleanInstallFolder(rushTempFolder, packageInstallFolder, lockFilePath);
 
     const sourceNpmrcFolder: string = path.join(rushCommonFolder, 'config', 'rush');
-    syncNpmrc(sourceNpmrcFolder, packageInstallFolder, undefined, logger);
+    syncNpmrc({
+      sourceNpmrcFolder,
+      targetNpmrcFolder: packageInstallFolder,
+      logger
+    });
 
     _createPackageJson(packageInstallFolder, packageName, packageVersion);
     const command: 'install' | 'ci' = lockFilePath ? 'ci' : 'install';
@@ -428,16 +454,15 @@ export function installAndRun(
   const originalEnvPath: string = process.env.PATH || '';
   let result: childProcess.SpawnSyncReturns<Buffer>;
   try {
-    // Node.js on Windows can not spawn a file when the path has a space on it
-    // unless the path gets wrapped in a cmd friendly way and shell mode is used
-    const shouldUseShell: boolean = binPath.includes(' ') && os.platform() === 'win32';
-    const platformBinPath: string = shouldUseShell ? `"${binPath}"` : binPath;
+    // `npm` bin stubs on Windows are `.cmd` files
+    // Node.js will not directly invoke a `.cmd` file unless `shell` is set to `true`
+    const platformBinPath: string = _getPlatformPath(binPath);
 
     process.env.PATH = [binFolderPath, originalEnvPath].join(path.delimiter);
     result = childProcess.spawnSync(platformBinPath, packageBinArgs, {
       stdio: 'inherit',
       windowsVerbatimArguments: false,
-      shell: shouldUseShell,
+      shell: _isWindows(),
       cwd: process.cwd(),
       env: process.env
     });

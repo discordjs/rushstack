@@ -1,6 +1,27 @@
 # Change Log - @rushstack/eslint-plugin
 
-This log was last generated on Wed, 07 Feb 2024 01:11:18 GMT and should not be manually modified.
+This log was last generated on Wed, 14 Aug 2024 22:37:32 GMT and should not be manually modified.
+
+## 0.16.0
+Wed, 14 Aug 2024 22:37:32 GMT
+
+### Minor changes
+
+- Add 4 new ESLint rules: "@rushstack/no-backslash-imports", used to prevent backslashes in import and require statements; "@rushstack/no-external-local-imports", used to prevent referencing external depedencies in import and require statements; "@rushstack/no-transitive-dependency-imports", used to prevent referencing transitive dependencies (ie. dependencies of dependencies) in import and require statements; and "@rushstack/normalized-imports", used to ensure that the most direct path to a dependency is provided in import and require statements
+
+## 0.15.2
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 0.15.1
+Sat, 17 Feb 2024 06:24:34 GMT
+
+### Patches
+
+- Fix broken link to API documentation
 
 ## 0.15.0
 Wed, 07 Feb 2024 01:11:18 GMT

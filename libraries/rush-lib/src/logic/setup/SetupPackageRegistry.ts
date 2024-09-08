@@ -5,22 +5,19 @@ import * as path from 'path';
 import type * as child_process from 'child_process';
 import {
   AlreadyReportedError,
-  Colors,
-  ConsoleTerminalProvider,
   Executable,
   FileSystem,
   InternalError,
   type JsonObject,
   NewlineKind,
-  Terminal,
   Text
 } from '@rushstack/node-core-library';
-import { PrintUtilities } from '@rushstack/terminal';
+import { PrintUtilities, Colorize, ConsoleTerminalProvider, Terminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../../api/RushConfiguration';
 import { Utilities } from '../../utilities/Utilities';
 import { type IArtifactoryPackageRegistryJson, ArtifactoryConfiguration } from './ArtifactoryConfiguration';
-import { WebClient, type WebClientResponse } from '../../utilities/WebClient';
+import type { WebClient as WebClientType, WebClientResponse } from '../../utilities/WebClient';
 import { TerminalInput } from './TerminalInput';
 
 interface IArtifactoryCustomizableMessages {
@@ -97,7 +94,7 @@ export class SetupPackageRegistry {
    *
    * @returns - `true` if valid, `false` if not valid
    */
-  public async checkOnly(): Promise<boolean> {
+  public async checkOnlyAsync(): Promise<boolean> {
     const packageRegistry: IArtifactoryPackageRegistryJson =
       this._artifactoryConfiguration.configuration.packageRegistry;
     if (!packageRegistry.enabled) {
@@ -111,10 +108,10 @@ export class SetupPackageRegistry {
     }
 
     if (!this._options.syncNpmrcAlreadyCalled) {
-      Utilities.syncNpmrc(
-        this.rushConfiguration.commonRushConfigFolder,
-        this.rushConfiguration.commonTempFolder
-      );
+      Utilities.syncNpmrc({
+        sourceNpmrcFolder: this.rushConfiguration.commonRushConfigFolder,
+        targetNpmrcFolder: this.rushConfiguration.commonTempFolder
+      });
     }
 
     // Artifactory does not implement the "npm ping" protocol or any equivalent REST API.
@@ -201,8 +198,8 @@ export class SetupPackageRegistry {
   /**
    * Test whether the NPM token is valid.  If not, prompt to update it.
    */
-  public async checkAndSetup(): Promise<void> {
-    if (await this.checkOnly()) {
+  public async checkAndSetupAsync(): Promise<void> {
+    if (await this.checkOnlyAsync()) {
       return;
     }
 
@@ -212,7 +209,7 @@ export class SetupPackageRegistry {
     const packageRegistry: IArtifactoryPackageRegistryJson =
       this._artifactoryConfiguration.configuration.packageRegistry;
 
-    const fixThisProblem: boolean = await TerminalInput.promptYesNo({
+    const fixThisProblem: boolean = await TerminalInput.promptYesNoAsync({
       message: 'Fix this problem now?',
       defaultValue: false
     });
@@ -223,7 +220,7 @@ export class SetupPackageRegistry {
 
     this._writeInstructionBlock(this._messages.introduction);
 
-    const hasArtifactoryAccount: boolean = await TerminalInput.promptYesNo({
+    const hasArtifactoryAccount: boolean = await TerminalInput.promptYesNoAsync({
       message: 'Do you already have an Artifactory user account?'
     });
     this._terminal.writeLine();
@@ -240,54 +237,56 @@ export class SetupPackageRegistry {
         this._artifactoryConfiguration.configuration.packageRegistry.artifactoryWebsiteUrl;
 
       if (artifactoryWebsiteUrl) {
-        this._terminal.writeLine('  ', Colors.cyan(artifactoryWebsiteUrl));
+        this._terminal.writeLine('  ', Colorize.cyan(artifactoryWebsiteUrl));
         this._terminal.writeLine();
       }
     }
 
     this._writeInstructionBlock(this._messages.locateUserName);
 
-    let artifactoryUser: string = await TerminalInput.promptLine({
+    let artifactoryUser: string = await TerminalInput.promptLineAsync({
       message: this._messages.userNamePrompt
     });
     this._terminal.writeLine();
 
     artifactoryUser = artifactoryUser.trim();
     if (artifactoryUser.length === 0) {
-      this._terminal.writeLine(Colors.red('Operation aborted because the input was empty'));
+      this._terminal.writeLine(Colorize.red('Operation aborted because the input was empty'));
       this._terminal.writeLine();
       throw new AlreadyReportedError();
     }
 
     this._writeInstructionBlock(this._messages.locateApiKey);
 
-    let artifactoryKey: string = await TerminalInput.promptPasswordLine({
+    let artifactoryKey: string = await TerminalInput.promptPasswordLineAsync({
       message: this._messages.apiKeyPrompt
     });
     this._terminal.writeLine();
 
     artifactoryKey = artifactoryKey.trim();
     if (artifactoryKey.length === 0) {
-      this._terminal.writeLine(Colors.red('Operation aborted because the input was empty'));
+      this._terminal.writeLine(Colorize.red('Operation aborted because the input was empty'));
       this._terminal.writeLine();
       throw new AlreadyReportedError();
     }
 
-    await this._fetchTokenAndUpdateNpmrc(artifactoryUser, artifactoryKey, packageRegistry);
+    await this._fetchTokenAndUpdateNpmrcAsync(artifactoryUser, artifactoryKey, packageRegistry);
   }
 
   /**
    * Fetch a valid NPM token from the Artifactory service and add it to the `~/.npmrc` file,
    * preserving other settings in that file.
    */
-  private async _fetchTokenAndUpdateNpmrc(
+  private async _fetchTokenAndUpdateNpmrcAsync(
     artifactoryUser: string,
     artifactoryKey: string,
     packageRegistry: IArtifactoryPackageRegistryJson
   ): Promise<void> {
     this._terminal.writeLine('\nFetching an NPM token from the Artifactory service...');
 
-    const webClient: WebClient = new WebClient();
+    // Defer this import since it is conditionally needed.
+    const { WebClient } = await import('../../utilities/WebClient');
+    const webClient: WebClientType = new WebClient();
 
     webClient.addBasicAuthHeader(artifactoryUser, artifactoryKey);
 
@@ -397,7 +396,7 @@ export class SetupPackageRegistry {
     }
 
     this._terminal.writeLine();
-    this._terminal.writeLine(Colors.green('Adding Artifactory token to: '), npmrcPath);
+    this._terminal.writeLine(Colorize.green('Adding Artifactory token to: '), npmrcPath);
 
     const npmrcLines: string[] = [];
 
@@ -499,7 +498,7 @@ export class SetupPackageRegistry {
    * @returns the JSON section, or `undefined` if a JSON object could not be detected
    */
   private static _tryFindJson(dirtyOutput: string): string | undefined {
-    const lines: string[] = dirtyOutput.split(/\r?\n/g);
+    const lines: string[] = Text.splitByNewLines(dirtyOutput);
     let startIndex: number | undefined;
     let endIndex: number | undefined;
 

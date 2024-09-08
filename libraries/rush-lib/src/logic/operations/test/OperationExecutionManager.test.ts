@@ -4,9 +4,18 @@
 // The TaskExecutionManager prints "x.xx seconds" in TestRunner.test.ts.snap; ensure that the Stopwatch timing is deterministic
 jest.mock('../../../utilities/Utilities');
 
-import colors from 'colors/safe';
+jest.mock('@rushstack/terminal', () => {
+  const originalModule = jest.requireActual('@rushstack/terminal');
+  return {
+    ...originalModule,
+    ConsoleTerminalProvider: {
+      ...originalModule.ConsoleTerminalProvider,
+      supportsColor: true
+    }
+  };
+});
 
-import { Terminal } from '@rushstack/node-core-library';
+import { Terminal } from '@rushstack/terminal';
 import { CollatedTerminal } from '@rushstack/stream-collator';
 import { MockWritable, PrintUtilities } from '@rushstack/terminal';
 
@@ -41,7 +50,8 @@ function createExecutionManager(
   operationRunner: IOperationRunner
 ): OperationExecutionManager {
   const operation: Operation = new Operation({
-    runner: operationRunner
+    runner: operationRunner,
+    logFilenameIdentifier: 'operation'
   });
 
   return new OperationExecutionManager(new Set([operation]), executionManagerOptions);
@@ -50,19 +60,6 @@ function createExecutionManager(
 describe(OperationExecutionManager.name, () => {
   let executionManager: OperationExecutionManager;
   let executionManagerOptions: IOperationExecutionManagerOptions;
-
-  let initialColorsEnabled: boolean;
-
-  beforeAll(() => {
-    initialColorsEnabled = colors.enabled;
-    colors.enable();
-  });
-
-  afterAll(() => {
-    if (!initialColorsEnabled) {
-      colors.disable();
-    }
-  });
 
   beforeEach(() => {
     jest.spyOn(PrintUtilities, 'getConsoleWidth').mockReturnValue(90);
@@ -131,13 +128,15 @@ describe(OperationExecutionManager.name, () => {
       const failingOperation = new Operation({
         runner: new MockOperationRunner('fail', async () => {
           return OperationStatus.Failure;
-        })
+        }),
+        logFilenameIdentifier: 'fail'
       });
 
       const blockedRunFn: jest.Mock = jest.fn();
 
       const blockedOperation = new Operation({
-        runner: new MockOperationRunner('blocked', blockedRunFn)
+        runner: new MockOperationRunner('blocked', blockedRunFn),
+        logFilenameIdentifier: 'blocked'
       });
 
       blockedOperation.addDependency(failingOperation);

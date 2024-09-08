@@ -1,9 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { AsyncSeriesBailHook, AsyncSeriesHook, AsyncSeriesWaterfallHook, SyncHook } from 'tapable';
-
+import {
+  AsyncParallelHook,
+  AsyncSeriesBailHook,
+  AsyncSeriesHook,
+  AsyncSeriesWaterfallHook,
+  SyncHook
+} from 'tapable';
 import type { CommandLineParameter } from '@rushstack/ts-command-line';
+
 import type { BuildCacheConfiguration } from '../api/BuildCacheConfiguration';
 import type { IPhase } from '../api/CommandLineConfiguration';
 import type { RushConfiguration } from '../api/RushConfiguration';
@@ -71,10 +77,7 @@ export interface ICreateOperationsContext {
    * The set of phases selected for the current command execution.
    */
   readonly phaseSelection: ReadonlySet<IPhase>;
-  /**
-   * The current state of the repository
-   */
-  readonly projectChangeAnalyzer: ProjectChangeAnalyzer;
+
   /**
    * The set of Rush projects selected for the current command execution.
    */
@@ -92,6 +95,25 @@ export interface ICreateOperationsContext {
    * The Rush configuration
    */
   readonly rushConfiguration: RushConfiguration;
+  /**
+   * Marks an operation's result as invalid, potentially triggering a new build. Only applicable in watch mode.
+   * @param operation - The operation to invalidate
+   * @param reason - The reason for invalidating the operation
+   */
+  readonly invalidateOperation?: ((operation: Operation, reason: string) => void) | undefined;
+}
+
+/**
+ * Context used for executing operations.
+ * @alpha
+ */
+export interface IExecuteOperationsContext extends ICreateOperationsContext {
+  /**
+   * The current state of the repository.
+   *
+   * Note that this is not defined during the initial operation creation.
+   */
+  readonly projectChangeAnalyzer: ProjectChangeAnalyzer;
 }
 
 /**
@@ -111,7 +133,7 @@ export class PhasedCommandHooks {
    * Hook is series for stable output.
    */
   public readonly beforeExecuteOperations: AsyncSeriesHook<
-    [Map<Operation, IOperationExecutionResult>, ICreateOperationsContext]
+    [Map<Operation, IOperationExecutionResult>, IExecuteOperationsContext]
   > = new AsyncSeriesHook(['records', 'context']);
 
   /**
@@ -125,7 +147,7 @@ export class PhasedCommandHooks {
    * Use the context to distinguish between the initial run and phased runs.
    * Hook is series for stable output.
    */
-  public readonly afterExecuteOperations: AsyncSeriesHook<[IExecutionResult, ICreateOperationsContext]> =
+  public readonly afterExecuteOperations: AsyncSeriesHook<[IExecutionResult, IExecuteOperationsContext]> =
     new AsyncSeriesHook(['results', 'context']);
 
   /**
@@ -142,6 +164,11 @@ export class PhasedCommandHooks {
   public readonly afterExecuteOperation: AsyncSeriesHook<
     [IOperationRunnerContext & IOperationExecutionResult]
   > = new AsyncSeriesHook(['runnerContext'], 'afterExecuteOperation');
+
+  /**
+   * Hook invoked to shutdown long-lived work in plugins.
+   */
+  public readonly shutdownAsync: AsyncParallelHook<void> = new AsyncParallelHook(undefined, 'shutdown');
 
   /**
    * Hook invoked after a run has finished and the command is watching for changes.

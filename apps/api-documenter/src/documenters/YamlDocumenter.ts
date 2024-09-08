@@ -73,7 +73,7 @@ interface IYamlReferences {
   uidTypeReferenceCounters: Map<string, number>;
 }
 
-const enum FlattenMode {
+enum FlattenMode {
   /** Include entries for nested namespaces and non-namespace children. */
   NestedNamespacesAndChildren,
   /** Include entries for nested namespaces only. */
@@ -89,6 +89,8 @@ interface INameOptions {
   includeNamespace?: boolean;
 }
 
+export type YamlFormat = 'udp' | 'sdp';
+
 /**
  * Writes documentation in the Universal Reference YAML file format, as defined by typescript.schema.json.
  */
@@ -101,7 +103,11 @@ export class YamlDocumenter {
   private _apiItemsByCanonicalReference: Map<string, ApiItem>;
   private _yamlReferences: IYamlReferences | undefined;
 
-  public constructor(apiModel: ApiModel, newDocfxNamespaces: boolean = false, yamlFormat: string = 'sdp') {
+  public constructor(
+    apiModel: ApiModel,
+    newDocfxNamespaces: boolean = false,
+    yamlFormat: YamlFormat = 'sdp'
+  ) {
     this._apiModel = apiModel;
     this.newDocfxNamespaces = newDocfxNamespaces;
     this._yamlFormat = yamlFormat;
@@ -937,12 +943,12 @@ export class YamlDocumenter {
           spec.fullName = apiItem
             ? apiItem.getScopedNameWithinPackage()
             : token.canonicalReference
-            ? token.canonicalReference
-                .withSource(undefined)
-                .withMeaning(undefined)
-                .withOverloadIndex(undefined)
-                .toString()
-            : token.text;
+              ? token.canonicalReference
+                  .withSource(undefined)
+                  .withMeaning(undefined)
+                  .withOverloadIndex(undefined)
+                  .toString()
+              : token.text;
           specs.push(spec);
         } else {
           specs.push({

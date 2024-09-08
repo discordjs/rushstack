@@ -20,7 +20,7 @@ export const SPLIT_WORKSPACE_SUBSPACE_NAME_REGEXP: RegExp = /^[a-z0-9][+_\-a-z0-
  * This represents the JSON data structure for the "subspaces.json" configuration file.
  * See subspace.schema.json for documentation.
  */
-interface ISubspacesConfigurationJson {
+export interface ISubspacesConfigurationJson {
   subspacesEnabled: boolean;
   splitWorkspaceCompatibility?: boolean;
   preventSelectingAllSubspaces?: boolean;
@@ -41,7 +41,7 @@ export class SubspacesConfiguration {
   public readonly subspaceJsonFilePath: string;
 
   /*
-   * Determines if the subspace feature is enabled
+   * Determines whether the subspaces feature is enabled.
    */
   public readonly subspacesEnabled: boolean;
 
@@ -152,29 +152,5 @@ export class SubspacesConfiguration {
     const commonRushConfigFolder: string = rushConfiguration.commonRushConfigFolder;
     const subspaceJsonLocation: string = `${commonRushConfigFolder}/${RushConstants.subspacesConfigFilename}`;
     return SubspacesConfiguration.tryLoadFromConfigurationFile(subspaceJsonLocation);
-  }
-
-  /**
-   * Returns a name of the form `_RUSH_SUBSPACE_XYZ_TEMP_FOLDER` where `XYZ` is
-   * derived from the subspace name.
-   *
-   * @internal
-   */
-  public static _convertNameToEnvironmentVariable(
-    subspaceName: string,
-    splitWorkspaceCompatibility: boolean
-  ): string {
-    let formattedSubspaceName: string;
-    if (splitWorkspaceCompatibility) {
-      // Convert all special characters according to utf-8character map
-      formattedSubspaceName = subspaceName.replace(/_/g, '_x45');
-      formattedSubspaceName = formattedSubspaceName.replace(/\+/g, '_x43');
-      formattedSubspaceName = formattedSubspaceName.replace(/-/g, '_x95');
-      formattedSubspaceName = formattedSubspaceName.toUpperCase();
-    } else {
-      formattedSubspaceName = subspaceName.replace(/-/g, '_').toUpperCase();
-    }
-
-    return `_RUSH_SUBSPACE_${formattedSubspaceName}_TEMP_FOLDER`;
   }
 }

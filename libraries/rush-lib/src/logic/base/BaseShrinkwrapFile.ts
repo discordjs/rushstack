@@ -1,10 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
 import * as semver from 'semver';
+import { Colorize, type ITerminal } from '@rushstack/terminal';
 
-import { RushConstants } from '../../logic/RushConstants';
+import { RushConstants } from '../RushConstants';
 import { type DependencySpecifier, DependencySpecifierType } from '../DependencySpecifier';
 import type { IShrinkwrapFilePolicyValidatorOptions } from '../policy/ShrinkwrapFilePolicy';
 import type { RushConfiguration } from '../../api/RushConfiguration';
@@ -28,6 +28,17 @@ export abstract class BaseShrinkwrapFile {
     }
     return undefined;
   }
+
+  /**
+   * Determine whether `pnpm-lock.yaml` complies with the rules specified in `common/config/rush/pnpm-config.schema.json`.
+   *
+   * @virtual
+   */
+  public validateShrinkwrapAfterUpdate(
+    rushConfiguration: RushConfiguration,
+    subspace: Subspace,
+    terminal: ITerminal
+  ): void {}
 
   /**
    * Validate the shrinkwrap using the provided policy options.
@@ -143,14 +154,12 @@ export abstract class BaseShrinkwrapFile {
    * a given package.json. Returns true if any dependencies are not aligned with the shrinkwrap.
    *
    * @param project - the Rush project that is being validated against the shrinkwrap
-   * @param variant - the variant that is being validated
    *
    * @virtual
    */
   public abstract isWorkspaceProjectModifiedAsync(
     project: RushConfigurationProject,
-    subspace: Subspace,
-    variant?: string
+    subspace: Subspace
   ): Promise<boolean>;
 
   /** @virtual */
@@ -218,7 +227,7 @@ export abstract class BaseShrinkwrapFile {
           this._alreadyWarnedSpecs.add(projectDependency.versionSpecifier);
           // eslint-disable-next-line no-console
           console.log(
-            colors.yellow(
+            Colorize.yellow(
               `WARNING: Not validating ${projectDependency.specifierType}-based` +
                 ` specifier: "${projectDependency.versionSpecifier}"`
             )

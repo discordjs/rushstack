@@ -3,18 +3,7 @@
 
 import type { OperationExecutionRecord } from './OperationExecutionRecord';
 import { OperationStatus } from './OperationStatus';
-
-/**
- * When the queue returns an unassigned operation, it means there is at least one remote executing operation,
- * at this time, the caller has a chance to make a decision:
- * 1. Manually invoke `tryGetRemoteExecutingOperation()` to get the remote executing operation.
- * 2. If there is no remote executing operation available, wait for some time and return in callback, which
- * internally invoke `assignOperations()` to assign new operations.
- * NOTE: the caller must wait for some time to avoid busy loop and burn CPU cycles.
- */
-export const UNASSIGNED_OPERATION: 'UNASSIGNED_OPERATION' = 'UNASSIGNED_OPERATION';
-
-export type IOperationIteratorResult = OperationExecutionRecord | typeof UNASSIGNED_OPERATION;
+import { RushConstants } from '../RushConstants';
 
 /**
  * Implementation of the async iteration protocol for a collection of IOperation objects.
@@ -26,10 +15,10 @@ export type IOperationIteratorResult = OperationExecutionRecord | typeof UNASSIG
  * stall until another operations completes.
  */
 export class AsyncOperationQueue
-  implements AsyncIterable<IOperationIteratorResult>, AsyncIterator<IOperationIteratorResult>
+  implements AsyncIterable<OperationExecutionRecord>, AsyncIterator<OperationExecutionRecord>
 {
   private readonly _queue: OperationExecutionRecord[];
-  private readonly _pendingIterators: ((result: IteratorResult<IOperationIteratorResult>) => void)[];
+  private readonly _pendingIterators: ((result: IteratorResult<OperationExecutionRecord>) => void)[];
   private readonly _totalOperations: number;
   private readonly _completedOperations: Set<OperationExecutionRecord>;
 
@@ -54,11 +43,11 @@ export class AsyncOperationQueue
    * For use with `for await (const operation of taskQueue)`
    * @see {AsyncIterator}
    */
-  public next(): Promise<IteratorResult<IOperationIteratorResult>> {
+  public next(): Promise<IteratorResult<OperationExecutionRecord>> {
     const { _pendingIterators: waitingIterators } = this;
 
-    const promise: Promise<IteratorResult<IOperationIteratorResult>> = new Promise(
-      (resolve: (result: IteratorResult<IOperationIteratorResult>) => void) => {
+    const promise: Promise<IteratorResult<OperationExecutionRecord>> = new Promise(
+      (resolve: (result: IteratorResult<OperationExecutionRecord>) => void) => {
         waitingIterators.push(resolve);
       }
     );
@@ -89,6 +78,8 @@ export class AsyncOperationQueue
         }
       }
     }
+
+    this.assignOperations();
 
     if (this._completedOperations.size === this._totalOperations) {
       this._isDone = true;
@@ -124,10 +115,6 @@ export class AsyncOperationQueue
         // This operation is not yet ready to be executed
         // next one plz :)
         continue;
-      } else if (record.status === OperationStatus.RemoteExecuting) {
-        // This operation is not ready to execute yet, but it may become ready later
-        // next one plz :)
-        continue;
       } else if (record.status !== OperationStatus.Ready) {
         // Sanity check
         throw new Error(`Unexpected status "${record.status}" for queued operation: ${record.name}`);
@@ -157,37 +144,13 @@ export class AsyncOperationQueue
       }
       return;
     }
-
-    if (waitingIterators.length > 0) {
-      // returns an unassigned operation to let caller decide when there is at least one
-      // remote executing operation which is not ready to process.
-      if (queue.some((operation) => operation.status === OperationStatus.RemoteExecuting)) {
-        waitingIterators.shift()!({
-          value: UNASSIGNED_OPERATION,
-          done: false
-        });
-      }
-    }
-  }
-
-  public tryGetRemoteExecutingOperation(): OperationExecutionRecord | undefined {
-    const { _queue: queue } = this;
-    // cycle through the queue to find the next operation that is executed remotely
-    for (let i: number = queue.length - 1; i >= 0; i--) {
-      const operation: OperationExecutionRecord = queue[i];
-
-      if (operation.status === OperationStatus.RemoteExecuting) {
-        return operation;
-      }
-    }
-    return undefined;
   }
 
   /**
    * Returns this queue as an async iterator, such that multiple functions iterating this object concurrently
    * receive distinct iteration results.
    */
-  public [Symbol.asyncIterator](): AsyncIterator<IOperationIteratorResult> {
+  public [Symbol.asyncIterator](): AsyncIterator<OperationExecutionRecord> {
     return this;
   }
 }
@@ -236,7 +199,7 @@ function calculateCriticalPathLength(
           .map((visitedTask) => visitedTask.name)
           .reverse()
           .join('\n  -> ') +
-        '\nConsider using the decoupledLocalDependencies option for rush.json.'
+        `\nConsider using the decoupledLocalDependencies option in ${RushConstants.rushJsonFilename}.`
     );
   }
 

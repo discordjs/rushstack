@@ -1,6 +1,220 @@
 # Change Log - @rushstack/heft-webpack5-plugin
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 0.10.9
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 0.10.8
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 0.10.7
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 0.10.6
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 0.10.5
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 0.10.4
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 0.10.3
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 0.10.2
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 0.10.1
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 0.10.0
+Fri, 07 Jun 2024 15:10:25 GMT
+
+### Minor changes
+
+- Add `onGetWatchOptions` accessor hook to allow cooperating plugins to, for example, configure a list of globs for the file watcher to ignore.
+
+## 0.9.55
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 0.9.54
+Thu, 30 May 2024 00:13:05 GMT
+
+_Version update only_
+
+## 0.9.53
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 0.9.52
+Wed, 29 May 2024 00:10:52 GMT
+
+_Version update only_
+
+## 0.9.51
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.9.50
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 0.9.49
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 0.9.48
+Fri, 24 May 2024 00:15:08 GMT
+
+_Version update only_
+
+## 0.9.47
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 0.9.46
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 0.9.45
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 0.9.44
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 0.9.43
+Fri, 10 May 2024 05:33:34 GMT
+
+_Version update only_
+
+## 0.9.42
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 0.9.41
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 0.9.40
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 0.9.39
+Tue, 19 Mar 2024 15:10:18 GMT
+
+_Version update only_
+
+## 0.9.38
+Fri, 15 Mar 2024 00:12:40 GMT
+
+_Version update only_
+
+## 0.9.37
+Tue, 05 Mar 2024 01:19:24 GMT
+
+_Version update only_
+
+## 0.9.36
+Sun, 03 Mar 2024 20:58:13 GMT
+
+_Version update only_
+
+## 0.9.35
+Sat, 02 Mar 2024 02:22:24 GMT
+
+_Version update only_
+
+## 0.9.34
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 0.9.33
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 0.9.32
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 0.9.31
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 0.9.30
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 0.9.29
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 0.9.28
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 0.9.27
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 0.9.26
+Tue, 20 Feb 2024 16:10:53 GMT
+
+_Version update only_
+
+## 0.9.25
+Mon, 19 Feb 2024 21:54:26 GMT
+
+_Version update only_
+
+## 0.9.24
+Sat, 17 Feb 2024 06:24:35 GMT
+
+_Version update only_
 
 ## 0.9.23
 Thu, 08 Feb 2024 01:09:21 GMT

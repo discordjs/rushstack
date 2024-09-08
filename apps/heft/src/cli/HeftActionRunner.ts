@@ -5,14 +5,8 @@ import { performance } from 'perf_hooks';
 import { createInterface, type Interface as ReadlineInterface } from 'readline';
 import os from 'os';
 
-import {
-  AlreadyReportedError,
-  Colors,
-  ConsoleTerminalProvider,
-  InternalError,
-  type ITerminal,
-  type IPackageJson
-} from '@rushstack/node-core-library';
+import { AlreadyReportedError, InternalError, type IPackageJson } from '@rushstack/node-core-library';
+import { Colorize, ConsoleTerminalProvider, type ITerminal } from '@rushstack/terminal';
 import {
   type IOperationExecutionOptions,
   type IWatchLoopState,
@@ -35,7 +29,7 @@ import { HeftParameterManager } from '../pluginFramework/HeftParameterManager';
 import { TaskOperationRunner } from '../operations/runners/TaskOperationRunner';
 import { PhaseOperationRunner } from '../operations/runners/PhaseOperationRunner';
 import type { HeftPhase } from '../pluginFramework/HeftPhase';
-import type { IHeftAction, IHeftActionOptions } from '../cli/actions/IHeftAction';
+import type { IHeftAction, IHeftActionOptions } from './actions/IHeftAction';
 import type {
   IHeftLifecycleCleanHookOptions,
   IHeftLifecycleSession,
@@ -93,7 +87,7 @@ export function ensureCliAbortSignal(terminal: ITerminal): AbortSignal {
         process.exit(1);
       } else {
         terminal.writeLine(
-          Colors.yellow(Colors.bold(`Canceling... Press Ctrl+C again to forcibly terminate.`))
+          Colorize.yellow(Colorize.bold(`Canceling... Press Ctrl+C again to forcibly terminate.`))
         );
       }
 
@@ -150,8 +144,8 @@ export async function runWithLoggingAsync(
     const durationSeconds: number = Math.round(duration) / 1000;
     const finishedLoggingLine: string = `-------------------- ${finishedLoggingWord} (${durationSeconds}s) --------------------`;
     terminal.writeLine(
-      Colors.bold(
-        (encounteredError ? Colors.red : encounteredWarnings ? Colors.yellow : Colors.green)(
+      Colorize.bold(
+        (encounteredError ? Colorize.red : encounteredWarnings ? Colorize.yellow : Colorize.green)(
           finishedLoggingLine
         )
       )
@@ -215,8 +209,6 @@ export class HeftActionRunner {
       // to the number of CPU cores
       this._parallelism = numberOfCores;
     }
-
-    this._metricsCollector.setStartTime();
   }
 
   protected get parameterManager(): HeftParameterManager {
@@ -313,7 +305,7 @@ export class HeftActionRunner {
           await watchLoop.runIPCAsync();
         } else {
           await watchLoop.runUntilAbortedAsync(cliAbortSignal, () => {
-            terminal.writeLine(Colors.bold('Waiting for changes. Press CTRL + C to exit...'));
+            terminal.writeLine(Colorize.bold('Waiting for changes. Press CTRL + C to exit...'));
             terminal.writeLine('');
           });
         }
@@ -336,16 +328,16 @@ export class HeftActionRunner {
         // Write an empty line to the terminal for separation between iterations. We've already iterated
         // at this point, so log out that we're about to start a new run.
         terminal.writeLine('');
-        terminal.writeLine(Colors.bold('Starting incremental build...'));
+        terminal.writeLine(Colorize.bold('Starting incremental build...'));
       },
       executeAsync: (state: IWatchLoopState): Promise<OperationStatus> => {
         return this._executeOnceAsync(executionManager, state.abortSignal, state.requestRun);
       },
       onRequestRun: (requestor?: string) => {
-        terminal.writeLine(Colors.bold(`New run requested by ${requestor || 'unknown task'}`));
+        terminal.writeLine(Colorize.bold(`New run requested by ${requestor || 'unknown task'}`));
       },
       onAbort: () => {
-        terminal.writeLine(Colors.bold(`Cancelling incremental build...`));
+        terminal.writeLine(Colorize.bold(`Cancelling incremental build...`));
       }
     });
     return watchLoop;
@@ -356,6 +348,8 @@ export class HeftActionRunner {
     abortSignal: AbortSignal,
     requestRun?: (requestor?: string) => void
   ): Promise<OperationStatus> {
+    // Record this as the start of task execution.
+    this._metricsCollector.setStartTime();
     // Execute the action operations
     return await runWithLoggingAsync(
       () => {
@@ -392,7 +386,7 @@ export class HeftActionRunner {
             // Only write once, and write with yellow to make it stand out without writing a warning to stderr
             hasWarnedAboutSkippedPhases = true;
             this._terminal.writeLine(
-              Colors.bold(
+              Colorize.bold(
                 'The provided list of phases does not contain all phase dependencies. You may need to run the ' +
                   'excluded phases manually.'
               )
@@ -503,9 +497,8 @@ async function _startLifecycleAsync(this: void, internalHeftSession: InternalHef
 
     // Delete all temp folders for tasks by default
     for (const pluginDefinition of lifecycle.pluginDefinitions) {
-      const lifecycleSession: IHeftLifecycleSession = await lifecycle.getSessionForPluginDefinitionAsync(
-        pluginDefinition
-      );
+      const lifecycleSession: IHeftLifecycleSession =
+        await lifecycle.getSessionForPluginDefinitionAsync(pluginDefinition);
       deleteOperations.push({ sourcePath: lifecycleSession.tempFolderPath });
     }
 

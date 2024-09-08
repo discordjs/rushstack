@@ -1,9 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
-
 import type { CommandLineFlagParameter } from '@rushstack/ts-command-line';
+import { Colorize } from '@rushstack/terminal';
 
 import { BaseRushAction } from './BaseRushAction';
 import type { RushCommandLineParser } from '../RushCommandLineParser';
@@ -40,7 +39,7 @@ export class PurgeAction extends BaseRushAction {
     const unlinkManager: UnlinkManager = new UnlinkManager(this.rushConfiguration);
     const purgeManager: PurgeManager = new PurgeManager(this.rushConfiguration, this.rushGlobalFolder);
 
-    unlinkManager.unlink(/*force:*/ true);
+    await unlinkManager.unlinkAsync(/*force:*/ true);
 
     if (this._unsafeParameter.value!) {
       purgeManager.purgeUnsafe();
@@ -53,7 +52,7 @@ export class PurgeAction extends BaseRushAction {
     // eslint-disable-next-line no-console
     console.log(
       '\n' +
-        colors.green(
+        Colorize.green(
           `Rush purge started successfully and will complete asynchronously. (${stopwatch.toString()})`
         )
     );

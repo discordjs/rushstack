@@ -6,44 +6,51 @@
  * @packageDocumentation
  */
 
+// For backwards compatibility
+export { LookupByPath as LookupByPath, type IPrefixMatch } from '@rushstack/lookup-by-path';
+
 export { ApprovedPackagesPolicy } from './api/ApprovedPackagesPolicy';
 
-export { RushConfiguration, ITryFindRushJsonLocationOptions } from './api/RushConfiguration';
+export { RushConfiguration, type ITryFindRushJsonLocationOptions } from './api/RushConfiguration';
 
 export { Subspace } from './api/Subspace';
 export { SubspacesConfiguration } from './api/SubspacesConfiguration';
 
 export {
-  IPackageManagerOptionsJsonBase,
-  IConfigurationEnvironment,
-  IConfigurationEnvironmentVariable,
+  type IPackageManagerOptionsJsonBase,
+  type IConfigurationEnvironment,
+  type IConfigurationEnvironmentVariable,
   PackageManagerOptionsConfigurationBase
 } from './logic/base/BasePackageManagerOptionsConfiguration';
 export {
-  INpmOptionsJson as _INpmOptionsJson,
+  type INpmOptionsJson as _INpmOptionsJson,
   NpmOptionsConfiguration
 } from './logic/npm/NpmOptionsConfiguration';
 export {
-  IYarnOptionsJson as _IYarnOptionsJson,
+  type IYarnOptionsJson as _IYarnOptionsJson,
   YarnOptionsConfiguration
 } from './logic/yarn/YarnOptionsConfiguration';
 export {
-  IPnpmOptionsJson as _IPnpmOptionsJson,
-  PnpmStoreLocation,
-  PnpmStoreOptions,
+  type IPnpmOptionsJson as _IPnpmOptionsJson,
+  type PnpmStoreLocation,
+  type IPnpmLockfilePolicies,
+  type IPnpmPackageExtension,
+  type IPnpmPeerDependencyRules,
+  type IPnpmPeerDependenciesMeta,
+  type PnpmStoreOptions,
   PnpmOptionsConfiguration,
-  PnpmResolutionMode
+  type PnpmResolutionMode
 } from './logic/pnpm/PnpmOptionsConfiguration';
 
 export { BuildCacheConfiguration } from './api/BuildCacheConfiguration';
-export { CobuildConfiguration, ICobuildJson } from './api/CobuildConfiguration';
-export { GetCacheEntryIdFunction, IGenerateCacheEntryIdOptions } from './logic/buildCache/CacheEntryId';
+export { CobuildConfiguration, type ICobuildJson } from './api/CobuildConfiguration';
+export type { GetCacheEntryIdFunction, IGenerateCacheEntryIdOptions } from './logic/buildCache/CacheEntryId';
 export {
   FileSystemBuildCacheProvider,
-  IFileSystemBuildCacheProviderOptions
+  type IFileSystemBuildCacheProviderOptions
 } from './logic/buildCache/FileSystemBuildCacheProvider';
 
-export {
+export type {
   IPhase,
   PhaseBehaviorForMissingScript as IPhaseBehaviorForMissingScript
 } from './api/CommandLineConfiguration';
@@ -51,19 +58,20 @@ export {
 export {
   EnvironmentConfiguration,
   EnvironmentVariableNames,
-  IEnvironmentConfigurationInitializeOptions
+  type IEnvironmentConfigurationInitializeOptions
 } from './api/EnvironmentConfiguration';
 
 export { RushConstants } from './logic/RushConstants';
 
-export { PackageManagerName, PackageManager } from './api/packageManager/PackageManager';
+export { type PackageManagerName, PackageManager } from './api/packageManager/PackageManager';
 
 export { RushConfigurationProject } from './api/RushConfigurationProject';
 
 export {
-  IRushProjectJson as _IRushProjectJson,
-  IOperationSettings,
-  RushProjectConfiguration
+  type IRushProjectJson as _IRushProjectJson,
+  type IOperationSettings,
+  RushProjectConfiguration,
+  type IRushPhaseSharding
 } from './api/RushProjectConfiguration';
 
 export { RushUserConfiguration } from './api/RushUserConfiguration';
@@ -83,15 +91,11 @@ export {
 
 export { RepoStateFile } from './logic/RepoStateFile';
 
-export { LookupByPath, IPrefixMatch } from './logic/LookupByPath';
 export { EventHooks, Event } from './api/EventHooks';
 
 export { ChangeManager } from './api/ChangeManager';
 
-export {
-  LastInstallFlag as _LastInstallFlag,
-  ILockfileValidityCheckOptions as _ILockfileValidityCheckOptions
-} from './api/LastInstallFlag';
+export { FlagFile as _FlagFile } from './api/FlagFile';
 
 export {
   VersionPolicyDefinitionName,
@@ -103,71 +107,89 @@ export {
 
 export { VersionPolicyConfiguration } from './api/VersionPolicyConfiguration';
 
-export { ILaunchOptions, Rush } from './api/Rush';
+export { type ILaunchOptions, Rush } from './api/Rush';
 export { RushInternals as _RushInternals } from './api/RushInternals';
 
-export { ExperimentsConfiguration, IExperimentsJson } from './api/ExperimentsConfiguration';
+export { ExperimentsConfiguration, type IExperimentsJson } from './api/ExperimentsConfiguration';
 export {
   CustomTipsConfiguration,
   CustomTipId,
-  ICustomTipsJson,
-  ICustomTipInfo,
-  ICustomTipItemJson,
+  type ICustomTipsJson,
+  type ICustomTipInfo,
+  type ICustomTipItemJson,
   CustomTipSeverity,
   CustomTipType
 } from './api/CustomTipsConfiguration';
 
 export {
   ProjectChangeAnalyzer,
-  IGetChangedProjectsOptions,
-  IRawRepoState as _IRawRepoState
+  type IGetChangedProjectsOptions,
+  type IRawRepoState as _IRawRepoState
 } from './logic/ProjectChangeAnalyzer';
 
-export { IOperationRunner, IOperationRunnerContext } from './logic/operations/IOperationRunner';
-export { IExecutionResult, IOperationExecutionResult } from './logic/operations/IOperationExecutionResult';
-export { IOperationOptions, Operation } from './logic/operations/Operation';
+export type { IOperationRunner, IOperationRunnerContext } from './logic/operations/IOperationRunner';
+export type {
+  IExecutionResult,
+  IOperationExecutionResult
+} from './logic/operations/IOperationExecutionResult';
+export { type IOperationOptions, Operation } from './logic/operations/Operation';
 export { OperationStatus } from './logic/operations/OperationStatus';
 
 export {
   RushSession,
-  IRushSessionOptions,
-  CloudBuildCacheProviderFactory,
-  CobuildLockProviderFactory
+  type IRushSessionOptions,
+  type CloudBuildCacheProviderFactory,
+  type CobuildLockProviderFactory
 } from './pluginFramework/RushSession';
 
 export {
-  IRushCommand,
-  IGlobalCommand,
-  IPhasedCommand,
+  type IRushCommand,
+  type IGlobalCommand,
+  type IPhasedCommand,
   RushLifecycleHooks
 } from './pluginFramework/RushLifeCycle';
 
-export { ICreateOperationsContext, PhasedCommandHooks } from './pluginFramework/PhasedCommandHooks';
-
-export { IRushPlugin } from './pluginFramework/IRushPlugin';
-export { IBuiltInPluginConfiguration as _IBuiltInPluginConfiguration } from './pluginFramework/PluginLoader/BuiltInPluginLoader';
-export { IRushPluginConfigurationBase as _IRushPluginConfigurationBase } from './api/RushPluginsConfiguration';
-export { ILogger } from './pluginFramework/logging/Logger';
-
-export { ICloudBuildCacheProvider } from './logic/buildCache/ICloudBuildCacheProvider';
 export {
+  type ICreateOperationsContext,
+  type IExecuteOperationsContext,
+  PhasedCommandHooks
+} from './pluginFramework/PhasedCommandHooks';
+
+export type { IRushPlugin } from './pluginFramework/IRushPlugin';
+export type { IBuiltInPluginConfiguration as _IBuiltInPluginConfiguration } from './pluginFramework/PluginLoader/BuiltInPluginLoader';
+export type { IRushPluginConfigurationBase as _IRushPluginConfigurationBase } from './api/RushPluginsConfiguration';
+export type { ILogger } from './pluginFramework/logging/Logger';
+
+export type { ICloudBuildCacheProvider } from './logic/buildCache/ICloudBuildCacheProvider';
+export type {
   ICobuildLockProvider,
   ICobuildContext,
   ICobuildCompletedState
 } from './logic/cobuild/ICobuildLockProvider';
 
-export { ICredentialCacheOptions, ICredentialCacheEntry, CredentialCache } from './logic/CredentialCache';
+export {
+  type ICredentialCacheOptions,
+  type ICredentialCacheEntry,
+  CredentialCache
+} from './logic/CredentialCache';
 
 export type { ITelemetryData, ITelemetryMachineInfo, ITelemetryOperationResult } from './logic/Telemetry';
 
-export { IStopwatchResult } from './utilities/Stopwatch';
+export type { IStopwatchResult } from './utilities/Stopwatch';
 export {
   OperationStateFile as _OperationStateFile,
-  IOperationStateFileOptions as _IOperationStateFileOptions,
-  IOperationStateJson as _IOperationStateJson
+  type IOperationStateFileOptions as _IOperationStateFileOptions,
+  type IOperationStateJson as _IOperationStateJson
 } from './logic/operations/OperationStateFile';
 export {
   OperationMetadataManager as _OperationMetadataManager,
-  IOperationMetadataManagerOptions as _IOperationMetadataManagerOptions,
-  IOperationMetaData as _IOperationMetadata
+  type IOperationMetadataManagerOptions as _IOperationMetadataManagerOptions,
+  type IOperationMetaData as _IOperationMetadata
 } from './logic/operations/OperationMetadataManager';
+
+export {
+  RushCommandLine,
+  type IRushCommandLineSpec,
+  type IRushCommandLineParameter,
+  type IRushCommandLineAction
+} from './api/RushCommandLine';

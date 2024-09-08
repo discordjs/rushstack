@@ -1,6 +1,111 @@
 # Change Log - @microsoft/api-extractor-model
 
-This log was last generated on Thu, 08 Feb 2024 01:09:22 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 7.29.6
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 7.29.5
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 7.29.4
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 7.29.3
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 7.29.2
+Thu, 30 May 2024 00:13:05 GMT
+
+### Patches
+
+- Include missing `type` modifiers on type-only exports.
+
+## 7.29.1
+Wed, 29 May 2024 02:03:51 GMT
+
+_Version update only_
+
+## 7.29.0
+Wed, 29 May 2024 00:10:52 GMT
+
+### Minor changes
+
+- Bump TSDoc dependencies.
+
+## 7.28.21
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 7.28.20
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 7.28.19
+Sat, 25 May 2024 04:54:08 GMT
+
+_Version update only_
+
+## 7.28.18
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 7.28.17
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 7.28.16
+Fri, 10 May 2024 05:33:34 GMT
+
+_Version update only_
+
+## 7.28.15
+Mon, 06 May 2024 15:11:05 GMT
+
+_Version update only_
+
+## 7.28.14
+Wed, 10 Apr 2024 15:10:08 GMT
+
+_Version update only_
+
+## 7.28.13
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 7.28.12
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 7.28.11
+Mon, 19 Feb 2024 21:54:26 GMT
+
+### Patches
+
+- Fix a formatting issue with the LICENSE.
+
+## 7.28.10
+Sat, 17 Feb 2024 06:24:34 GMT
+
+### Patches
+
+- Fix broken link to API documentation
 
 ## 7.28.9
 Thu, 08 Feb 2024 01:09:22 GMT

@@ -4,7 +4,7 @@
 import * as path from 'path';
 import type { ChildProcess, SpawnSyncReturns } from 'child_process';
 import { default as getGitRepoInfo, type GitRepoInfo as IGitRepoInfo } from 'git-repo-info';
-import { Executable, FileSystem, InternalError, Path } from '@rushstack/node-core-library';
+import { Executable, FileSystem, InternalError, Path, Text } from '@rushstack/node-core-library';
 import { default as ignore, type Ignore as IIgnoreMatcher } from 'ignore';
 
 // Matches lines starting with "#" and whitepace lines
@@ -188,9 +188,8 @@ export class GitUtilities {
     let currentPath: string = normalizedWorkingDirectory;
     while (currentPath.length >= gitRepoRootPath.length) {
       const gitIgnoreFilePath: string = `${currentPath}/.gitignore`;
-      const gitIgnorePatterns: string[] | undefined = await this._tryReadGitIgnoreFileAsync(
-        gitIgnoreFilePath
-      );
+      const gitIgnorePatterns: string[] | undefined =
+        await this._tryReadGitIgnoreFileAsync(gitIgnoreFilePath);
       if (gitIgnorePatterns) {
         rawIgnorePatternsByGitignoreFolder.set(currentPath, gitIgnorePatterns);
       }
@@ -201,9 +200,8 @@ export class GitUtilities {
     const gitignoreRelativeFilePaths: string[] = await this._findUnignoredFilesAsync('*.gitignore');
     for (const gitignoreRelativeFilePath of gitignoreRelativeFilePaths) {
       const gitignoreFilePath: string = `${normalizedWorkingDirectory}/${gitignoreRelativeFilePath}`;
-      const gitIgnorePatterns: string[] | undefined = await this._tryReadGitIgnoreFileAsync(
-        gitignoreFilePath
-      );
+      const gitIgnorePatterns: string[] | undefined =
+        await this._tryReadGitIgnoreFileAsync(gitignoreFilePath);
       if (gitIgnorePatterns) {
         const parentPath: string = gitignoreFilePath.slice(0, gitignoreFilePath.lastIndexOf('/'));
         rawIgnorePatternsByGitignoreFolder.set(parentPath, gitIgnorePatterns);
@@ -284,7 +282,7 @@ export class GitUtilities {
 
     const foundIgnorePatterns: string[] = [];
     if (gitIgnoreContent) {
-      const gitIgnorePatterns: string[] = gitIgnoreContent.split(/\r?\n/g);
+      const gitIgnorePatterns: string[] = Text.splitByNewLines(gitIgnoreContent);
       for (const gitIgnorePattern of gitIgnorePatterns) {
         // Ignore whitespace-only lines and comments
         if (gitIgnorePattern.length === 0 || GITIGNORE_IGNORABLE_LINE_REGEX.test(gitIgnorePattern)) {
@@ -347,11 +345,13 @@ export class GitUtilities {
       childProcess.stderr!.on('data', (chunk: Buffer) => {
         errorMessage += chunk.toString();
       });
-      childProcess.on('close', (exitCode: number) => {
-        if (exitCode !== 0) {
+      childProcess.on('close', (exitCode: number | null, signal: NodeJS.Signals | null) => {
+        if (exitCode) {
           reject(
             new Error(`git exited with error code ${exitCode}${errorMessage ? `: ${errorMessage}` : ''}`)
           );
+        } else if (signal) {
+          reject(new Error(`git terminated by signal ${signal}`));
         }
         let remainder: string = '';
         for (let chunk of stdoutBuffer) {

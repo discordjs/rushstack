@@ -2,9 +2,9 @@
 // See LICENSE in the project root for license information.
 
 import * as os from 'os';
-import colors from 'colors';
 
 import { PackageJsonLookup } from '@rushstack/node-core-library';
+import { Colorize } from '@rushstack/terminal';
 
 import { ApiDocumenterCommandLine } from './cli/ApiDocumenterCommandLine';
 
@@ -12,9 +12,11 @@ const myPackageVersion: string = PackageJsonLookup.loadOwnPackageJson(__dirname)
 
 console.log(
   os.EOL +
-    colors.bold(`api-documenter ${myPackageVersion} ` + colors.cyan(' - https://api-extractor.com/') + os.EOL)
+    Colorize.bold(
+      `api-documenter ${myPackageVersion} ` + Colorize.cyan(' - https://api-extractor.com/') + os.EOL
+    )
 );
 
 const parser: ApiDocumenterCommandLine = new ApiDocumenterCommandLine();
 
-parser.execute().catch(console.error); // CommandLineParser.execute() should never reject the promise
+parser.executeAsync().catch(console.error); // CommandLineParser.executeAsync() should never reject the promise

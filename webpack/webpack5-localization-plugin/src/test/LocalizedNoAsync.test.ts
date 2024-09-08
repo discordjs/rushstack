@@ -27,6 +27,7 @@ async function testLocalizedNoAsyncInner(minimize: boolean): Promise<void> {
     '/'
   );
 
+  let compilationInStats: webpack.Compilation | undefined;
   const resJsonLoader: string = resolve(__dirname, '../loaders/resjson-loader.js');
   const options: ILocalizationPluginOptions = {
     localizedData: {
@@ -53,7 +54,10 @@ async function testLocalizedNoAsyncInner(minimize: boolean): Promise<void> {
       }
     },
     localizationStats: {
-      dropPath: 'localization-stats.json'
+      dropPath: 'localization-stats.json',
+      callback: (stats, compilation) => {
+        compilationInStats = compilation;
+      }
     },
     realContentHash: true
   };
@@ -61,12 +65,18 @@ async function testLocalizedNoAsyncInner(minimize: boolean): Promise<void> {
   const localizationPlugin: LocalizationPlugin = new LocalizationPlugin(options);
 
   const compiler: Compiler = webpack({
+    devtool: 'hidden-source-map',
     entry: {
       main: '/a/entry.js'
     },
     output: {
       path: '/release',
-      filename: '[name]-[locale]-[contenthash].js'
+      filename: '[name]-[locale]-[contenthash].js',
+      devtoolModuleFilenameTemplate: (info: { resourcePath: string }) => {
+        // On Windows the path contains backslashes because webpack doesn't normalize to platform agnostic paths.
+        // Also strangely we get `/` instead of `./` at the start of the path.
+        return `source:///${info.resourcePath?.replace(/\\/g, '/').replace(/^\//, './')}`;
+      }
     },
     module: {
       rules: [
@@ -103,6 +113,9 @@ async function testLocalizedNoAsyncInner(minimize: boolean): Promise<void> {
 
   expect(errors).toHaveLength(0);
   expect(warnings).toHaveLength(0);
+
+  expect(compilationInStats).toBeDefined();
+  expect(compilationInStats).toBeInstanceOf(webpack.Compilation);
 }
 
 describe(LocalizationPlugin.name, () => {

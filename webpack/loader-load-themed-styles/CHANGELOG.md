@@ -1,6 +1,213 @@
 # Change Log - @microsoft/loader-load-themed-styles
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 2.1.64
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 2.1.63
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 2.1.62
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 2.1.61
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 2.1.60
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 2.1.59
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 2.1.58
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 2.1.57
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 2.1.56
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 2.1.55
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 2.1.54
+Thu, 30 May 2024 00:13:05 GMT
+
+_Version update only_
+
+## 2.1.53
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 2.1.52
+Wed, 29 May 2024 00:10:52 GMT
+
+_Version update only_
+
+## 2.1.51
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 2.1.50
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 2.1.49
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 2.1.48
+Fri, 24 May 2024 00:15:08 GMT
+
+_Version update only_
+
+## 2.1.47
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 2.1.46
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 2.1.45
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 2.1.44
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 2.1.43
+Fri, 10 May 2024 05:33:33 GMT
+
+_Version update only_
+
+## 2.1.42
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 2.1.41
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 2.1.40
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 2.1.39
+Tue, 19 Mar 2024 15:10:18 GMT
+
+_Version update only_
+
+## 2.1.38
+Fri, 15 Mar 2024 00:12:40 GMT
+
+_Version update only_
+
+## 2.1.37
+Tue, 05 Mar 2024 01:19:24 GMT
+
+_Version update only_
+
+## 2.1.36
+Sun, 03 Mar 2024 20:58:13 GMT
+
+_Version update only_
+
+## 2.1.35
+Sat, 02 Mar 2024 02:22:24 GMT
+
+_Version update only_
+
+## 2.1.34
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 2.1.33
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 2.1.32
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 2.1.31
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 2.1.30
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 2.1.29
+Wed, 21 Feb 2024 21:45:28 GMT
+
+_Version update only_
+
+## 2.1.28
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 2.1.27
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 2.1.26
+Tue, 20 Feb 2024 16:10:52 GMT
+
+_Version update only_
+
+## 2.1.25
+Mon, 19 Feb 2024 21:54:27 GMT
+
+_Version update only_
+
+## 2.1.24
+Sat, 17 Feb 2024 06:24:35 GMT
+
+_Version update only_
 
 ## 2.1.23
 Thu, 08 Feb 2024 01:09:21 GMT

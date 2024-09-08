@@ -1,17 +1,20 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type { ITerminal } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../../api/RushConfiguration';
 import type { RushGlobalFolder } from '../../api/RushGlobalFolder';
 import type { BaseInstallManager } from '../base/BaseInstallManager';
+import type { IInstallManagerOptions } from '../base/BaseInstallManagerTypes';
 import { InstallManagerFactory } from '../InstallManagerFactory';
 import { SetupChecks } from '../SetupChecks';
 import { PurgeManager } from '../PurgeManager';
 import { VersionMismatchFinder } from '../versionMismatch/VersionMismatchFinder';
 
 export interface IRunInstallOptions {
+  afterInstallAsync?: IInstallManagerOptions['afterInstallAsync'];
+  beforeInstallAsync?: IInstallManagerOptions['beforeInstallAsync'];
   rushConfiguration: RushConfiguration;
   rushGlobalFolder: RushGlobalFolder;
   isDebug: boolean;
@@ -40,10 +43,14 @@ export async function doBasicInstallAsync(options: IRunInstallOptions): Promise<
       recheckShrinkwrap: false,
       offline: false,
       collectLogFile: false,
-      pnpmFilterArguments: [],
+      pnpmFilterArgumentValues: [],
+      selectedProjects: new Set(rushConfiguration.projects),
       maxInstallAttempts: 1,
       networkConcurrency: undefined,
-      subspace: rushConfiguration.defaultSubspace
+      subspace: rushConfiguration.defaultSubspace,
+      terminal: options.terminal,
+      afterInstallAsync: options.afterInstallAsync,
+      beforeInstallAsync: options.beforeInstallAsync
     }
   );
 

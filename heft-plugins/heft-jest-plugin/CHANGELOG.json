@@ -2,6 +2,821 @@
   "name": "@rushstack/heft-jest-plugin",
   "entries": [
     {
+      "version": "0.12.9",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.9",
+      "date": "Wed, 21 Aug 2024 05:43:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.15.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.7.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.14.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.67.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.26` to `0.67.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.8",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.8",
+      "date": "Mon, 12 Aug 2024 22:16:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.15.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.6.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.13.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.26`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.25` to `0.66.26`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.7",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.7",
+      "date": "Fri, 02 Aug 2024 17:26:42 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.25`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.24` to `0.66.25`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.6",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.6",
+      "date": "Sat, 27 Jul 2024 00:10:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Include CHANGELOG.md in published releases again"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.15.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.5.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.13.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.24`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.23` to `0.66.24`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.5",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.5",
+      "date": "Wed, 24 Jul 2024 00:12:14 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.23`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.22` to `0.66.23`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.4",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.4",
+      "date": "Wed, 17 Jul 2024 06:55:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.15.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.13.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.22`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.21` to `0.66.22`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.3",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.3",
+      "date": "Wed, 17 Jul 2024 00:11:19 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.21`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.20` to `0.66.21`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.2",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.2",
+      "date": "Tue, 16 Jul 2024 00:36:22 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.15.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.5.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.13.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.20`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.19` to `0.66.20`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.1",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.1",
+      "date": "Thu, 27 Jun 2024 21:01:36 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.15.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.19`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.18` to `0.66.19`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.12.0",
+      "tag": "@rushstack/heft-jest-plugin_v0.12.0",
+      "date": "Tue, 11 Jun 2024 00:21:28 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Update the test reporter to report unchecked snapshots."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.39",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.39",
+      "date": "Mon, 03 Jun 2024 23:43:15 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.18`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.17` to `0.66.18`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.38",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.38",
+      "date": "Thu, 30 May 2024 00:13:05 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.25`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.4.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.13.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.17`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.16` to `0.66.17`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.37",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.37",
+      "date": "Wed, 29 May 2024 02:03:50 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.24`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.4.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.12.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.16`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.15` to `0.66.16`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.36",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.36",
+      "date": "Wed, 29 May 2024 00:10:52 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.15`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.14` to `0.66.15`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.35",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.35",
+      "date": "Tue, 28 May 2024 15:10:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.23`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.3.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.12.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.14`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.13` to `0.66.14`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.34",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.34",
+      "date": "Tue, 28 May 2024 00:09:47 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.22`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.12.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.13`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.12` to `0.66.13`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.33",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.33",
+      "date": "Sat, 25 May 2024 04:54:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.21`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.12.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.12`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.11` to `0.66.12`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.32",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.32",
+      "date": "Fri, 24 May 2024 00:15:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.11`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.10` to `0.66.11`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.31",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.31",
+      "date": "Thu, 23 May 2024 02:26:56 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.20`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.11.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.10`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.9` to `0.66.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.30",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.30",
+      "date": "Thu, 16 May 2024 15:10:22 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.9`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.8` to `0.66.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.29",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.29",
+      "date": "Wed, 15 May 2024 23:42:58 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.19`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.11.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.8`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.7` to `0.66.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.28",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.28",
+      "date": "Wed, 15 May 2024 06:04:17 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.18`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.3.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.10.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.6` to `0.66.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.27",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.27",
+      "date": "Fri, 10 May 2024 05:33:34 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.17`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.2.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.10.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.5` to `0.66.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.26",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.26",
+      "date": "Wed, 08 May 2024 22:23:51 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.4` to `0.66.5`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.25",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.25",
+      "date": "Mon, 06 May 2024 15:11:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.16`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.2.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.10.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.3` to `0.66.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.24",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.24",
+      "date": "Wed, 10 Apr 2024 15:10:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.15`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.1.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.10.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.2` to `0.66.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.23",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.23",
+      "date": "Tue, 19 Mar 2024 15:10:18 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.1` to `0.66.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.22",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.22",
+      "date": "Fri, 15 Mar 2024 00:12:40 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.66.0` to `0.66.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.21",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.21",
+      "date": "Tue, 05 Mar 2024 01:19:24 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.10` to `0.66.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.20",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.20",
+      "date": "Sun, 03 Mar 2024 20:58:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.10`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.9` to `0.65.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.19",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.19",
+      "date": "Sat, 02 Mar 2024 02:22:24 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.9`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.8` to `0.65.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.18",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.18",
+      "date": "Fri, 01 Mar 2024 01:10:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.8`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.7` to `0.65.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.17",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.17",
+      "date": "Thu, 29 Feb 2024 07:11:45 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.6` to `0.65.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.16",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.16",
+      "date": "Wed, 28 Feb 2024 16:09:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.5` to `0.65.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.15",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.15",
+      "date": "Mon, 26 Feb 2024 16:10:56 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Make `@rushstack/terminal` a dependency because the reporter has a runtime dependency on that package."
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.14",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.14",
+      "date": "Thu, 22 Feb 2024 05:54:17 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add a missing dependency on `@rushstack/terminal`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.13",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.13",
+      "date": "Thu, 22 Feb 2024 01:36:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.3` to `^0.65.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.12",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.12",
+      "date": "Wed, 21 Feb 2024 21:45:28 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.13`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.0.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.9.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.2` to `^0.65.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.11",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.11",
+      "date": "Wed, 21 Feb 2024 08:55:47 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.1` to `^0.65.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.10",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.10",
+      "date": "Tue, 20 Feb 2024 21:45:10 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.12`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.0.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.8.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.65.0` to `^0.65.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.9",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.9",
+      "date": "Tue, 20 Feb 2024 16:10:53 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.64.8` to `^0.65.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.8",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.8",
+      "date": "Mon, 19 Feb 2024 21:54:26 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.11`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `4.0.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.8`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.8.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.64.7` to `^0.64.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.11.7",
+      "tag": "@rushstack/heft-jest-plugin_v0.11.7",
+      "date": "Sat, 17 Feb 2024 06:24:35 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft-config-file\" to `0.14.10`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `3.66.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" from `^0.64.6` to `^0.64.7`"
+          }
+        ]
+      }
+    },
+    {
       "version": "0.11.6",
       "tag": "@rushstack/heft-jest-plugin_v0.11.6",
       "date": "Thu, 08 Feb 2024 01:09:21 GMT",

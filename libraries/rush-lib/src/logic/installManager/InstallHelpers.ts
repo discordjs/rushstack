@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
 import * as path from 'path';
 import {
   FileConstants,
@@ -10,6 +9,7 @@ import {
   JsonFile,
   LockFile
 } from '@rushstack/node-core-library';
+import { Colorize } from '@rushstack/terminal';
 
 import { LastInstallFlag } from '../../api/LastInstallFlag';
 import type { PackageManagerName } from '../../api/packageManager/PackageManager';
@@ -20,6 +20,7 @@ import type { IConfigurationEnvironment } from '../base/BasePackageManagerOption
 import type { PnpmOptionsConfiguration } from '../pnpm/PnpmOptionsConfiguration';
 import { merge } from '../../utilities/objectUtilities';
 import type { Subspace } from '../../api/Subspace';
+import { RushConstants } from '../RushConstants';
 
 interface ICommonPackageJson extends IPackageJson {
   pnpm?: {
@@ -47,7 +48,8 @@ export class InstallHelpers {
     };
 
     if (rushConfiguration.packageManager === 'pnpm') {
-      const { pnpmOptions } = rushConfiguration;
+      const pnpmOptions: PnpmOptionsConfiguration =
+        subspace.getPnpmOptions() || rushConfiguration.pnpmOptions;
       if (!commonPackageJson.pnpm) {
         commonPackageJson.pnpm = {};
       }
@@ -88,7 +90,7 @@ export class InstallHelpers {
 
     // Example: "C:\MyRepo\common\temp\package.json"
     const commonPackageJsonFilename: string = path.join(
-      subspace.getSubspaceTempFolder(),
+      subspace.getSubspaceTempFolderPath(),
       FileConstants.PackageJson
     );
 
@@ -126,7 +128,7 @@ export class InstallHelpers {
    * If the "(p)npm-local" symlink hasn't been set up yet, this creates it, installing the
    * specified (P)npm version in the user's home directory if needed.
    */
-  public static async ensureLocalPackageManager(
+  public static async ensureLocalPackageManagerAsync(
     rushConfiguration: RushConfiguration,
     rushGlobalFolder: RushGlobalFolder,
     maxInstallAttempts: number,
@@ -169,13 +171,13 @@ export class InstallHelpers {
 
     logIfConsoleOutputIsNotRestricted(`Acquired lock for ${packageManagerAndVersion}`);
 
-    if (!packageManagerMarker.isValid() || lock.dirtyWhenAcquired) {
+    if (!(await packageManagerMarker.isValidAsync()) || lock.dirtyWhenAcquired) {
       logIfConsoleOutputIsNotRestricted(
-        colors.bold(`Installing ${packageManager} version ${packageManagerVersion}\n`)
+        Colorize.bold(`Installing ${packageManager} version ${packageManagerVersion}\n`)
       );
 
       // note that this will remove the last-install flag from the directory
-      Utilities.installPackageInDirectory({
+      await Utilities.installPackageInDirectoryAsync({
         directory: packageManagerToolFolder,
         packageName: packageManager,
         version: rushConfiguration.packageManagerToolVersion,
@@ -199,7 +201,7 @@ export class InstallHelpers {
       );
     }
 
-    packageManagerMarker.create();
+    await packageManagerMarker.createAsync();
 
     // Example: "C:\MyRepo\common\temp"
     FileSystem.ensureFolder(rushConfiguration.commonTempFolder);
@@ -257,15 +259,19 @@ export class InstallHelpers {
           // eslint-disable-next-line no-console
           console.log(`  Existing value: ${baseEnv[envVar]}`);
           // eslint-disable-next-line no-console
-          console.log(`  Value set in rush.json: ${environmentVariables[envVar].value}`);
+          console.log(
+            `  Value set in ${RushConstants.rushJsonFilename}: ${environmentVariables[envVar].value}`
+          );
 
           if (environmentVariables[envVar].override) {
             setEnvironmentVariable = true;
             // eslint-disable-next-line no-console
-            console.log(`Overriding the environment variable with the value set in rush.json.`);
+            console.log(
+              `Overriding the environment variable with the value set in ${RushConstants.rushJsonFilename}.`
+            );
           } else {
             // eslint-disable-next-line no-console
-            console.log(colors.yellow(`WARNING: Not overriding the value of the environment variable.`));
+            console.log(Colorize.yellow(`WARNING: Not overriding the value of the environment variable.`));
           }
         }
 

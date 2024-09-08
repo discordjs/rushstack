@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
+import type { ITerminal } from '@rushstack/terminal';
 import type { Subspace } from '../../api/Subspace';
+import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
 
 export interface IInstallManagerOptions {
   /**
@@ -19,6 +21,11 @@ export interface IInstallManagerOptions {
    * Whether to check the validation before install only, without actually installing anything.
    */
   checkOnly: boolean;
+
+  /**
+   * Whether to only run resolutions. Only supported for PNPM.
+   */
+  resolutionOnly?: boolean;
 
   /**
    * Whether a "--bypass-policy" flag can be specified.
@@ -75,28 +82,45 @@ export interface IInstallManagerOptions {
   collectLogFile: boolean;
 
   /**
-   * The variant to consider when performing installations and validating shrinkwrap updates.
-   */
-  variant?: string | undefined;
-
-  /**
    * Retry the install the specified number of times
    */
   maxInstallAttempts: number;
 
   /**
-   * Filters to be passed to PNPM during installation, if applicable.
-   * These restrict the scope of a workspace installation.
+   * An array of `--filter` argument values. For example, if the array is ["a", "b"] then Rush would invoke
+   * `pnpm install --filter a --filter b` which restricts the install/update to dependencies of
+   * workspace projects "a" and "b". If the array is empty, then an unfiltered install
+   * is performed. Filtered installs have some limitations such as less comprehensive version analysis.
+   *
+   * @remarks
+   * Note that PNPM may arbitrarily ignore `--filter` (producing an unfiltered install) in certain situations,
+   * for example when `config.dedupe-peer-dependents=true` with PNPM 8.  Rush tries to circumvent this, under the
+   * assumption that a user who invokes a filtered install cares more about lockfile stability than duplication.
    */
-  pnpmFilterArguments: string[];
+  pnpmFilterArgumentValues: string[];
+
+  /**
+   * The set of projects for which installation should be performed.
+   */
+  selectedProjects: Set<RushConfigurationProject>;
 
   /**
    * Callback to invoke between preparing the common/temp folder and running installation.
    */
-  beforeInstallAsync?: () => Promise<void>;
+  beforeInstallAsync?: (subspace: Subspace) => Promise<void>;
+
+  /**
+   * Callback to invoke after a successful installation.
+   */
+  afterInstallAsync?: (subspace: Subspace) => Promise<void>;
 
   /**
    * The specific subspace to install.
    */
   subspace: Subspace;
+
+  /**
+   * The terminal where output should be printed.
+   */
+  terminal: ITerminal;
 }

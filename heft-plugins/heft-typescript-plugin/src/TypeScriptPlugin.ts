@@ -5,7 +5,8 @@ import * as path from 'path';
 
 import type * as TTypescript from 'typescript';
 import { SyncHook } from 'tapable';
-import { FileSystem, Path, type ITerminal } from '@rushstack/node-core-library';
+import { FileSystem, Path } from '@rushstack/node-core-library';
+import type { ITerminal } from '@rushstack/terminal';
 import { ConfigurationFile, InheritanceType, PathResolutionMethod } from '@rushstack/heft-config-file';
 import type {
   HeftConfiguration,
@@ -247,7 +248,7 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
         // all source files to this set of static assets. This would allow us to avoid
         // having to copy the static assets multiple times, increasing build times and
         // package size.
-        for (const copyOperation of await this._getStaticAssetCopyOperations(
+        for (const copyOperation of await this._getStaticAssetCopyOperationsAsync(
           taskSession,
           heftConfiguration
         )) {
@@ -284,7 +285,7 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
     );
   }
 
-  private async _getStaticAssetCopyOperations(
+  private async _getStaticAssetCopyOperationsAsync(
     taskSession: IHeftTaskSession,
     heftConfiguration: HeftConfiguration
   ): Promise<ICopyOperation[]> {

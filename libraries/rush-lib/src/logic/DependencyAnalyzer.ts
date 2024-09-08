@@ -6,6 +6,7 @@ import type { CommonVersionsConfiguration } from '../api/CommonVersionsConfigura
 import { DependencyType, type PackageJsonDependency } from '../api/PackageJsonEditor';
 import type { RushConfiguration } from '../api/RushConfiguration';
 import type { RushConfigurationProject } from '../api/RushConfigurationProject';
+import type { Subspace } from '../api/Subspace';
 
 export interface IDependencyAnalysis {
   /**
@@ -15,7 +16,7 @@ export interface IDependencyAnalysis {
 
   /**
    * A map of all direct dependencies that only have a single semantic version specifier,
-   * unless the variant has the {@link CommonVersionsConfiguration.implicitlyPreferredVersions} option
+   * unless the {@link CommonVersionsConfiguration.implicitlyPreferredVersions} option
    * set to `false`.
    */
   implicitlyPreferredVersionByPackageName: Map<string, string>;
@@ -32,7 +33,7 @@ export class DependencyAnalyzer {
     | undefined;
 
   private _rushConfiguration: RushConfiguration;
-  private _analysisByVariant: Map<string, IDependencyAnalysis> = new Map();
+  private _analysisBySubspace: WeakMap<Subspace, IDependencyAnalysis> | undefined;
 
   private constructor(rushConfiguration: RushConfiguration) {
     this._rushConfiguration = rushConfiguration;
@@ -53,35 +54,42 @@ export class DependencyAnalyzer {
     return analyzer;
   }
 
-  public getAnalysis(variant?: string): IDependencyAnalysis {
-    // Use an empty string as the key when no variant provided. Anything else would possibly conflict
-    // with a variant created by the user
-    const variantKey: string = variant || '';
-    let analysis: IDependencyAnalysis | undefined = this._analysisByVariant.get(variantKey);
-    if (!analysis) {
-      analysis = this._getAnalysisInternal(variant);
-      this._analysisByVariant.set(variantKey, analysis);
+  public getAnalysis(subspace?: Subspace, addAction?: boolean): IDependencyAnalysis {
+    if (!this._analysisBySubspace) {
+      this._analysisBySubspace = new WeakMap();
     }
 
-    return analysis;
+    const subspaceToAnalyze: Subspace = subspace || this._rushConfiguration.defaultSubspace;
+    if (!this._analysisBySubspace.has(subspaceToAnalyze)) {
+      this._analysisBySubspace.set(
+        subspaceToAnalyze,
+        this._getAnalysisInternal(subspace || this._rushConfiguration.defaultSubspace, addAction)
+      );
+    }
+
+    return this._analysisBySubspace.get(subspaceToAnalyze) as IDependencyAnalysis;
   }
 
   /**
-   * Generates the {@link IDependencyAnalysis} for a variant.
+   * Generates the {@link IDependencyAnalysis}.
    *
    * @remarks
    * The result of this function is not cached.
    */
-  private _getAnalysisInternal(variant: string | undefined): IDependencyAnalysis {
-    const commonVersionsConfiguration: CommonVersionsConfiguration =
-      this._rushConfiguration.getCommonVersions();
+  private _getAnalysisInternal(subspace: Subspace, addAction?: boolean): IDependencyAnalysis {
+    const commonVersionsConfiguration: CommonVersionsConfiguration = subspace.getCommonVersions();
     const allVersionsByPackageName: Map<string, Set<string>> = new Map();
     const allowedAlternativeVersions: Map<
       string,
       ReadonlyArray<string>
     > = commonVersionsConfiguration.allowedAlternativeVersions;
 
-    for (const project of this._rushConfiguration.projects) {
+    let projectsToProcess: RushConfigurationProject[] = this._rushConfiguration.projects;
+    if (addAction && this._rushConfiguration.subspacesFeatureEnabled) {
+      projectsToProcess = subspace.getProjects();
+    }
+
+    for (const project of projectsToProcess) {
       const dependencies: PackageJsonDependency[] = [
         ...project.packageJsonEditor.dependencyList,
         ...project.packageJsonEditor.devDependencyList
@@ -117,7 +125,7 @@ export class DependencyAnalyzer {
     }
 
     const implicitlyPreferredVersionByPackageName: Map<string, string> = new Map();
-    // Only generate implicitly preferred versions for variants that request it
+    // Only generate implicitly preferred versions when requested
     const useImplicitlyPreferredVersions: boolean =
       commonVersionsConfiguration.implicitlyPreferredVersions ?? true;
     if (useImplicitlyPreferredVersions) {

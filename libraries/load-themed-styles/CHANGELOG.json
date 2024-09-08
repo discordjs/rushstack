@@ -2,6 +2,503 @@
   "name": "@microsoft/load-themed-styles",
   "entries": [
     {
+      "version": "2.0.140",
+      "tag": "@microsoft/load-themed-styles_v2.0.140",
+      "date": "Wed, 21 Aug 2024 05:43:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.67.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.139",
+      "tag": "@microsoft/load-themed-styles_v2.0.139",
+      "date": "Mon, 12 Aug 2024 22:16:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.26`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.138",
+      "tag": "@microsoft/load-themed-styles_v2.0.138",
+      "date": "Fri, 02 Aug 2024 17:26:42 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.25`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.137",
+      "tag": "@microsoft/load-themed-styles_v2.0.137",
+      "date": "Sat, 27 Jul 2024 00:10:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Include CHANGELOG.md in published releases again"
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.24`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.136",
+      "tag": "@microsoft/load-themed-styles_v2.0.136",
+      "date": "Wed, 24 Jul 2024 00:12:14 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.23`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.135",
+      "tag": "@microsoft/load-themed-styles_v2.0.135",
+      "date": "Wed, 17 Jul 2024 06:55:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.22`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.134",
+      "tag": "@microsoft/load-themed-styles_v2.0.134",
+      "date": "Wed, 17 Jul 2024 00:11:19 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.21`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.133",
+      "tag": "@microsoft/load-themed-styles_v2.0.133",
+      "date": "Tue, 16 Jul 2024 00:36:21 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.20`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.132",
+      "tag": "@microsoft/load-themed-styles_v2.0.132",
+      "date": "Thu, 27 Jun 2024 21:01:36 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.19`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.131",
+      "tag": "@microsoft/load-themed-styles_v2.0.131",
+      "date": "Mon, 03 Jun 2024 23:43:15 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.18`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.130",
+      "tag": "@microsoft/load-themed-styles_v2.0.130",
+      "date": "Thu, 30 May 2024 00:13:05 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.17`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.129",
+      "tag": "@microsoft/load-themed-styles_v2.0.129",
+      "date": "Wed, 29 May 2024 02:03:50 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.16`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.128",
+      "tag": "@microsoft/load-themed-styles_v2.0.128",
+      "date": "Wed, 29 May 2024 00:10:52 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.15`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.127",
+      "tag": "@microsoft/load-themed-styles_v2.0.127",
+      "date": "Tue, 28 May 2024 15:10:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.14`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.126",
+      "tag": "@microsoft/load-themed-styles_v2.0.126",
+      "date": "Tue, 28 May 2024 00:09:47 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.13`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.125",
+      "tag": "@microsoft/load-themed-styles_v2.0.125",
+      "date": "Sat, 25 May 2024 04:54:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.12`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.124",
+      "tag": "@microsoft/load-themed-styles_v2.0.124",
+      "date": "Fri, 24 May 2024 00:15:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.11`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.123",
+      "tag": "@microsoft/load-themed-styles_v2.0.123",
+      "date": "Thu, 23 May 2024 02:26:56 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.122",
+      "tag": "@microsoft/load-themed-styles_v2.0.122",
+      "date": "Thu, 16 May 2024 15:10:22 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.121",
+      "tag": "@microsoft/load-themed-styles_v2.0.121",
+      "date": "Wed, 15 May 2024 23:42:58 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.120",
+      "tag": "@microsoft/load-themed-styles_v2.0.120",
+      "date": "Wed, 15 May 2024 06:04:17 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.119",
+      "tag": "@microsoft/load-themed-styles_v2.0.119",
+      "date": "Fri, 10 May 2024 05:33:33 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.118",
+      "tag": "@microsoft/load-themed-styles_v2.0.118",
+      "date": "Wed, 08 May 2024 22:23:50 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.5`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.117",
+      "tag": "@microsoft/load-themed-styles_v2.0.117",
+      "date": "Mon, 06 May 2024 15:11:04 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.116",
+      "tag": "@microsoft/load-themed-styles_v2.0.116",
+      "date": "Wed, 10 Apr 2024 15:10:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.115",
+      "tag": "@microsoft/load-themed-styles_v2.0.115",
+      "date": "Tue, 19 Mar 2024 15:10:18 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.114",
+      "tag": "@microsoft/load-themed-styles_v2.0.114",
+      "date": "Fri, 15 Mar 2024 00:12:40 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.113",
+      "tag": "@microsoft/load-themed-styles_v2.0.113",
+      "date": "Tue, 05 Mar 2024 01:19:24 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.66.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.112",
+      "tag": "@microsoft/load-themed-styles_v2.0.112",
+      "date": "Sun, 03 Mar 2024 20:58:12 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.111",
+      "tag": "@microsoft/load-themed-styles_v2.0.111",
+      "date": "Sat, 02 Mar 2024 02:22:23 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.110",
+      "tag": "@microsoft/load-themed-styles_v2.0.110",
+      "date": "Fri, 01 Mar 2024 01:10:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.109",
+      "tag": "@microsoft/load-themed-styles_v2.0.109",
+      "date": "Thu, 29 Feb 2024 07:11:45 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.108",
+      "tag": "@microsoft/load-themed-styles_v2.0.108",
+      "date": "Wed, 28 Feb 2024 16:09:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.107",
+      "tag": "@microsoft/load-themed-styles_v2.0.107",
+      "date": "Sat, 24 Feb 2024 23:02:51 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.5`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.106",
+      "tag": "@microsoft/load-themed-styles_v2.0.106",
+      "date": "Thu, 22 Feb 2024 01:36:09 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.105",
+      "tag": "@microsoft/load-themed-styles_v2.0.105",
+      "date": "Wed, 21 Feb 2024 21:45:28 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.104",
+      "tag": "@microsoft/load-themed-styles_v2.0.104",
+      "date": "Wed, 21 Feb 2024 08:55:47 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.103",
+      "tag": "@microsoft/load-themed-styles_v2.0.103",
+      "date": "Tue, 20 Feb 2024 21:45:10 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.102",
+      "tag": "@microsoft/load-themed-styles_v2.0.102",
+      "date": "Tue, 20 Feb 2024 16:10:52 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.65.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.101",
+      "tag": "@microsoft/load-themed-styles_v2.0.101",
+      "date": "Mon, 19 Feb 2024 21:54:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "2.0.100",
+      "tag": "@microsoft/load-themed-styles_v2.0.100",
+      "date": "Sat, 17 Feb 2024 06:24:35 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `0.64.7`"
+          }
+        ]
+      }
+    },
+    {
       "version": "2.0.99",
       "tag": "@microsoft/load-themed-styles_v2.0.99",
       "date": "Thu, 08 Feb 2024 01:09:21 GMT",

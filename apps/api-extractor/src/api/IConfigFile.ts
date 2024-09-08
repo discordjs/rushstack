@@ -49,6 +49,13 @@ export interface IConfigCompiler {
 }
 
 /**
+ * The allowed variations of API reports.
+ *
+ * @public
+ */
+export type ApiReportVariant = 'public' | 'beta' | 'alpha' | 'complete';
+
+/**
  * Configures how the API report files (*.api.md) will be generated.
  *
  * @remarks
@@ -63,13 +70,38 @@ export interface IConfigApiReport {
   enabled: boolean;
 
   /**
-   * The filename for the API report files.  It will be combined with `reportFolder` or `reportTempFolder` to produce
-   * a full output filename.
+   * The base filename for the API report files, to be combined with {@link IConfigApiReport.reportFolder} or
+   * {@link IConfigApiReport.reportTempFolder} to produce the full file path.
    *
    * @remarks
-   * The file extension should be ".api.md", and the string should not contain a path separator such as `\` or `/`.
+   * The `reportFileName` should not include any path separators such as `\` or `/`.  The `reportFileName` should
+   * not include a file extension, since API Extractor will automatically append an appropriate file extension such
+   * as `.api.md`.  If the {@link IConfigApiReport.reportVariants} setting is used, then the file extension includes
+   * the variant name, for example `my-report.public.api.md` or `my-report.beta.api.md`. The `complete` variant always
+   * uses the simple extension `my-report.api.md`.
+   *
+   * Previous versions of API Extractor required `reportFileName` to include the `.api.md` extension explicitly;
+   * for backwards compatibility, that is still accepted but will be discarded before applying the above rules.
+   *
+   * @defaultValue `<unscopedPackageName>`
    */
   reportFileName?: string;
+
+  /**
+   * The set of report variants to generate.
+   *
+   * @remarks
+   * To support different approval requirements for different API levels, multiple "variants" of the API report can
+   * be generated.  The `reportVariants` setting specifies a list of variants to be generated.  If omitted,
+   * by default only the `complete` variant will be generated, which includes all `@internal`, `@alpha`, `@beta`,
+   * and `@public` items.  Other possible variants are `alpha` (`@alpha` + `@beta` + `@public`),
+   * `beta` (`@beta` + `@public`), and `public` (`@public only`).
+   *
+   * The resulting API report file names will be derived from the {@link IConfigApiReport.reportFileName}.
+   *
+   * @defaultValue `[ "complete" ]`
+   */
+  reportVariants?: ApiReportVariant[];
 
   /**
    * Specifies the folder where the API report file is written.  The file name portion is determined by
@@ -378,8 +410,17 @@ export interface IConfigFile {
    * A list of NPM package names whose exports should be treated as part of this package.
    *
    * @remarks
+   * Also supports glob patterns.
+   * Note: glob patterns will **only** be resolved against dependencies listed in the project's package.json file.
    *
-   * For example, suppose that Webpack is used to generate a distributed bundle for the project `library1`,
+   * * This is both a safety and a performance precaution.
+   *
+   * Exact package names will be applied against any dependency encountered while walking the type graph, regardless of
+   * dependencies listed in the package.json.
+   *
+   * @example
+   *
+   * Suppose that Webpack is used to generate a distributed bundle for the project `library1`,
    * and another NPM package `library2` is embedded in this bundle.  Some types from `library2` may become part
    * of the exported API for `library1`, but by default API Extractor would generate a .d.ts rollup that explicitly
    * imports `library2`.  To avoid this, we can specify:

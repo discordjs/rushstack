@@ -1,13 +1,13 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
 import * as path from 'path';
 import builtinPackageNames from 'builtin-modules';
-
-import { FileSystem } from '@rushstack/node-core-library';
-import type { RushCommandLineParser } from '../RushCommandLineParser';
+import { Colorize } from '@rushstack/terminal';
 import type { CommandLineFlagParameter } from '@rushstack/ts-command-line';
+import { FileSystem } from '@rushstack/node-core-library';
+
+import type { RushCommandLineParser } from '../RushCommandLineParser';
 import { BaseConfiglessRushAction } from './BaseRushAction';
 
 export interface IJsonOutput {
@@ -67,20 +67,24 @@ export class ScanAction extends BaseConfiglessRushAction {
 
     const requireRegExps: RegExp[] = [
       // Example: require('something')
-      /\brequire\s*\(\s*[']([^']+\s*)[']\)/,
-      /\brequire\s*\(\s*["]([^"]+)["]\s*\)/,
+      /\brequire\s*\(\s*[']([^']+\s*)[']\s*\)/,
+      /\brequire\s*\(\s*["]([^"]+\s*)["]\s*\)/,
 
       // Example: require.ensure('something')
-      /\brequire.ensure\s*\(\s*[']([^']+\s*)[']\)/,
-      /\brequire.ensure\s*\(\s*["]([^"]+)["]\s*\)/,
+      /\brequire\.ensure\s*\(\s*[']([^']+\s*)[']\s*\)/,
+      /\brequire\.ensure\s*\(\s*["]([^"]+\s*)["]\s*\)/,
 
       // Example: require.resolve('something')
-      /\brequire.resolve\s*\(\s*[']([^']+\s*)[']\)/,
-      /\brequire.resolve\s*\(\s*["]([^"]+)["]\s*\)/,
+      /\brequire\.resolve\s*\(\s*[']([^']+\s*)[']\s*\)/,
+      /\brequire\.resolve\s*\(\s*["]([^"]+\s*)["]\s*\)/,
 
       // Example: System.import('something')
-      /\bSystem.import\s*\(\s*[']([^']+\s*)[']\)/,
-      /\bSystem.import\s*\(\s*["]([^"]+)["]\s*\)/,
+      /\bSystem\.import\s*\(\s*[']([^']+\s*)[']\s*\)/,
+      /\bSystem\.import\s*\(\s*["]([^"]+\s*)["]\s*\)/,
+
+      // Example: Import.lazy('something', require);
+      /\bImport\.lazy\s*\(\s*[']([^']+\s*)[']/,
+      /\bImport\.lazy\s*\(\s*["]([^"]+\s*)["]/,
 
       // Example:
       //
@@ -93,6 +97,10 @@ export class ScanAction extends BaseConfiglessRushAction {
       // Example:  import 'something';
       /\bimport\s*[']([^']+)[']\s*\;/,
       /\bimport\s*["]([^"]+)["]\s*\;/,
+
+      // Example: await import('fast-glob')
+      /\bimport\s*\(\s*[']([^']+)[']\s*\)/,
+      /\bimport\s*\(\s*["]([^"]+)["]\s*\)/,
 
       // Example:
       // /// <reference types="something" />
@@ -123,7 +131,7 @@ export class ScanAction extends BaseConfiglessRushAction {
         }
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.log(colors.bold('Skipping file due to error: ' + filename));
+        console.log(Colorize.bold('Skipping file due to error: ' + filename));
       }
     }
 
@@ -219,7 +227,7 @@ export class ScanAction extends BaseConfiglessRushAction {
       if (missingDependencies.length > 0) {
         // eslint-disable-next-line no-console
         console.log(
-          colors.yellow('Possible phantom dependencies') +
+          Colorize.yellow('Possible phantom dependencies') +
             " - these seem to be imported but aren't listed in package.json:"
         );
         for (const packageName of missingDependencies) {
@@ -236,7 +244,7 @@ export class ScanAction extends BaseConfiglessRushAction {
         }
         // eslint-disable-next-line no-console
         console.log(
-          colors.yellow('Possible unused dependencies') +
+          Colorize.yellow('Possible unused dependencies') +
             " - these are listed in package.json but don't seem to be imported:"
         );
         for (const packageName of unusedDependencies) {
@@ -249,7 +257,7 @@ export class ScanAction extends BaseConfiglessRushAction {
       if (!wroteAnything) {
         // eslint-disable-next-line no-console
         console.log(
-          colors.green('Everything looks good.') + '  No missing or unused dependencies were found.'
+          Colorize.green('Everything looks good.') + '  No missing or unused dependencies were found.'
         );
       }
     }

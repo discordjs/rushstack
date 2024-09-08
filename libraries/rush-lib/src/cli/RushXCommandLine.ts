@@ -1,10 +1,18 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
 import * as path from 'path';
-import { PackageJsonLookup, type IPackageJson, Text } from '@rushstack/node-core-library';
-import { DEFAULT_CONSOLE_WIDTH, PrintUtilities } from '@rushstack/terminal';
+import { PackageJsonLookup, type IPackageJson, Text, FileSystem, Async } from '@rushstack/node-core-library';
+import {
+  Colorize,
+  ConsoleTerminalProvider,
+  DEFAULT_CONSOLE_WIDTH,
+  type ITerminalProvider,
+  PrintUtilities,
+  Terminal,
+  type ITerminal
+} from '@rushstack/terminal';
+import { type ILogMessageCallbackOptions, pnpmSyncCopyAsync } from 'pnpm-sync-lib';
 
 import { Utilities } from '../utilities/Utilities';
 import { ProjectCommandSet } from '../logic/ProjectCommandSet';
@@ -15,6 +23,8 @@ import { RushStartupBanner } from './RushStartupBanner';
 import { EventHooksManager } from '../logic/EventHooksManager';
 import { Event } from '../api/EventHooks';
 import { EnvironmentVariableNames } from '../api/EnvironmentConfiguration';
+import { RushConstants } from '../logic/RushConstants';
+import { PnpmSyncUtilities } from '../utilities/PnpmSyncUtilities';
 
 interface IRushXCommandLineArguments {
   /**
@@ -64,7 +74,7 @@ class ProcessError extends Error {
 }
 
 export class RushXCommandLine {
-  public static launchRushX(launcherVersion: string, options: ILaunchOptions): void {
+  public static async launchRushXAsync(launcherVersion: string, options: ILaunchOptions): Promise<void> {
     try {
       const rushxArguments: IRushXCommandLineArguments = RushXCommandLine._parseCommandLineArguments();
       const rushConfiguration: RushConfiguration | undefined = RushConfiguration.tryLoadFromDefaultLocation({
@@ -81,20 +91,20 @@ export class RushXCommandLine {
           eventHooksManager?.handle(Event.preRushx, rushxArguments.isDebug, rushxArguments.ignoreHooks);
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error(colors.red('PreRushx hook error: ' + (error as Error).message));
+          console.error(Colorize.red('PreRushx hook error: ' + (error as Error).message));
         }
       }
       // Node.js can sometimes accidentally terminate with a zero exit code  (e.g. for an uncaught
       // promise exception), so we start with the assumption that the exit code is 1
       // and set it to 0 only on success.
       process.exitCode = 1;
-      RushXCommandLine._launchRushXInternal(rushxArguments, rushConfiguration, options);
+      await RushXCommandLine._launchRushXInternalAsync(rushxArguments, rushConfiguration, options);
       if (attemptHooks) {
         try {
           eventHooksManager?.handle(Event.postRushx, rushxArguments.isDebug, rushxArguments.ignoreHooks);
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error(colors.red('PostRushx hook error: ' + (error as Error).message));
+          console.error(Colorize.red('PostRushx hook error: ' + (error as Error).message));
         }
       }
 
@@ -107,15 +117,15 @@ export class RushXCommandLine {
         process.exitCode = 1;
       }
       // eslint-disable-next-line no-console
-      console.error(colors.red('Error: ' + (error as Error).message));
+      console.error(Colorize.red('Error: ' + (error as Error).message));
     }
   }
 
-  private static _launchRushXInternal(
+  private static async _launchRushXInternalAsync(
     rushxArguments: IRushXCommandLineArguments,
     rushConfiguration: RushConfiguration | undefined,
     options: ILaunchOptions
-  ): void {
+  ): Promise<void> {
     if (!rushxArguments.quiet) {
       RushStartupBanner.logStreamlinedBanner(Rush.version, options.isManaged);
     }
@@ -144,8 +154,9 @@ export class RushXCommandLine {
       // did not install the project's dependencies, because the project was not registered.
       // eslint-disable-next-line no-console
       console.log(
-        colors.yellow(
-          'Warning: You are invoking "rushx" inside a Rush repository, but this project is not registered in rush.json.'
+        Colorize.yellow(
+          'Warning: You are invoking "rushx" inside a Rush repository, but this project is not registered in ' +
+            `${RushConstants.rushJsonFilename}.`
         )
       );
     }
@@ -207,6 +218,34 @@ export class RushXCommandLine {
       }
     });
 
+    const terminalProvider: ITerminalProvider = new ConsoleTerminalProvider({
+      debugEnabled: rushxArguments.isDebug,
+      verboseEnabled: rushxArguments.isDebug
+    });
+    const terminal: ITerminal = new Terminal(terminalProvider);
+
+    if (rushConfiguration?.packageManager === 'pnpm' && rushConfiguration?.experimentsConfiguration) {
+      const { configuration: experiments } = rushConfiguration?.experimentsConfiguration;
+
+      if (experiments?.usePnpmSyncForInjectedDependencies) {
+        const pnpmSyncJsonPath: string = packageFolder + '/node_modules/.pnpm-sync.json';
+        if (await FileSystem.existsAsync(pnpmSyncJsonPath)) {
+          const { PackageExtractor } = await import(
+            /* webpackChunkName: 'PackageExtractor' */
+            '@rushstack/package-extractor'
+          );
+          await pnpmSyncCopyAsync({
+            pnpmSyncJsonPath,
+            ensureFolderAsync: FileSystem.ensureFolderAsync,
+            forEachAsyncWithConcurrency: Async.forEachAsync,
+            getPackageIncludedFiles: PackageExtractor.getPackageIncludedFilesAsync,
+            logMessageCallback: (logMessageOptions: ILogMessageCallbackOptions) =>
+              PnpmSyncUtilities.processLogMessage(logMessageOptions, terminal)
+          });
+        }
+      }
+    }
+
     if (exitCode > 0) {
       throw new ProcessError(
         `Failed calling ${commandWithArgsForDisplay}.  Exit code: ${exitCode}`,
@@ -258,7 +297,7 @@ export class RushXCommandLine {
       // Future TODO: Instead of just displaying usage info, we could display a
       // specific error about the unknown flag the user tried to pass to rushx.
       // eslint-disable-next-line no-console
-      console.log(colors.red(`Unknown arguments: ${unknownArgs.map((x) => JSON.stringify(x)).join(', ')}`));
+      console.log(Colorize.red(`Unknown arguments: ${unknownArgs.map((x) => JSON.stringify(x)).join(', ')}`));
       help = true;
     }
 
@@ -289,7 +328,7 @@ export class RushXCommandLine {
 
     if (projectCommandSet.commandNames.length > 0) {
       // eslint-disable-next-line no-console
-      console.log(`Project commands for ${colors.cyan(packageJson.name)}:`);
+      console.log(`Project commands for ${Colorize.cyan(packageJson.name)}:`);
 
       // Calculate the length of the longest script name, for formatting
       let maxLength: number = 0;
@@ -311,7 +350,7 @@ export class RushXCommandLine {
         console.log(
           // Example: "  command: "
           '  ' +
-            colors.cyan(Text.padEnd(commandName + ':', maxLength + 2)) +
+            Colorize.cyan(Text.padEnd(commandName + ':', maxLength + 2)) +
             // Example: "do some thin..."
             Text.truncateWithEllipsis(escapedScriptBody, truncateLength)
         );
@@ -321,7 +360,7 @@ export class RushXCommandLine {
         // eslint-disable-next-line no-console
         console.log(
           '\n' +
-            colors.yellow(
+            Colorize.yellow(
               'Warning: Some "scripts" entries in the package.json file' +
                 ' have malformed names: ' +
                 projectCommandSet.malformedScriptNames.map((x) => `"${x}"`).join(', ')
@@ -330,7 +369,7 @@ export class RushXCommandLine {
       }
     } else {
       // eslint-disable-next-line no-console
-      console.log(colors.yellow('Warning: No commands are defined yet for this project.'));
+      console.log(Colorize.yellow('Warning: No commands are defined yet for this project.'));
       // eslint-disable-next-line no-console
       console.log(
         'You can define a command by adding a "scripts" table to the project\'s package.json file.'

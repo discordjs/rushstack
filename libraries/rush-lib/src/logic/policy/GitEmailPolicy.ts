@@ -1,8 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import colors from 'colors/safe';
 import { AlreadyReportedError } from '@rushstack/node-core-library';
+import { Colorize } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../../api/RushConfiguration';
 import { Utilities } from '../../utilities/Utilities';
@@ -10,7 +10,10 @@ import { Git } from '../Git';
 import { RushConstants } from '../RushConstants';
 import type { IPolicyValidatorOptions } from './PolicyValidator';
 
-export function validate(rushConfiguration: RushConfiguration, options: IPolicyValidatorOptions): void {
+export async function validateAsync(
+  rushConfiguration: RushConfiguration,
+  options: IPolicyValidatorOptions
+): Promise<void> {
   const git: Git = new Git(rushConfiguration);
 
   if (!git.isGitPresent()) {
@@ -18,7 +21,7 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
     // then we don't care about the Git email
     // eslint-disable-next-line no-console
     console.log(
-      colors.cyan('Ignoring Git validation because the Git binary was not found in the shell path.') + '\n'
+      Colorize.cyan('Ignoring Git validation because the Git binary was not found in the shell path.') + '\n'
     );
     return;
   }
@@ -27,14 +30,15 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
     // If Git isn't installed, or this Rush project is not under a Git working folder,
     // then we don't care about the Git email
     // eslint-disable-next-line no-console
-    console.log(colors.cyan('Ignoring Git validation because this is not a Git working folder.') + '\n');
+    console.log(Colorize.cyan('Ignoring Git validation because this is not a Git working folder.') + '\n');
     return;
   }
 
+  let userEmail: string | undefined = await git.tryGetGitEmailAsync();
   // If there isn't a Git policy, then we don't care whether the person configured
-  // a Git email address at all.  This helps people who don't
+  // a Git email address at all.
   if (rushConfiguration.gitAllowedEmailRegExps.length === 0) {
-    if (git.tryGetGitEmail() === undefined) {
+    if (userEmail === undefined) {
       return;
     }
 
@@ -42,9 +46,8 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
     // sanity checks (e.g. no spaces in the address).
   }
 
-  let userEmail: string;
   try {
-    userEmail = git.getGitEmail();
+    userEmail = git.validateGitEmail(userEmail);
 
     // sanity check; a valid email should not contain any whitespace
     // if this fails, then we have another issue to report
@@ -52,7 +55,7 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
       // eslint-disable-next-line no-console
       console.log(
         [
-          colors.red('Your Git email address is invalid: ' + JSON.stringify(userEmail)),
+          Colorize.red('Your Git email address is invalid: ' + JSON.stringify(userEmail)),
           '',
           `To configure your Git email address, try something like this:`,
           '',
@@ -70,7 +73,7 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
       }
 
       // eslint-disable-next-line no-console
-      console.log(colors.red(errorMessage));
+      console.log(Colorize.red(errorMessage));
       throw e;
     } else {
       throw e;
@@ -95,12 +98,10 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
 
   // Show the user's name as well.
   // Ex. "Example Name <name@example.com>"
-  let fancyEmail: string = colors.cyan(userEmail);
+  let fancyEmail: string = Colorize.cyan(userEmail);
   try {
-    const userName: string = Utilities.executeCommandAndCaptureOutput(
-      git.gitPath!,
-      ['config', 'user.name'],
-      '.'
+    const userName: string = (
+      await Utilities.executeCommandAndCaptureOutputAsync(git.gitPath!, ['config', 'user.name'], '.')
     ).trim();
     if (userName) {
       fancyEmail = `${userName} <${fancyEmail}>`;
@@ -115,7 +116,7 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
       'Hey there!  To keep things tidy, this repo asks you to submit your Git commits using an email like ' +
         (rushConfiguration.gitAllowedEmailRegExps.length > 1 ? 'one of these patterns:' : 'this pattern:'),
       '',
-      ...rushConfiguration.gitAllowedEmailRegExps.map((pattern) => '    ' + colors.cyan(pattern)),
+      ...rushConfiguration.gitAllowedEmailRegExps.map((pattern) => '    ' + Colorize.cyan(pattern)),
       '',
       '...but yours is configured like this:',
       '',
@@ -134,14 +135,14 @@ export function validate(rushConfiguration: RushConfiguration, options: IPolicyV
   }
 
   // eslint-disable-next-line no-console
-  console.log(colors.red(errorMessage));
+  console.log(Colorize.red(errorMessage));
   throw new AlreadyReportedError();
 }
 
 export function getEmailExampleLines(rushConfiguration: RushConfiguration): string[] {
   return [
-    colors.cyan('    git config --local user.name "Example Name"'),
-    colors.cyan(
+    Colorize.cyan('    git config --local user.name "Example Name"'),
+    Colorize.cyan(
       `    git config --local user.email "${rushConfiguration.gitSampleEmail || 'name@example.com'}"`
     )
   ];

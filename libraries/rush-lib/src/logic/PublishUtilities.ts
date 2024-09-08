@@ -43,6 +43,8 @@ interface IAddChangeOptions {
   projectsToExclude?: Set<string>;
 }
 
+const MAGIC_SPECIFIERS: Set<string> = new Set<string>(['*', '^', '~']);
+
 export class PublishUtilities {
   /**
    * Finds change requests in the given folder.
@@ -163,8 +165,8 @@ export class PublishUtilities {
           change.changeType! >= ChangeType.patch
             ? semver.inc(packageJson.version, PublishUtilities._getReleaseType(change.changeType!))!
             : change.changeType === ChangeType.hotfix
-            ? change.newVersion
-            : packageJson.version;
+              ? change.newVersion
+              : packageJson.version;
       }
 
       if (deps) {
@@ -251,14 +253,14 @@ export class PublishUtilities {
    * @param secretSubstring -- if specified, a substring to be replaced by `<<SECRET>>` to avoid printing secrets
    * on the console
    */
-  public static execCommand(
+  public static async execCommandAsync(
     shouldExecute: boolean,
     command: string,
     args: string[] = [],
     workingDirectory: string = process.cwd(),
     environment?: IEnvironment,
     secretSubstring?: string
-  ): void {
+  ): Promise<void> {
     let relativeDirectory: string = path.relative(process.cwd(), workingDirectory);
 
     if (relativeDirectory) {
@@ -278,7 +280,7 @@ export class PublishUtilities {
     );
 
     if (shouldExecute) {
-      Utilities.executeCommand({
+      await Utilities.executeCommandAsync({
         command,
         args,
         workingDirectory,
@@ -301,8 +303,10 @@ export class PublishUtilities {
     const currentDependencyVersion: string = currentDependencySpecifier.versionSpecifier;
     let newDependencyVersion: string;
 
-    if (currentDependencyVersion === '*') {
-      newDependencyVersion = '*';
+    if (MAGIC_SPECIFIERS.has(currentDependencyVersion)) {
+      // pnpm and yarn support `workspace:*', `workspace:~`, and `workspace:^` as valid version specifiers
+      // These translate as `current`, `~current`, and `^current` when published
+      newDependencyVersion = currentDependencyVersion;
     } else if (PublishUtilities.isRangeDependency(currentDependencyVersion)) {
       newDependencyVersion = PublishUtilities._getNewRangeDependency(newProjectVersion);
     } else if (currentDependencyVersion.lastIndexOf('~', 0) === 0) {
@@ -767,7 +771,7 @@ export class PublishUtilities {
       );
       const isWorkspaceWildcardVersion: boolean =
         requiredVersion.specifierType === DependencySpecifierType.Workspace &&
-        requiredVersion.versionSpecifier === '*';
+        MAGIC_SPECIFIERS.has(requiredVersion.versionSpecifier);
 
       const isPrerelease: boolean =
         !!prereleaseToken && prereleaseToken.hasValue && !allChanges.packageChanges.has(parentPackageName);
@@ -825,6 +829,20 @@ export class PublishUtilities {
     return hasChanges;
   }
 
+  private static _getPublishDependencyVersion(specifier: DependencySpecifier, newVersion: string): string {
+    if (specifier.specifierType === DependencySpecifierType.Workspace) {
+      const { versionSpecifier } = specifier;
+      switch (versionSpecifier) {
+        case '*':
+          return newVersion;
+        case '~':
+        case '^':
+          return `${versionSpecifier}${newVersion}`;
+      }
+    }
+    return newVersion;
+  }
+
   private static _updateDependencyVersion(
     packageName: string,
     dependencies: { [key: string]: string },
@@ -842,7 +860,7 @@ export class PublishUtilities {
     );
     dependencies[dependencyName] = newDependencyVersion;
 
-    // "*" is a special case for workspace ranges, since it will publish using the exact
+    // "*", "~", and "^" are special cases for workspace ranges, since it will publish using the exact
     // version of the local dependency, so we need to modify what we write for our change
     // comment
     const currentDependencySpecifier: DependencySpecifier = new DependencySpecifier(
@@ -851,7 +869,7 @@ export class PublishUtilities {
     );
     currentDependencyVersion =
       currentDependencySpecifier.specifierType === DependencySpecifierType.Workspace &&
-      currentDependencySpecifier.versionSpecifier === '*'
+      MAGIC_SPECIFIERS.has(currentDependencySpecifier.versionSpecifier)
         ? undefined
         : currentDependencySpecifier.versionSpecifier;
 
@@ -859,11 +877,10 @@ export class PublishUtilities {
       dependencyName,
       newDependencyVersion
     );
-    newDependencyVersion =
-      newDependencySpecifier.specifierType === DependencySpecifierType.Workspace &&
-      newDependencySpecifier.versionSpecifier === '*'
-        ? dependencyChange.newVersion!
-        : newDependencySpecifier.versionSpecifier;
+    newDependencyVersion = PublishUtilities._getPublishDependencyVersion(
+      newDependencySpecifier,
+      dependencyChange.newVersion!
+    );
 
     // Add dependency version update comment.
     PublishUtilities._addChange({

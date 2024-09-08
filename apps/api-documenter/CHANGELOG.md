@@ -1,6 +1,228 @@
 # Change Log - @microsoft/api-documenter
 
-This log was last generated on Thu, 08 Feb 2024 01:09:21 GMT and should not be manually modified.
+This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+
+## 7.25.12
+Wed, 21 Aug 2024 05:43:04 GMT
+
+_Version update only_
+
+## 7.25.11
+Mon, 12 Aug 2024 22:16:04 GMT
+
+_Version update only_
+
+## 7.25.10
+Fri, 02 Aug 2024 17:26:42 GMT
+
+_Version update only_
+
+## 7.25.9
+Sat, 27 Jul 2024 00:10:27 GMT
+
+### Patches
+
+- Include CHANGELOG.md in published releases again
+
+## 7.25.8
+Wed, 24 Jul 2024 00:12:14 GMT
+
+_Version update only_
+
+## 7.25.7
+Wed, 17 Jul 2024 06:55:09 GMT
+
+_Version update only_
+
+## 7.25.6
+Wed, 17 Jul 2024 00:11:19 GMT
+
+_Version update only_
+
+## 7.25.5
+Tue, 16 Jul 2024 00:36:21 GMT
+
+_Version update only_
+
+## 7.25.4
+Thu, 27 Jun 2024 21:01:36 GMT
+
+_Version update only_
+
+## 7.25.3
+Mon, 03 Jun 2024 23:43:15 GMT
+
+_Version update only_
+
+## 7.25.2
+Thu, 30 May 2024 00:13:05 GMT
+
+### Patches
+
+- Include missing `type` modifiers on type-only exports.
+
+## 7.25.1
+Wed, 29 May 2024 02:03:50 GMT
+
+_Version update only_
+
+## 7.25.0
+Wed, 29 May 2024 00:10:52 GMT
+
+### Minor changes
+
+- Bump TSDoc dependencies.
+
+## 7.24.13
+Tue, 28 May 2024 15:10:09 GMT
+
+_Version update only_
+
+## 7.24.12
+Tue, 28 May 2024 00:09:47 GMT
+
+_Version update only_
+
+## 7.24.11
+Sat, 25 May 2024 04:54:07 GMT
+
+_Version update only_
+
+## 7.24.10
+Fri, 24 May 2024 00:15:08 GMT
+
+_Version update only_
+
+## 7.24.9
+Thu, 23 May 2024 02:26:56 GMT
+
+_Version update only_
+
+## 7.24.8
+Thu, 16 May 2024 15:10:22 GMT
+
+_Version update only_
+
+## 7.24.7
+Wed, 15 May 2024 23:42:58 GMT
+
+_Version update only_
+
+## 7.24.6
+Wed, 15 May 2024 06:04:17 GMT
+
+_Version update only_
+
+## 7.24.5
+Fri, 10 May 2024 05:33:33 GMT
+
+_Version update only_
+
+## 7.24.4
+Wed, 08 May 2024 22:23:50 GMT
+
+_Version update only_
+
+## 7.24.3
+Mon, 06 May 2024 15:11:04 GMT
+
+_Version update only_
+
+## 7.24.2
+Wed, 10 Apr 2024 15:10:09 GMT
+
+_Version update only_
+
+## 7.24.1
+Tue, 19 Mar 2024 15:10:18 GMT
+
+_Version update only_
+
+## 7.24.0
+Sat, 16 Mar 2024 00:11:37 GMT
+
+### Minor changes
+
+- Emit HTML tags for tables instead of Markdown code.
+
+## 7.23.38
+Fri, 15 Mar 2024 00:12:40 GMT
+
+_Version update only_
+
+## 7.23.37
+Tue, 05 Mar 2024 01:19:24 GMT
+
+_Version update only_
+
+## 7.23.36
+Sun, 03 Mar 2024 20:58:12 GMT
+
+_Version update only_
+
+## 7.23.35
+Sat, 02 Mar 2024 02:22:23 GMT
+
+_Version update only_
+
+## 7.23.34
+Fri, 01 Mar 2024 01:10:08 GMT
+
+_Version update only_
+
+## 7.23.33
+Thu, 29 Feb 2024 07:11:45 GMT
+
+_Version update only_
+
+## 7.23.32
+Wed, 28 Feb 2024 16:09:27 GMT
+
+_Version update only_
+
+## 7.23.31
+Sat, 24 Feb 2024 23:02:51 GMT
+
+_Version update only_
+
+## 7.23.30
+Thu, 22 Feb 2024 01:36:09 GMT
+
+_Version update only_
+
+## 7.23.29
+Wed, 21 Feb 2024 21:45:28 GMT
+
+### Patches
+
+- Replace the dependency on the `colors` package with `Colorize` from `@rushstack/terminal`.
+
+## 7.23.28
+Wed, 21 Feb 2024 08:55:47 GMT
+
+_Version update only_
+
+## 7.23.27
+Tue, 20 Feb 2024 21:45:10 GMT
+
+_Version update only_
+
+## 7.23.26
+Tue, 20 Feb 2024 16:10:52 GMT
+
+_Version update only_
+
+## 7.23.25
+Mon, 19 Feb 2024 21:54:27 GMT
+
+_Version update only_
+
+## 7.23.24
+Sat, 17 Feb 2024 06:24:34 GMT
+
+### Patches
+
+- Fix broken link to API documentation
 
 ## 7.23.23
 Thu, 08 Feb 2024 01:09:21 GMT
