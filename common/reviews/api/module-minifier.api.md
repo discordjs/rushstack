@@ -8,7 +8,8 @@
 
 import { MinifyOptions } from 'terser';
 import type { RawSourceMap } from 'source-map';
-import type * as WorkerThreads from 'worker_threads';
+import type { ResourceLimits } from 'node:worker_threads';
+import type * as WorkerThreads from 'node:worker_threads';
 
 // @public
 export function getIdentifier(ordinal: number): string;
@@ -79,6 +80,7 @@ export interface IWorkerPoolMinifierOptions {
     maxThreads?: number;
     terserOptions?: MinifyOptions;
     verbose?: boolean;
+    workerResourceLimits?: ResourceLimits;
 }
 
 // @public

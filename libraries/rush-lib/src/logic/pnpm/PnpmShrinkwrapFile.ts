@@ -1,9 +1,20 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+import crypto from 'node:crypto';
+
 import * as semver from 'semver';
-import crypto from 'crypto';
+import * as dependencyPathLockfilePreV9 from '@pnpm/dependency-path-lockfile-pre-v9';
+import * as dependencyPath from '@pnpm/dependency-path';
+import type {
+  ProjectId,
+  Lockfile,
+  PackageSnapshot,
+  ProjectSnapshot,
+  LockfileFileV9,
+  ResolvedDependencies
+} from '@pnpm/lockfile.types';
 
 import {
   FileSystem,
@@ -14,7 +25,7 @@ import {
   InternalError
 } from '@rushstack/node-core-library';
 import { Colorize, type ITerminal } from '@rushstack/terminal';
-import * as dependencyPath from '@pnpm/dependency-path';
+import type { IReadonlyLookupByPath } from '@rushstack/lookup-by-path';
 
 import { BaseShrinkwrapFile } from '../base/BaseShrinkwrapFile';
 import { DependencySpecifier } from '../DependencySpecifier';
@@ -32,8 +43,14 @@ import { PnpmOptionsConfiguration } from './PnpmOptionsConfiguration';
 import type { IPnpmfile, IPnpmfileContext } from './IPnpmfile';
 import type { Subspace } from '../../api/Subspace';
 import { CustomTipId, type CustomTipsConfiguration } from '../../api/CustomTipsConfiguration';
+import { convertLockfileV9ToLockfileObject } from './PnpmShrinkWrapFileConverters';
 
 const yamlModule: typeof import('js-yaml') = Import.lazy('js-yaml', require);
+
+export enum ShrinkwrapFileMajorVersion {
+  V6 = 6,
+  V9 = 9
+}
 
 export interface IPeerDependenciesMetaYaml {
   optional?: boolean;
@@ -47,11 +64,14 @@ export interface IPnpmV8VersionSpecifier {
   version: string;
   specifier: string;
 }
-export type IPnpmVersionSpecifier = IPnpmV7VersionSpecifier | IPnpmV8VersionSpecifier;
+export type IPnpmV9VersionSpecifier = string;
+export type IPnpmVersionSpecifier =
+  | IPnpmV7VersionSpecifier
+  | IPnpmV8VersionSpecifier
+  | IPnpmV9VersionSpecifier;
 
-export interface IPnpmShrinkwrapDependencyYaml {
-  /** Information about the resolved package */
-  resolution?: {
+export interface IPnpmShrinkwrapDependencyYaml extends Omit<PackageSnapshot, 'resolution'> {
+  resolution: {
     /** The directory this package should clone, for injected dependencies */
     directory?: string;
     /** The hash of the tarball, to ensure archive integrity */
@@ -59,99 +79,108 @@ export interface IPnpmShrinkwrapDependencyYaml {
     /** The name of the tarball, if this was from a TGZ file */
     tarball?: string;
   };
-  /** The list of bundled dependencies in this package */
-  bundledDependencies?: ReadonlyArray<string>;
-  /** The list of dependencies and the resolved version */
-  dependencies?: Record<string, IPnpmVersionSpecifier>;
-  /** The list of optional dependencies and the resolved version */
-  optionalDependencies?: Record<string, IPnpmVersionSpecifier>;
-  /** The list of peer dependencies and the resolved version */
-  peerDependencies?: Record<string, IPnpmVersionSpecifier>;
-  /**
-   * Used to indicate optional peer dependencies, as described in this RFC:
-   * https://github.com/yarnpkg/rfcs/blob/master/accepted/0000-optional-peer-dependencies.md
-   */
-  peerDependenciesMeta?: Record<string, IPeerDependenciesMetaYaml>;
-  /** The name of the package, if the package is a local tarball */
-  name?: string;
-  /** If this is an optional dependency */
-  optional?: boolean;
-  /** The values of process.platform supported by this package */
-  os?: readonly string[];
-  /** The values of process.arch supported by this package */
-  cpu?: readonly string[];
-  /** The libc runtimes supported by this package */
-  libc?: readonly string[];
 }
 
-export interface IPnpmShrinkwrapImporterYaml {
-  /** The list of resolved version numbers for direct dependencies */
-  dependencies?: Record<string, IPnpmVersionSpecifier>;
-  /** The list of resolved version numbers for dev dependencies */
-  devDependencies?: Record<string, IPnpmVersionSpecifier>;
-  /** The list of resolved version numbers for optional dependencies */
-  optionalDependencies?: Record<string, IPnpmVersionSpecifier>;
-  /** The list of metadata for dependencies declared inside dependencies, optionalDependencies, and devDependencies. */
-  dependenciesMeta?: Record<string, IDependenciesMetaYaml>;
-  /**
-   * The list of specifiers used to resolve dependency versions
-   *
-   * @remarks
-   * This has been removed in PNPM v8
-   */
-  specifiers?: Record<string, IPnpmVersionSpecifier>;
-}
+export type IPnpmShrinkwrapImporterYaml = ProjectSnapshot;
 
-/**
- * This interface represents the raw pnpm-lock.YAML file
- * Example:
- *  {
- *    "dependencies": {
- *      "@rush-temp/project1": "file:./projects/project1.tgz"
- *    },
- *    "packages": {
- *      "file:projects/library1.tgz": {
- *        "dependencies: {
- *          "markdown": "0.5.0"
- *        },
- *        "name": "@rush-temp/library1",
- *        "resolution": {
- *          "tarball": "file:projects/library1.tgz"
- *        },
- *        "version": "0.0.0"
- *      },
- *      "markdown/0.5.0": {
- *        "resolution": {
- *          "integrity": "sha1-KCBbVlqK51kt4gdGPWY33BgnIrI="
- *        }
- *      }
- *    },
- *    "registry": "http://localhost:4873/",
- *    "shrinkwrapVersion": 3,
- *    "specifiers": {
- *      "@rush-temp/project1": "file:./projects/project1.tgz"
- *    }
- *  }
- */
-export interface IPnpmShrinkwrapYaml {
-  /** The version of the lockfile format */
-  lockfileVersion?: string | number;
+export interface IPnpmShrinkwrapYaml extends Lockfile {
+  /**
+   * This interface represents the raw pnpm-lock.YAML file
+   * Example:
+   *  {
+   *    "dependencies": {
+   *      "@rush-temp/project1": "file:./projects/project1.tgz"
+   *    },
+   *    "packages": {
+   *      "file:projects/library1.tgz": {
+   *        "dependencies: {
+   *          "markdown": "0.5.0"
+   *        },
+   *        "name": "@rush-temp/library1",
+   *        "resolution": {
+   *          "tarball": "file:projects/library1.tgz"
+   *        },
+   *        "version": "0.0.0"
+   *      },
+   *      "markdown/0.5.0": {
+   *        "resolution": {
+   *          "integrity": "sha1-KCBbVlqK51kt4gdGPWY33BgnIrI="
+   *        }
+   *      }
+   *    },
+   *    "registry": "http://localhost:4873/",
+   *    "shrinkwrapVersion": 3,
+   *    "specifiers": {
+   *      "@rush-temp/project1": "file:./projects/project1.tgz"
+   *    }
+   *  }
+   */
   /** The list of resolved version numbers for direct dependencies */
-  dependencies: Record<string, string>;
-  /** The list of importers for local workspace projects */
-  importers: Record<string, IPnpmShrinkwrapImporterYaml>;
-  /** The description of the solved graph */
-  packages: Record<string, IPnpmShrinkwrapDependencyYaml>;
-  /** URL of the registry which was used */
-  registry: string;
+  dependencies?: Record<string, string>;
   /** The list of specifiers used to resolve direct dependency versions */
-  specifiers: Record<string, string>;
-  /** The list of override version number for dependencies */
-  overrides?: { [dependency: string]: string };
+  specifiers?: Record<string, string>;
+  /** URL of the registry which was used */
+  registry?: string;
 }
 
 export interface ILoadFromFileOptions {
   withCaching?: boolean;
+}
+
+export function parsePnpm9DependencyKey(
+  dependencyName: string,
+  versionSpecifier: IPnpmVersionSpecifier
+): DependencySpecifier | undefined {
+  if (!versionSpecifier) {
+    return undefined;
+  }
+
+  const dependencyKey: string = normalizePnpmVersionSpecifier(versionSpecifier);
+
+  // Example: file:projects/project2
+  // Example: project-2@file:projects/project2
+  // Example: link:../projects/project1
+  if (/(file|link):/.test(dependencyKey)) {
+    // If it starts with an NPM scheme such as "file:projects/my-app.tgz", we don't support that
+    return undefined;
+  }
+
+  const { peersIndex } = dependencyPath.indexOfPeersSuffix(dependencyKey);
+  if (peersIndex !== -1) {
+    // Remove peer suffix
+    const key: string = dependencyKey.slice(0, peersIndex);
+
+    // Example: 7.26.0
+    if (semver.valid(key)) {
+      return DependencySpecifier.parseWithCache(dependencyName, key);
+    }
+  }
+
+  // Example: @babel/preset-env@7.26.0                                                          -> name=@babel/preset-env version=7.26.0
+  // Example: @babel/preset-env@7.26.0(peer@1.2.3)                                              -> name=@babel/preset-env version=7.26.0
+  // Example: https://github.com/jonschlinkert/pad-left/tarball/2.1.0                           -> name=undefined         version=undefined
+  // Example: pad-left@https://github.com/jonschlinkert/pad-left/tarball/2.1.0                  -> name=pad-left          nonSemverVersion=https://xxxx
+  // Example: pad-left@https://codeload.github.com/jonschlinkert/pad-left/tar.gz/7798d648225aa5 -> name=pad-left          nonSemverVersion=https://xxxx
+  const dependency: dependencyPath.DependencyPath = dependencyPath.parse(dependencyKey);
+
+  const name: string = dependency.name ?? dependencyName;
+  const version: string = dependency.version ?? dependency.nonSemverVersion ?? dependencyKey;
+
+  // Example: https://xxxx/pad-left/tarball/2.1.0
+  // Example: https://github.com/jonschlinkert/pad-left/tarball/2.1.0
+  // Example: https://codeload.github.com/jonschlinkert/pad-left/tar.gz/7798d648225aa5d879660a37c408ab4675b65ac7
+  if (/^https?:/.test(version)) {
+    return DependencySpecifier.parseWithCache(name, version);
+  }
+
+  // Is it an alias for a different package?
+  if (name === dependencyName) {
+    // No, it's a regular dependency
+    return DependencySpecifier.parseWithCache(name, version);
+  } else {
+    // If the parsed package name is different from the dependencyName, then this is an NPM package alias
+    return DependencySpecifier.parseWithCache(dependencyName, `npm:${name}@${version}`);
+  }
 }
 
 /**
@@ -238,7 +267,10 @@ export function parsePnpmDependencyKey(
     //     git@bitbucket.com+abc/def/188ed64efd5218beda276e02f2277bf3a6b745b2
     //     bitbucket.co.in/abc/def/188ed64efd5218beda276e02f2277bf3a6b745b2
     if (urlRegex.test(dependencyKey)) {
-      const dependencySpecifier: DependencySpecifier = new DependencySpecifier(dependencyName, dependencyKey);
+      const dependencySpecifier: DependencySpecifier = DependencySpecifier.parseWithCache(
+        dependencyName,
+        dependencyKey
+      );
       return dependencySpecifier;
     } else {
       return undefined;
@@ -248,10 +280,13 @@ export function parsePnpmDependencyKey(
   // Is it an alias for a different package?
   if (parsedPackageName === dependencyName) {
     // No, it's a regular dependency
-    return new DependencySpecifier(parsedPackageName, parsedVersionPart);
+    return DependencySpecifier.parseWithCache(parsedPackageName, parsedVersionPart);
   } else {
     // If the parsed package name is different from the dependencyName, then this is an NPM package alias
-    return new DependencySpecifier(dependencyName, `npm:${parsedPackageName}@${parsedVersionPart}`);
+    return DependencySpecifier.parseWithCache(
+      dependencyName,
+      `npm:${parsedPackageName}@${parsedVersionPart}`
+    );
   }
 }
 
@@ -263,10 +298,9 @@ export function normalizePnpmVersionSpecifier(versionSpecifier: IPnpmVersionSpec
   }
 }
 
-export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
-  // TODO: Implement cache eviction when a lockfile is copied back
-  private static _cacheByLockfilePath: Map<string, PnpmShrinkwrapFile | undefined> = new Map();
+const cacheByLockfileHash: Map<string, PnpmShrinkwrapFile | undefined> = new Map();
 
+export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
   public readonly shrinkwrapFileMajorVersion: number;
   public readonly isWorkspaceCompatible: boolean;
   public readonly registry: string;
@@ -275,14 +309,18 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
   public readonly specifiers: ReadonlyMap<string, string>;
   public readonly packages: ReadonlyMap<string, IPnpmShrinkwrapDependencyYaml>;
   public readonly overrides: ReadonlyMap<string, string>;
+  public readonly packageExtensionsChecksum: undefined | string;
+  public readonly hash: string;
 
   private readonly _shrinkwrapJson: IPnpmShrinkwrapYaml;
   private readonly _integrities: Map<string, Map<string, string>>;
   private _pnpmfileConfiguration: PnpmfileConfiguration | undefined;
 
-  private constructor(shrinkwrapJson: IPnpmShrinkwrapYaml) {
+  private constructor(shrinkwrapJson: IPnpmShrinkwrapYaml, hash: string) {
     super();
+    this.hash = hash;
     this._shrinkwrapJson = shrinkwrapJson;
+    cacheByLockfileHash.set(hash, this);
 
     // Normalize the data
     const lockfileVersion: string | number | undefined = shrinkwrapJson.lockfileVersion;
@@ -304,42 +342,97 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
     this.specifiers = new Map(Object.entries(shrinkwrapJson.specifiers || {}));
     this.packages = new Map(Object.entries(shrinkwrapJson.packages || {}));
     this.overrides = new Map(Object.entries(shrinkwrapJson.overrides || {}));
+    this.packageExtensionsChecksum = shrinkwrapJson.packageExtensionsChecksum;
 
-    // Importers only exist in workspaces
-    this.isWorkspaceCompatible = this.importers.size > 0;
+    // Lockfile v9 always has "." in importers filed.
+    this.isWorkspaceCompatible =
+      this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V9
+        ? this.importers.size > 1
+        : this.importers.size > 0;
 
     this._integrities = new Map();
   }
 
-  public static loadFromFile(
-    shrinkwrapYamlFilePath: string,
-    { withCaching }: ILoadFromFileOptions = {}
-  ): PnpmShrinkwrapFile | undefined {
-    let loaded: PnpmShrinkwrapFile | undefined;
-    if (withCaching) {
-      loaded = PnpmShrinkwrapFile._cacheByLockfilePath.get(shrinkwrapYamlFilePath);
+  public static getLockfileV9PackageId(name: string, version: string): string {
+    /**
+     * name@1.2.3                -> name@1.2.3
+     * name@1.2.3(peer)          -> name@1.2.3(peer)
+     * https://xxx/@a/b          -> name@https://xxx/@a/b
+     * file://xxx                -> name@file://xxx
+     * 1.2.3                     -> name@1.2.3
+     */
+
+    if (/https?:/.test(version)) {
+      return /@https?:/.test(version) ? version : `${name}@${version}`;
+    } else if (/file:/.test(version)) {
+      return /@file:/.test(version) ? version : `${name}@${version}`;
     }
 
-    // TODO: Promisify this
-    loaded ??= (() => {
-      try {
-        const shrinkwrapContent: string = FileSystem.readFile(shrinkwrapYamlFilePath);
-        return PnpmShrinkwrapFile.loadFromString(shrinkwrapContent);
-      } catch (error) {
-        if (FileSystem.isNotExistError(error as Error)) {
-          return undefined; // file does not exist
-        }
-        throw new Error(`Error reading "${shrinkwrapYamlFilePath}":\n  ${(error as Error).message}`);
-      }
-    })();
+    return dependencyPath.removeSuffix(version).includes('@', 1) ? version : `${name}@${version}`;
+  }
 
-    PnpmShrinkwrapFile._cacheByLockfilePath.set(shrinkwrapYamlFilePath, loaded);
-    return loaded;
+  /**
+   * Clears the cache of PnpmShrinkwrapFile instances to free up memory.
+   */
+  public static clearCache(): void {
+    cacheByLockfileHash.clear();
+  }
+
+  public static loadFromFile(
+    shrinkwrapYamlFilePath: string,
+    options: ILoadFromFileOptions = {}
+  ): PnpmShrinkwrapFile | undefined {
+    try {
+      const shrinkwrapContent: string = FileSystem.readFile(shrinkwrapYamlFilePath);
+      return PnpmShrinkwrapFile.loadFromString(shrinkwrapContent);
+    } catch (error) {
+      if (FileSystem.isNotExistError(error as Error)) {
+        return undefined; // file does not exist
+      }
+      throw new Error(`Error reading "${shrinkwrapYamlFilePath}":\n  ${(error as Error).message}`);
+    }
   }
 
   public static loadFromString(shrinkwrapContent: string): PnpmShrinkwrapFile {
-    const parsedData: IPnpmShrinkwrapYaml = yamlModule.safeLoad(shrinkwrapContent);
-    return new PnpmShrinkwrapFile(parsedData);
+    const hash: string = crypto.createHash('sha-256').update(shrinkwrapContent, 'utf8').digest('hex');
+    const cached: PnpmShrinkwrapFile | undefined = cacheByLockfileHash.get(hash);
+    if (cached) {
+      return cached;
+    }
+
+    const shrinkwrapJson: IPnpmShrinkwrapYaml = yamlModule.load(shrinkwrapContent) as IPnpmShrinkwrapYaml;
+    if ((shrinkwrapJson as LockfileFileV9).snapshots) {
+      const lockfile: IPnpmShrinkwrapYaml | null = convertLockfileV9ToLockfileObject(
+        shrinkwrapJson as LockfileFileV9
+      );
+      /**
+       * In Lockfile V9,
+       * 1. There is no top-level dependencies field, but it is a property of the importers field.
+       * 2. The version may is not equal to the key in the package field. Thus, it needs to be standardized in the form of `<name>:<version>`.
+       *
+       * importers:
+       *  .:
+       *    dependencies:
+       *      'project1':
+       *        specifier: file:./projects/project1
+       *        version: file:projects/project1
+       *
+       * packages:
+       *   project1@file:projects/project1:
+       *     resolution: {directory: projects/project1, type: directory}
+       */
+      const dependencies: ResolvedDependencies | undefined =
+        lockfile.importers['.' as ProjectId]?.dependencies;
+      if (dependencies) {
+        lockfile.dependencies = {};
+        for (const [name, versionSpecifier] of Object.entries(dependencies)) {
+          lockfile.dependencies[name] = PnpmShrinkwrapFile.getLockfileV9PackageId(name, versionSpecifier);
+        }
+      }
+      return new PnpmShrinkwrapFile(lockfile, hash);
+    }
+
+    return new PnpmShrinkwrapFile(shrinkwrapJson, hash);
   }
 
   public getShrinkwrapHash(experimentsConfig?: IExperimentsJson): string {
@@ -475,7 +568,8 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
   private _convertLockfileV6DepPathToV5DepPath(newDepPath: string): string {
     if (!newDepPath.includes('@', 2) || newDepPath.startsWith('file:')) return newDepPath;
     const index: number = newDepPath.indexOf('@', newDepPath.indexOf('/@') + 2);
-    if (newDepPath.includes('(') && index > dependencyPath.indexOfPeersSuffix(newDepPath)) return newDepPath;
+    if (newDepPath.includes('(') && index > dependencyPathLockfilePreV9.indexOfPeersSuffix(newDepPath))
+      return newDepPath;
     return `${newDepPath.substring(0, index)}/${newDepPath.substring(index + 1)}`;
   }
 
@@ -486,10 +580,11 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
    */
   private _parseDependencyPath(packagePath: string): string {
     let depPath: string = packagePath;
-    if (this.shrinkwrapFileMajorVersion >= 6) {
+    if (this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V6) {
       depPath = this._convertLockfileV6DepPathToV5DepPath(packagePath);
     }
-    const pkgInfo: ReturnType<typeof dependencyPath.parse> = dependencyPath.parse(depPath);
+    const pkgInfo: ReturnType<typeof dependencyPathLockfilePreV9.parse> =
+      dependencyPathLockfilePreV9.parse(depPath);
     return this._getPackageId(pkgInfo.name as string, pkgInfo.version as string);
   }
 
@@ -589,7 +684,12 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
 
       const dependency: IPnpmShrinkwrapDependencyYaml | undefined = this.packages.get(value);
       if (dependency?.resolution?.tarball && value.startsWith(dependency.resolution.tarball)) {
-        return new DependencySpecifier(dependencyName, dependency.resolution.tarball);
+        return DependencySpecifier.parseWithCache(dependencyName, dependency.resolution.tarball);
+      }
+
+      if (this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V9) {
+        const { version, nonSemverVersion } = dependencyPath.parse(value);
+        value = version ?? nonSemverVersion ?? value;
       } else {
         let underscoreOrParenthesisIndex: number = value.indexOf('_');
         if (underscoreOrParenthesisIndex < 0) {
@@ -601,7 +701,7 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
         }
       }
 
-      return new DependencySpecifier(dependencyName, value);
+      return DependencySpecifier.parseWithCache(dependencyName, value);
     }
     return undefined;
   }
@@ -724,12 +824,15 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
       return super.findOrphanedProjects(rushConfiguration, subspace);
     }
 
+    const subspaceTempFolder: string = subspace.getSubspaceTempFolderPath();
+    const lookup: IReadonlyLookupByPath<RushConfigurationProject> =
+      rushConfiguration.getProjectLookupForRoot(subspaceTempFolder);
+
     const orphanedProjectPaths: string[] = [];
     for (const importerKey of this.getImporterKeys()) {
-      // PNPM importer keys are relative paths from the workspace root, which is the common temp folder
-      const rushProjectPath: string = path.resolve(subspace.getSubspaceTempFolderPath(), importerKey);
-      if (!rushConfiguration.tryGetProjectForPath(rushProjectPath)) {
-        orphanedProjectPaths.push(rushProjectPath);
+      if (!lookup.findChildPath(importerKey)) {
+        // PNPM importer keys are relative paths from the workspace root, which is the common temp folder
+        orphanedProjectPaths.push(path.resolve(subspaceTempFolder, importerKey));
       }
     }
     return orphanedProjectPaths;
@@ -805,7 +908,8 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
   /** @override */
   public async isWorkspaceProjectModifiedAsync(
     project: RushConfigurationProject,
-    subspace: Subspace
+    subspace: Subspace,
+    variant: string | undefined
   ): Promise<boolean> {
     const importerKey: string = this.getImporterKeyByPath(
       subspace.getSubspaceTempFolderPath(),
@@ -824,7 +928,8 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
     if (!this._pnpmfileConfiguration) {
       this._pnpmfileConfiguration = await PnpmfileConfiguration.initializeAsync(
         project.rushConfiguration,
-        subspace
+        subspace,
+        variant
       );
     }
 
@@ -893,7 +998,7 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
 
     const allDependencies: PackageJsonDependency[] = [...dependencyList, ...devDependencyList];
 
-    if (this.shrinkwrapFileMajorVersion < 6) {
+    if (this.shrinkwrapFileMajorVersion < ShrinkwrapFileMajorVersion.V6) {
       // PNPM <= v7
 
       // Then get the unique package names and map them to package versions.
@@ -968,7 +1073,7 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
         }
       }
     } else {
-      // PNPM v8
+      //  >= PNPM v8
       const importerOptionalDependencies: Set<string> = new Set(
         Object.keys(importer.optionalDependencies ?? {})
       );
@@ -1016,19 +1121,35 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
             return true;
           }
         } else {
-          if (typeof specifierFromLockfile === 'string') {
-            throw new Error(
-              `The PNPM lockfile is in an unexpected format. The "${name}" package is specified as ` +
-                `"${specifierFromLockfile}" instead of an object.`
-            );
-          } else {
+          if (this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V9) {
             // TODO: Emit an error message when someone tries to override a version of something in one of their
             // local repo packages.
             let resolvedVersion: string = this.overrides.get(name) ?? version;
             // convert path in posix style, otherwise pnpm install will fail in subspace case
             resolvedVersion = Path.convertToSlashes(resolvedVersion);
-            if (specifierFromLockfile.specifier !== resolvedVersion && !isDevDepFallThrough && !isOptional) {
+            const specifier: string = importer.specifiers[name];
+            if (specifier !== resolvedVersion && !isDevDepFallThrough && !isOptional) {
               return true;
+            }
+          } else {
+            if (typeof specifierFromLockfile === 'string') {
+              throw new Error(
+                `The PNPM lockfile is in an unexpected format. The "${name}" package is specified as ` +
+                  `"${specifierFromLockfile}" instead of an object.`
+              );
+            } else {
+              // TODO: Emit an error message when someone tries to override a version of something in one of their
+              // local repo packages.
+              let resolvedVersion: string = this.overrides.get(name) ?? version;
+              // convert path in posix style, otherwise pnpm install will fail in subspace case
+              resolvedVersion = Path.convertToSlashes(resolvedVersion);
+              if (
+                specifierFromLockfile.specifier !== resolvedVersion &&
+                !isDevDepFallThrough &&
+                !isOptional
+              ) {
+                return true;
+              }
             }
           }
         }
@@ -1145,7 +1266,9 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
 
   private _getPackageId(name: string, versionSpecifier: IPnpmVersionSpecifier): string {
     const version: string = normalizePnpmVersionSpecifier(versionSpecifier);
-    if (this.shrinkwrapFileMajorVersion >= 6) {
+    if (this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V9) {
+      return PnpmShrinkwrapFile.getLockfileV9PackageId(name, version);
+    } else if (this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V6) {
       if (version.startsWith('@github')) {
         // This is a github repo reference
         return version;
@@ -1163,10 +1286,10 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
     pnpmDependencyKey: IPnpmVersionSpecifier
   ): DependencySpecifier | undefined {
     if (pnpmDependencyKey) {
-      const result: DependencySpecifier | undefined = parsePnpmDependencyKey(
-        dependencyName,
-        pnpmDependencyKey
-      );
+      const result: DependencySpecifier | undefined =
+        this.shrinkwrapFileMajorVersion >= ShrinkwrapFileMajorVersion.V9
+          ? parsePnpm9DependencyKey(dependencyName, pnpmDependencyKey)
+          : parsePnpmDependencyKey(dependencyName, pnpmDependencyKey);
 
       if (!result) {
         throw new Error(
@@ -1195,6 +1318,6 @@ export class PnpmShrinkwrapFile extends BaseShrinkwrapFile {
       }
     }
 
-    return yamlModule.safeDump(shrinkwrapToSerialize, PNPM_SHRINKWRAP_YAML_FORMAT);
+    return yamlModule.dump(shrinkwrapToSerialize, PNPM_SHRINKWRAP_YAML_FORMAT);
   }
 }

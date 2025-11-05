@@ -1,17 +1,23 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+import { createHash } from 'node:crypto';
+
 import * as semver from 'semver';
 import yaml from 'js-yaml';
+
 import {
   FileSystem,
   FileConstants,
   AlreadyReportedError,
   Async,
   type IDependenciesMetaTable,
-  Path
+  Objects,
+  Path,
+  Sort
 } from '@rushstack/node-core-library';
+import { Colorize, ConsoleTerminalProvider } from '@rushstack/terminal';
 
 import { BaseInstallManager } from '../base/BaseInstallManager';
 import type { IInstallManagerOptions } from '../base/BaseInstallManagerTypes';
@@ -34,12 +40,11 @@ import { ShrinkwrapFileFactory } from '../ShrinkwrapFileFactory';
 import { BaseProjectShrinkwrapFile } from '../base/BaseProjectShrinkwrapFile';
 import { type CustomTipId, type ICustomTipInfo, PNPM_CUSTOM_TIPS } from '../../api/CustomTipsConfiguration';
 import type { PnpmShrinkwrapFile } from '../pnpm/PnpmShrinkwrapFile';
-import { objectsAreDeepEqual } from '../../utilities/objectUtilities';
 import type { Subspace } from '../../api/Subspace';
-import { Colorize, ConsoleTerminalProvider } from '@rushstack/terminal';
 import { BaseLinkManager, SymlinkKind } from '../base/BaseLinkManager';
 import { FlagFile } from '../../api/FlagFile';
 import { Stopwatch } from '../../utilities/Stopwatch';
+import type { PnpmOptionsConfiguration } from '../pnpm/PnpmOptionsConfiguration';
 
 export interface IPnpmModules {
   hoistedDependencies: { [dep in string]: { [depPath in string]: string } };
@@ -88,6 +93,8 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       );
     }
 
+    const { fullUpgrade, allowShrinkwrapUpdates, variant } = this.options;
+
     // eslint-disable-next-line no-console
     console.log('\n' + Colorize.bold('Updating workspace files in ' + subspace.getSubspaceTempFolderPath()));
 
@@ -100,7 +107,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
     if (!shrinkwrapFile) {
       shrinkwrapIsUpToDate = false;
     } else {
-      if (!shrinkwrapFile.isWorkspaceCompatible && !this.options.fullUpgrade) {
+      if (!shrinkwrapFile.isWorkspaceCompatible && !fullUpgrade) {
         // eslint-disable-next-line no-console
         console.log();
         // eslint-disable-next-line no-console
@@ -139,7 +146,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       );
       shrinkwrapIsUpToDate = false;
     } else {
-      const commonVersions: CommonVersionsConfiguration = subspace.getCommonVersions();
+      const commonVersions: CommonVersionsConfiguration = subspace.getCommonVersions(variant);
       if (repoState.preferredVersionsHash !== commonVersions.getPreferredVersionsHash()) {
         shrinkwrapWarnings.push(
           `Preferred versions from ${RushConstants.commonVersionsFilename} have been modified.`
@@ -150,7 +157,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       const stopwatch: Stopwatch = Stopwatch.start();
 
       const packageJsonInjectedDependenciesHash: string | undefined =
-        subspace.getPackageJsonInjectedDependenciesHash();
+        subspace.getPackageJsonInjectedDependenciesHash(variant);
 
       stopwatch.stop();
 
@@ -215,11 +222,21 @@ export class WorkspaceInstallManager extends BaseInstallManager {
           continue;
         }
 
-        const dependencySpecifier: DependencySpecifier = new DependencySpecifier(name, version);
+        const dependencySpecifier: DependencySpecifier = DependencySpecifier.parseWithCache(name, version);
 
         // Is there a locally built Rush project that could satisfy this dependency?
-        const referencedLocalProject: RushConfigurationProject | undefined =
+        let referencedLocalProject: RushConfigurationProject | undefined =
           this.rushConfiguration.getProjectByName(name);
+
+        // If we enable exemptDecoupledDependenciesBetweenSubspaces, it will only check dependencies within the subspace.
+        if (
+          this.rushConfiguration.experimentsConfiguration.configuration
+            .exemptDecoupledDependenciesBetweenSubspaces
+        ) {
+          if (referencedLocalProject && !subspace.contains(referencedLocalProject)) {
+            referencedLocalProject = undefined;
+          }
+        }
 
         // Validate that local projects are referenced with workspace notation. If not, and it is not a
         // cyclic dependency, then it needs to be updated to specify `workspace:*` explicitly. Currently only
@@ -243,15 +260,15 @@ export class WorkspaceInstallManager extends BaseInstallManager {
             // eslint-disable-next-line no-console
             console.log(
               Colorize.red(
-                `"${rushProject.packageName}" depends on package "${name}" (${version}) which exists ` +
-                  'within the workspace but cannot be fulfilled with the specified version range. Either ' +
-                  'specify a valid version range, or add the package as a cyclic dependency.'
+                `"${rushProject.packageName}" depends on package "${name}" (${version}) which belongs to ` +
+                  'the workspace but cannot be fulfilled with the specified version range. Either ' +
+                  'specify a valid version range, or add the package to "decoupledLocalDependencies" in rush.json.'
               )
             );
             throw new AlreadyReportedError();
           }
 
-          if (!this.options.allowShrinkwrapUpdates) {
+          if (!allowShrinkwrapUpdates) {
             // eslint-disable-next-line no-console
             console.log();
             // eslint-disable-next-line no-console
@@ -267,7 +284,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
             throw new AlreadyReportedError();
           }
 
-          if (this.options.fullUpgrade) {
+          if (fullUpgrade) {
             // We will update to `workspace` notation. If the version specified is a range, then use the provided range.
             // Otherwise, use `workspace:*` to ensure we're always using the workspace package.
             const workspaceRange: string =
@@ -310,7 +327,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       }
 
       // Now validate that the shrinkwrap file matches what is in the package.json
-      if (await shrinkwrapFile?.isWorkspaceProjectModifiedAsync(rushProject, subspace)) {
+      if (await shrinkwrapFile?.isWorkspaceProjectModifiedAsync(rushProject, subspace, variant)) {
         shrinkwrapWarnings.push(
           `Dependencies of project "${rushProject.packageName}" do not match the current shrinkwrap.`
         );
@@ -355,7 +372,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
     }
 
     // Now, we compare these two objects to see if they are equal or not
-    const dependenciesMetaAreEqual: boolean = objectsAreDeepEqual(
+    const dependenciesMetaAreEqual: boolean = Objects.areDeepEqual(
       expectedDependenciesMetaByProjectRelativePath,
       lockfileDependenciesMetaByProjectRelativePath
     );
@@ -368,8 +385,11 @@ export class WorkspaceInstallManager extends BaseInstallManager {
     }
 
     // Check if overrides and globalOverrides are the same
-    const overridesAreEqual: boolean = objectsAreDeepEqual<Record<string, string>>(
-      this.rushConfiguration.pnpmOptions.globalOverrides ?? {},
+    const pnpmOptions: PnpmOptionsConfiguration =
+      subspace.getPnpmOptions() || this.rushConfiguration.pnpmOptions;
+
+    const overridesAreEqual: boolean = Objects.areDeepEqual<Record<string, string>>(
+      pnpmOptions.globalOverrides ?? {},
       shrinkwrapFile?.overrides ? Object.fromEntries(shrinkwrapFile?.overrides) : {}
     );
 
@@ -378,8 +398,50 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       shrinkwrapIsUpToDate = false;
     }
 
+    // Check if packageExtensionsChecksum matches globalPackageExtension's hash
+    let packageExtensionsChecksum: string | undefined;
+    let existingPackageExtensionsChecksum: string | undefined;
+    if (shrinkwrapFile) {
+      existingPackageExtensionsChecksum = shrinkwrapFile.packageExtensionsChecksum;
+      let packageExtensionsChecksumAlgorithm: string | undefined;
+      if (existingPackageExtensionsChecksum) {
+        const dashIndex: number = existingPackageExtensionsChecksum.indexOf('-');
+        if (dashIndex !== -1) {
+          packageExtensionsChecksumAlgorithm = existingPackageExtensionsChecksum.substring(0, dashIndex);
+        }
+
+        if (packageExtensionsChecksumAlgorithm && packageExtensionsChecksumAlgorithm !== 'sha256') {
+          this._terminal.writeErrorLine(
+            `The existing packageExtensionsChecksum algorithm "${packageExtensionsChecksumAlgorithm}" is not supported. ` +
+              `This may indicate that the shrinkwrap was created with a newer version of PNPM than Rush supports.`
+          );
+          throw new AlreadyReportedError();
+        }
+      }
+
+      const globalPackageExtensions: Record<string, unknown> | undefined =
+        pnpmOptions.globalPackageExtensions;
+      // https://github.com/pnpm/pnpm/blob/ba9409ffcef0c36dc1b167d770a023c87444822d/pkg-manager/core/src/install/index.ts#L331
+      if (globalPackageExtensions && Object.keys(globalPackageExtensions).length !== 0) {
+        if (packageExtensionsChecksumAlgorithm) {
+          // In PNPM v10, the algorithm changed to SHA256 and the digest changed from hex to base64
+          packageExtensionsChecksum = await createObjectChecksumAsync(globalPackageExtensions);
+        } else {
+          packageExtensionsChecksum = createObjectChecksumLegacy(globalPackageExtensions);
+        }
+      }
+    }
+
+    const packageExtensionsChecksumAreEqual: boolean =
+      packageExtensionsChecksum === existingPackageExtensionsChecksum;
+
+    if (!packageExtensionsChecksumAreEqual) {
+      shrinkwrapWarnings.push("The package extension hash doesn't match the current shrinkwrap.");
+      shrinkwrapIsUpToDate = false;
+    }
+
     // Write the common package.json
-    InstallHelpers.generateCommonPackageJson(this.rushConfiguration, subspace, undefined);
+    InstallHelpers.generateCommonPackageJson(this.rushConfiguration, subspace, undefined, this._terminal);
 
     // Save the generated workspace file. Don't update the file timestamp unless the content has changed,
     // since "rush install" will consider this timestamp
@@ -388,14 +450,18 @@ export class WorkspaceInstallManager extends BaseInstallManager {
     return { shrinkwrapIsUpToDate, shrinkwrapWarnings };
   }
 
-  protected canSkipInstall(lastModifiedDate: Date, subspace: Subspace): boolean {
-    if (!super.canSkipInstall(lastModifiedDate, subspace)) {
+  protected async canSkipInstallAsync(
+    lastModifiedDate: Date,
+    subspace: Subspace,
+    variant: string | undefined
+  ): Promise<boolean> {
+    if (!(await super.canSkipInstallAsync(lastModifiedDate, subspace, variant))) {
       return false;
     }
 
     const potentiallyChangedFiles: string[] = [];
 
-    if (this.rushConfiguration.packageManager === 'pnpm') {
+    if (this.rushConfiguration.isPnpm) {
       // Add workspace file. This file is only modified when workspace packages change.
       const pnpmWorkspaceFilename: string = path.join(
         subspace.getSubspaceTempFolderPath(),
@@ -421,7 +487,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
 
     // NOTE: If any of the potentiallyChangedFiles does not exist, then isFileTimestampCurrent()
     // returns false.
-    return Utilities.isFileTimestampCurrent(lastModifiedDate, potentiallyChangedFiles);
+    return Utilities.isFileTimestampCurrentAsync(lastModifiedDate, potentiallyChangedFiles);
   }
 
   /**
@@ -532,7 +598,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
           },
           this.options.maxInstallAttempts,
           () => {
-            if (this.rushConfiguration.packageManager === 'pnpm') {
+            if (this.rushConfiguration.isPnpm) {
               this._terminal.writeWarningLine(`Deleting the "node_modules" folder`);
               this.installRecycler.moveFolder(commonNodeModulesFolder);
 
@@ -601,7 +667,6 @@ export class WorkspaceInstallManager extends BaseInstallManager {
     // projects with dependencies, a lockfile won't be generated.
     const tempShrinkwrapFile: BaseShrinkwrapFile | undefined = ShrinkwrapFileFactory.getShrinkwrapFile(
       this.rushConfiguration.packageManager,
-      this.rushConfiguration.pnpmOptions,
       subspace.getTempShrinkwrapFilename()
     );
 
@@ -614,10 +679,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
         },
         { concurrency: 10 }
       );
-    } else if (
-      this.rushConfiguration.packageManager === 'pnpm' &&
-      this.rushConfiguration.pnpmOptions?.useWorkspaces
-    ) {
+    } else if (this.rushConfiguration.isPnpm && this.rushConfiguration.pnpmOptions?.useWorkspaces) {
       // If we're in PNPM workspace mode and PNPM didn't create a shrinkwrap file,
       // there are no dependencies. Generate empty shrinkwrap files for all projects.
       await Async.forEachAsync(
@@ -655,7 +717,9 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       ) {
         // Find the .modules.yaml file in the subspace temp/node_modules folder
         const modulesContent: string = await FileSystem.readFileAsync(modulesFilePath);
-        const yamlContent: IPnpmModules = yaml.load(modulesContent, { filename: modulesFilePath });
+        const yamlContent: IPnpmModules = yaml.load(modulesContent, {
+          filename: modulesFilePath
+        }) as IPnpmModules;
         const { hoistedDependencies } = yamlContent;
         const subspaceProject: RushConfigurationProject = subspace.getProjects()[0];
         const projectNodeModulesPath: string = `${subspaceProject.projectFolder}/node_modules`;
@@ -668,7 +732,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
               // If we don't already have a symlink for this package, create one
               const parentDir: string = Utilities.trimAfterLastSlash(`${projectNodeModulesPath}/${filePath}`);
               await FileSystem.ensureFolderAsync(parentDir);
-              BaseLinkManager._createSymlink({
+              await BaseLinkManager._createSymlinkAsync({
                 linkTargetPath: `${tempNodeModulesPath}/${filePath}`,
                 newLinkPath: `${projectNodeModulesPath}/${filePath}`,
                 symlinkKind: SymlinkKind.Directory
@@ -690,7 +754,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
         if (!Utilities.existsOrIsSymlink(symlinkToCreate)) {
           const parentFolder: string = Utilities.trimAfterLastSlash(symlinkToCreate);
           await FileSystem.ensureFolderAsync(parentFolder);
-          BaseLinkManager._createSymlink({
+          await BaseLinkManager._createSymlinkAsync({
             linkTargetPath: dependencyProject.projectFolder,
             newLinkPath: symlinkToCreate,
             symlinkKind: SymlinkKind.Directory
@@ -714,7 +778,7 @@ export class WorkspaceInstallManager extends BaseInstallManager {
     super.pushConfigurationArgs(args, options, subspace);
 
     // Add workspace-specific args
-    if (this.rushConfiguration.packageManager === 'pnpm') {
+    if (this.rushConfiguration.isPnpm) {
       args.push('--recursive');
       args.push('--link-workspace-packages', 'false');
 
@@ -743,4 +807,40 @@ export class WorkspaceInstallManager extends BaseInstallManager {
       }
     }
   }
+}
+
+/**
+ * Source: https://github.com/pnpm/pnpm/blob/ba9409ffcef0c36dc1b167d770a023c87444822d/pkg-manager/core/src/install/index.ts#L821-L824
+ */
+function createObjectChecksumLegacy(obj: Record<string, unknown>): string {
+  const s: string = JSON.stringify(Sort.sortKeys(obj));
+  return createHash('md5').update(s).digest('hex');
+}
+
+/**
+ * Source: https://github.com/pnpm/pnpm/blob/bdbd31aa4fa6546d65b6eee50a79b51879340d40/crypto/object-hasher/src/index.ts#L8-L12
+ */
+const defaultOptions: import('object-hash').NormalOption = {
+  respectType: false,
+  algorithm: 'sha256',
+  encoding: 'base64'
+};
+
+/**
+ * https://github.com/pnpm/pnpm/blob/bdbd31aa4fa6546d65b6eee50a79b51879340d40/crypto/object-hasher/src/index.ts#L21-L26
+ */
+const withSortingOptions: import('object-hash').NormalOption = {
+  ...defaultOptions,
+  unorderedArrays: true,
+  unorderedObjects: true,
+  unorderedSets: true
+};
+
+/**
+ * Source: https://github.com/pnpm/pnpm/blob/bdbd31aa4fa6546d65b6eee50a79b51879340d40/crypto/object-hasher/src/index.ts#L45-L49
+ */
+async function createObjectChecksumAsync(obj: Record<string, unknown>): Promise<string> {
+  const { default: hash } = await import('object-hash');
+  const packageExtensionsChecksum: string = hash(obj, withSortingOptions);
+  return `${defaultOptions.algorithm}-${packageExtensionsChecksum}`;
 }

@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
-import * as process from 'process';
-import * as child_process from 'child_process';
+import * as path from 'node:path';
+import * as process from 'node:process';
+import * as child_process from 'node:child_process';
+
 import type {
   CommandLineFlagParameter,
   CommandLineStringParameter,
@@ -84,7 +85,8 @@ export default class ServerlessStackPlugin implements IHeftTaskPlugin {
     try {
       sstCliPackagePath = Import.resolvePackage({
         packageName: SST_CLI_PACKAGE_NAME,
-        baseFolderPath: options.heftConfiguration.buildFolderPath
+        baseFolderPath: options.heftConfiguration.buildFolderPath,
+        useNodeJSResolver: true
       });
     } catch (e) {
       this._logger.emitError(

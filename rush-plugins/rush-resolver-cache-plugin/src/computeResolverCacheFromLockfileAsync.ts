@@ -49,11 +49,12 @@ function extractBundledDependencies(
   contexts: Map<string, IResolverContext>,
   context: IResolverContext
 ): void {
-  const { nestedPackageDirs } = context;
+  let { nestedPackageDirs } = context;
   if (!nestedPackageDirs) {
     return;
   }
 
+  let foundBundledDependencies: boolean = false;
   for (let i: number = nestedPackageDirs.length - 1; i >= 0; i--) {
     const nestedDir: string = nestedPackageDirs[i];
     if (!nestedDir.startsWith('node_modules/')) {
@@ -71,6 +72,12 @@ function extractBundledDependencies(
       continue;
     }
 
+    if (!foundBundledDependencies) {
+      foundBundledDependencies = true;
+      // Make a copy of the nestedPackageDirs array so that we don't mutate the version being
+      // saved into the subpackage index cache.
+      context.nestedPackageDirs = nestedPackageDirs = nestedPackageDirs.slice(0);
+    }
     // Remove this nested package from the list
     nestedPackageDirs.splice(i, 1);
 
@@ -137,6 +144,15 @@ export interface IComputeResolverCacheFromLockfileOptions {
 }
 
 /**
+ * Copied from `@rushstack/node-core-library/src/Path.ts` to avoid expensive dependency
+ * @param path - Path using backslashes as path separators
+ * @returns The same string using forward slashes as path separators
+ */
+function convertToSlashes(path: string): string {
+  return path.replace(/\\/g, '/');
+}
+
+/**
  * Given a lockfile and information about the workspace and platform, computes the resolver cache file.
  * @param params - The options for computing the resolver cache
  * @returns A promise that resolves with the resolver cache file
@@ -146,9 +162,9 @@ export async function computeResolverCacheFromLockfileAsync(
 ): Promise<IResolverCacheFile> {
   const { platformInfo, projectByImporterPath, lockfile, afterExternalPackagesAsync } = params;
   // Needs to be normalized to `/` for path.posix.join to work correctly
-  const workspaceRoot: string = params.workspaceRoot.replace(/\\/g, '/');
+  const workspaceRoot: string = convertToSlashes(params.workspaceRoot);
   // Needs to be normalized to `/` for path.posix.join to work correctly
-  const commonPrefixToTrim: string = params.commonPrefixToTrim.replace(/\\/g, '/');
+  const commonPrefixToTrim: string = convertToSlashes(params.commonPrefixToTrim);
 
   const contexts: Map<string, IResolverContext> = new Map();
   const missingOptionalDependencies: Set<string> = new Set();
@@ -218,8 +234,10 @@ export async function computeResolverCacheFromLockfileAsync(
       throw new Error(`Missing project for importer ${importerPath}`);
     }
 
+    const descriptionFileRoot: string = convertToSlashes(project.projectFolder);
+
     const context: IResolverContext = {
-      descriptionFileRoot: project.projectFolder,
+      descriptionFileRoot,
       descriptionFileHash: undefined, // Not needed anymore
       name: project.packageJson.name,
       isProject: true,
@@ -227,7 +245,7 @@ export async function computeResolverCacheFromLockfileAsync(
       ordinal: -1
     };
 
-    contexts.set(project.projectFolder, context);
+    contexts.set(descriptionFileRoot, context);
 
     if (importer.dependencies) {
       resolveDependencies(workspaceRoot, importer.dependencies, context);

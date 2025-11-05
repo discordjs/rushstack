@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { Text } from '@rushstack/node-core-library';
-
 import type webpack from 'webpack';
+
+import { Text } from '@rushstack/node-core-library';
 
 import { type IInternalOptions, getSetPublicPathCode } from './codeGenerator';
 import { SetPublicPathPluginBase } from './SetPublicPathPluginBase';
@@ -137,16 +137,21 @@ export class SetPublicPathPlugin extends SetPublicPathPluginBase {
           useAssetName
         } = this._pluginOptions.scriptName as IScriptNameInternalOptions;
 
+        const { chunk } = this;
+        if (!chunk) {
+          throw new Error(`Chunk is not defined`);
+        }
+
         let regexName: string;
         if (regexpName) {
           regexName = regexpName;
           if (regexpIsTokenized) {
             regexName = regexName
-              .replace(/\[name\]/g, Text.escapeRegExp(this.chunk.name))
-              .replace(/\[hash\]/g, this.chunk.renderedHash || '');
+              .replace(/\[name\]/g, Text.escapeRegExp(`${chunk.name}`))
+              .replace(/\[hash\]/g, chunk.renderedHash || '');
           }
         } else if (useAssetName) {
-          (this.chunk as IExtendedChunk)[SHOULD_REPLACE_ASSET_NAME_TOKEN] = true;
+          (chunk as IExtendedChunk)[SHOULD_REPLACE_ASSET_NAME_TOKEN] = true;
 
           regexName = ASSET_NAME_TOKEN;
         } else {

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
 
 import { FileSystem, Import, Path } from '@rushstack/node-core-library';
 
@@ -51,7 +51,8 @@ function generateLibFilesRecursively(options: {
 export async function runAsync(): Promise<void> {
   const rushLibFolder: string = Import.resolvePackage({
     baseFolderPath: __dirname,
-    packageName: '@microsoft/rush-lib'
+    packageName: '@microsoft/rush-lib',
+    useNodeJSResolver: true
   });
 
   const stubsTargetPath: string = path.resolve(__dirname, '../lib');

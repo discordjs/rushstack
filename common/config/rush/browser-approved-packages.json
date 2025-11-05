@@ -15,10 +15,6 @@
       "allowedCategories": [ "libraries" ]
     },
     {
-      "name": "@microsoft/rush-sdk",
-      "allowedCategories": [ "tests" ]
-    },
-    {
       "name": "@radix-ui/colors",
       "allowedCategories": [ "libraries" ]
     },
@@ -43,6 +39,10 @@
       "allowedCategories": [ "libraries", "vscode-extensions" ]
     },
     {
+      "name": "@rushstack/problem-matcher",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@rushstack/rush-themed-ui",
       "allowedCategories": [ "libraries" ]
     },
@@ -51,23 +51,23 @@
       "allowedCategories": [ "vscode-extensions" ]
     },
     {
-      "name": "axios",
+      "name": "@ungap/structured-clone",
       "allowedCategories": [ "libraries" ]
     },
     {
-      "name": "colors",
-      "allowedCategories": [ "tests" ]
+      "name": "axios",
+      "allowedCategories": [ "libraries" ]
     },
     {
       "name": "dependency-path",
       "allowedCategories": [ "libraries" ]
     },
     {
-      "name": "local-web-rig",
-      "allowedCategories": [ "libraries", "vscode-extensions" ]
+      "name": "office-ui-fabric-core",
+      "allowedCategories": [ "libraries" ]
     },
     {
-      "name": "office-ui-fabric-core",
+      "name": "prism-react-renderer",
       "allowedCategories": [ "libraries" ]
     },
     {
@@ -101,6 +101,10 @@
     {
       "name": "tslib",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
+    },
+    {
+      "name": "zod",
+      "allowedCategories": [ "libraries" ]
     }
   ]
 }

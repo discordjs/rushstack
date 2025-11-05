@@ -1,9 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
-import type * as tsdoc from '@microsoft/tsdoc';
+import * as path from 'node:path';
 
+import type * as tsdoc from '@microsoft/tsdoc';
 import {
   CommandLineAction,
   type CommandLineStringParameter,
@@ -32,7 +32,6 @@ export abstract class BaseAction extends CommandLineAction {
   protected constructor(options: ICommandLineActionOptions) {
     super(options);
 
-    // override
     this._inputFolderParameter = this.defineStringParameter({
       parameterLongName: '--input-folder',
       parameterShortName: '-i',

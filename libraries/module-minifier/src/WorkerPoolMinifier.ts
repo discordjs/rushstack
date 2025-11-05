@@ -1,11 +1,13 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { createHash } from 'crypto';
-import { cpus } from 'os';
+import { createHash } from 'node:crypto';
+import os from 'node:os';
+import type { ResourceLimits } from 'node:worker_threads';
 
 import serialize from 'serialize-javascript';
 import type { MinifyOptions } from 'terser';
+
 import { WorkerPool } from '@rushstack/worker-pool';
 
 import type {
@@ -23,7 +25,7 @@ import type {
 export interface IWorkerPoolMinifierOptions {
   /**
    * Maximum number of worker threads to use. Will never use more than there are modules to process.
-   * Defaults to os.cpus().length
+   * Defaults to os.availableParallelism()
    */
   maxThreads?: number;
   /**
@@ -36,6 +38,11 @@ export interface IWorkerPoolMinifierOptions {
    * If true, log to the console about the minification results.
    */
   verbose?: boolean;
+
+  /**
+   * Optional resource limits for the workers.
+   */
+  workerResourceLimits?: ResourceLimits;
 }
 
 /**
@@ -55,7 +62,12 @@ export class WorkerPoolMinifier implements IModuleMinifier {
   private readonly _activeRequests: Map<string, IModuleMinificationCallback[]>;
 
   public constructor(options: IWorkerPoolMinifierOptions) {
-    const { maxThreads = cpus().length, terserOptions = {}, verbose = false } = options || {};
+    const {
+      maxThreads = os.availableParallelism?.() ?? os.cpus().length,
+      terserOptions = {},
+      verbose = false,
+      workerResourceLimits
+    } = options || {};
 
     const activeRequests: Map<string, IModuleMinificationCallback[]> = new Map();
     const resultCache: Map<string, IModuleMinificationResult> = new Map();
@@ -63,7 +75,8 @@ export class WorkerPoolMinifier implements IModuleMinifier {
       id: 'Minifier',
       maxWorkers: maxThreads,
       workerData: terserOptions,
-      workerScriptPath: require.resolve('./MinifierWorker')
+      workerScriptPath: require.resolve('./MinifierWorker'),
+      workerResourceLimits
     });
 
     const { version: terserVersion } = require('terser/package.json');

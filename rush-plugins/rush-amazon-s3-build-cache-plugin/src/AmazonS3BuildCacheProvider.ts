@@ -1,19 +1,18 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
+import { type ICredentialCacheEntry, CredentialCache } from '@rushstack/credential-cache';
 import type { ITerminal } from '@rushstack/terminal';
 import {
   type ICloudBuildCacheProvider,
-  type ICredentialCacheEntry,
-  CredentialCache,
   type RushSession,
   RushConstants,
   EnvironmentVariableNames,
   EnvironmentConfiguration
 } from '@rushstack/rush-sdk';
+import { WebClient } from '@rushstack/rush-sdk/lib/utilities/WebClient';
 
 import { AmazonS3Client } from './AmazonS3Client';
-import { WebClient } from './WebClient';
 import { type IAmazonS3Credentials, fromAmazonEnv, fromRushEnv } from './AmazonS3Credentials';
 
 /**

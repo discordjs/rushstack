@@ -3,11 +3,13 @@
 
 /* eslint-disable no-console */
 
-import * as childProcess from 'child_process';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
+import * as childProcess from 'node:child_process';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+
 import type { IPackageJson } from '@rushstack/node-core-library';
+
 import { syncNpmrc, type ILogger } from '../utilities/npmrcUtilities';
 import type { RushConstants } from '../logic/RushConstants';
 
@@ -169,7 +171,8 @@ function _resolvePackageVersion(
       syncNpmrc({
         sourceNpmrcFolder,
         targetNpmrcFolder: rushTempFolder,
-        logger
+        logger,
+        supportEnvVarFallbackSyntax: false
       });
 
       const npmPath: string = getNpmPath();
@@ -433,7 +436,8 @@ export function installAndRun(
     syncNpmrc({
       sourceNpmrcFolder,
       targetNpmrcFolder: packageInstallFolder,
-      logger
+      logger,
+      supportEnvVarFallbackSyntax: false
     });
 
     _createPackageJson(packageInstallFolder, packageName, packageVersion);

@@ -3,10 +3,6 @@
 
 import * as React from 'react';
 import { type CSSProperties, type ReactNode, useCallback, useEffect, useMemo } from 'react';
-import { CommandLineParameterKind } from '@rushstack/ts-command-line/lib/parameters/BaseClasses';
-import type { CommandLineChoiceListParameter } from '@rushstack/ts-command-line/lib/parameters/CommandLineChoiceListParameter';
-import type { CommandLineChoiceParameter } from '@rushstack/ts-command-line/lib/parameters/CommandLineChoiceParameter';
-import type { CommandLineIntegerParameter } from '@rushstack/ts-command-line/lib/parameters/CommandLineIntegerParameter';
 import {
   type FieldValues,
   FormProvider,
@@ -15,6 +11,12 @@ import {
   type UseFormReturn
 } from 'react-hook-form';
 import { DefaultButton, Label } from '@fluentui/react';
+import type { AnyAction, Dispatch } from '@reduxjs/toolkit';
+
+import { CommandLineParameterKind } from '@rushstack/ts-command-line/lib/parameters/BaseClasses';
+import type { CommandLineChoiceListParameter } from '@rushstack/ts-command-line/lib/parameters/CommandLineChoiceListParameter';
+import type { CommandLineChoiceParameter } from '@rushstack/ts-command-line/lib/parameters/CommandLineChoiceParameter';
+import type { CommandLineIntegerParameter } from '@rushstack/ts-command-line/lib/parameters/CommandLineIntegerParameter';
 
 import { ControlledTextField } from '../../ControlledFormComponents/ControlledTextField';
 import { ControlledComboBox } from '../../ControlledFormComponents/ControlledComboBox';
@@ -29,8 +31,6 @@ import {
 } from '../../store/slices/parameter';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { ParameterFormWatcher } from './Watcher';
-
-import type { AnyAction, Dispatch } from '@reduxjs/toolkit';
 import { ControlledToggle } from '../../ControlledFormComponents/ControlledToggle';
 import { FIELD_ANCHOR_CLASSNAME } from '../../hooks/parametersFormScroll';
 import { setFormValidateAsync, useUserSelectedParameterName } from '../../store/slices/ui';
@@ -173,32 +173,33 @@ export const ParameterForm = (): JSX.Element => {
 
           switch (parameter.kind) {
             case CommandLineParameterKind.Choice: {
-              const commandLineChoiceParameter: CommandLineChoiceParameter =
+              const { alternatives, defaultValue }: CommandLineChoiceParameter =
                 parameter as CommandLineChoiceParameter;
+              const options: { key: string; text: string }[] = [];
+              for (const alternative of alternatives) {
+                options.push({
+                  key: alternative,
+                  text: alternative
+                });
+              }
+
               fieldNode = (
-                <ControlledComboBox
-                  {...baseControllerProps}
-                  defaultValue={commandLineChoiceParameter.defaultValue}
-                  options={commandLineChoiceParameter.alternatives.map((alternative: string) => ({
-                    key: alternative,
-                    text: alternative
-                  }))}
-                />
+                <ControlledComboBox {...baseControllerProps} defaultValue={defaultValue} options={options} />
               );
               break;
             }
             case CommandLineParameterKind.ChoiceList: {
-              const commandLineChoiceListParameter: CommandLineChoiceListParameter =
+              const { alternatives }: CommandLineChoiceListParameter =
                 parameter as CommandLineChoiceListParameter;
+              const options: { key: string; text: string }[] = [];
+              for (const alternative of alternatives) {
+                options.push({
+                  key: alternative,
+                  text: alternative
+                });
+              }
               fieldNode = (
-                <ControlledComboBox
-                  {...baseControllerProps}
-                  multiSelect={true}
-                  options={commandLineChoiceListParameter.alternatives.map((alternative: string) => ({
-                    key: alternative,
-                    text: alternative
-                  }))}
-                />
+                <ControlledComboBox {...baseControllerProps} multiSelect={true} options={options} />
               );
               break;
             }

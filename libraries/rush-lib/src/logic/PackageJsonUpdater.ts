@@ -2,8 +2,9 @@
 // See LICENSE in the project root for license information.
 
 import * as semver from 'semver';
-import type * as NpmCheck from 'npm-check';
-import { ConsoleTerminalProvider, Terminal, type ITerminalProvider, Colorize } from '@rushstack/terminal';
+
+import type { INpmCheckPackageSummary } from '@rushstack/npm-check-fork';
+import { Colorize, type ITerminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../api/RushConfiguration';
 import type { BaseInstallManager } from './base/BaseInstallManager';
@@ -28,6 +29,7 @@ import {
   SemVerStyle
 } from './PackageJsonUpdaterTypes';
 import type { Subspace } from '../api/Subspace';
+import { MAKE_CONSISTENT_FLAG_NAME } from '../cli/actions/AddAction';
 
 /**
  * Options for adding a dependency to a particular project.
@@ -40,7 +42,7 @@ export interface IPackageJsonUpdaterRushUpgradeOptions {
   /**
    * The dependencies to be added.
    */
-  packagesToAdd: NpmCheck.INpmCheckPackage[];
+  packagesToAdd: INpmCheckPackageSummary[];
   /**
    * If specified, other packages that use this dependency will also have their package.json's updated.
    */
@@ -53,6 +55,10 @@ export interface IPackageJsonUpdaterRushUpgradeOptions {
    * If specified, "rush update" will be run in debug mode.
    */
   debugInstall: boolean;
+  /**
+   * The variant to consider when performing installations and validating shrinkwrap updates.
+   */
+  variant: string | undefined;
 }
 
 /**
@@ -93,18 +99,18 @@ export interface IRemoveProjectOptions extends IBaseUpdateProjectOptions {}
  * @internal
  */
 export class PackageJsonUpdater {
-  private _rushConfiguration: RushConfiguration;
-  private _rushGlobalFolder: RushGlobalFolder;
+  private readonly _terminal: ITerminal;
+  private readonly _rushConfiguration: RushConfiguration;
+  private readonly _rushGlobalFolder: RushGlobalFolder;
 
-  private readonly _terminalProvider: ITerminalProvider;
-  private readonly _terminal: Terminal;
-
-  public constructor(rushConfiguration: RushConfiguration, rushGlobalFolder: RushGlobalFolder) {
+  public constructor(
+    terminal: ITerminal,
+    rushConfiguration: RushConfiguration,
+    rushGlobalFolder: RushGlobalFolder
+  ) {
+    this._terminal = terminal;
     this._rushConfiguration = rushConfiguration;
     this._rushGlobalFolder = rushGlobalFolder;
-
-    this._terminalProvider = new ConsoleTerminalProvider();
-    this._terminal = new Terminal(this._terminalProvider);
   }
 
   /**
@@ -112,7 +118,7 @@ export class PackageJsonUpdater {
    * "rush upgrade-interactive".
    */
   public async doRushUpgradeAsync(options: IPackageJsonUpdaterRushUpgradeOptions): Promise<void> {
-    const { projects, packagesToAdd, updateOtherPackages, skipUpdate, debugInstall } = options;
+    const { projects, packagesToAdd, updateOtherPackages, skipUpdate, debugInstall, variant } = options;
     const { DependencyAnalyzer } = await import(
       /* webpackChunkName: 'DependencyAnalyzer' */
       './DependencyAnalyzer'
@@ -124,19 +130,13 @@ export class PackageJsonUpdater {
       allVersionsByPackageName,
       implicitlyPreferredVersionByPackageName,
       commonVersionsConfiguration
-    }: IDependencyAnalysis = dependencyAnalyzer.getAnalysis();
+    }: IDependencyAnalysis = dependencyAnalyzer.getAnalysis(undefined, variant, false);
 
     const dependenciesToUpdate: Record<string, string> = {};
     const devDependenciesToUpdate: Record<string, string> = {};
     const peerDependenciesToUpdate: Record<string, string> = {};
 
-    for (const {
-      moduleName,
-      latest: latestVersion,
-      packageJson,
-      devDependency,
-      peerDependency
-    } of packagesToAdd) {
+    for (const { moduleName, latest: latestVersion, packageJson, devDependency } of packagesToAdd) {
       const inferredRangeStyle: SemVerStyle = this._cheaplyDetectSemVerRangeStyle(packageJson);
       const implicitlyPreferredVersion: string | undefined =
         implicitlyPreferredVersionByPackageName.get(moduleName);
@@ -156,8 +156,6 @@ export class PackageJsonUpdater {
 
       if (devDependency) {
         devDependenciesToUpdate[moduleName] = version;
-      } else if (peerDependency) {
-        peerDependenciesToUpdate[moduleName] = version;
       } else {
         dependenciesToUpdate[moduleName] = version;
       }
@@ -216,7 +214,8 @@ export class PackageJsonUpdater {
 
     if (updateOtherPackages) {
       const mismatchFinder: VersionMismatchFinder = VersionMismatchFinder.getMismatches(
-        this._rushConfiguration
+        this._rushConfiguration,
+        options
       );
       for (const update of this._getUpdates(mismatchFinder, allDependenciesToUpdate)) {
         this.updateProject(update);
@@ -236,10 +235,10 @@ export class PackageJsonUpdater {
           options.projects
         );
         for (const subspace of subspaceSet) {
-          await this._doUpdateAsync(debugInstall, subspace);
+          await this._doUpdateAsync(debugInstall, subspace, variant);
         }
       } else {
-        await this._doUpdateAsync(debugInstall, this._rushConfiguration.defaultSubspace);
+        await this._doUpdateAsync(debugInstall, this._rushConfiguration.defaultSubspace, variant);
       }
     }
   }
@@ -253,7 +252,7 @@ export class PackageJsonUpdater {
     } else {
       throw new Error('only accept "rush add" or "rush remove"');
     }
-    const { skipUpdate, debugInstall } = options;
+    const { skipUpdate, debugInstall, variant } = options;
     for (const { project } of allPackageUpdates) {
       if (project.saveIfModified()) {
         this._terminal.writeLine(Colorize.green('Wrote'), project.filePath);
@@ -266,15 +265,19 @@ export class PackageJsonUpdater {
           options.projects
         );
         for (const subspace of subspaceSet) {
-          await this._doUpdateAsync(debugInstall, subspace);
+          await this._doUpdateAsync(debugInstall, subspace, variant);
         }
       } else {
-        await this._doUpdateAsync(debugInstall, this._rushConfiguration.defaultSubspace);
+        await this._doUpdateAsync(debugInstall, this._rushConfiguration.defaultSubspace, variant);
       }
     }
   }
 
-  private async _doUpdateAsync(debugInstall: boolean, subspace: Subspace): Promise<void> {
+  private async _doUpdateAsync(
+    debugInstall: boolean,
+    subspace: Subspace,
+    variant: string | undefined
+  ): Promise<void> {
     this._terminal.writeLine();
     this._terminal.writeLine(Colorize.green('Running "rush update"'));
     this._terminal.writeLine();
@@ -290,6 +293,7 @@ export class PackageJsonUpdater {
       networkConcurrency: undefined,
       offline: false,
       collectLogFile: false,
+      variant,
       maxInstallAttempts: RushConstants.defaultMaxInstallAttempts,
       pnpmFilterArgumentValues: [],
       selectedProjects: new Set(this._rushConfiguration.projects),
@@ -342,7 +346,8 @@ export class PackageJsonUpdater {
     dependencyAnalyzer: DependencyAnalyzer,
     options: IPackageJsonUpdaterRushAddOptions
   ): Promise<IUpdateProjectOptions[]> {
-    const { projects, packagesToUpdate, devDependency, peerDependency, updateOtherPackages } = options;
+    const { projects, packagesToUpdate, devDependency, peerDependency, updateOtherPackages, variant } =
+      options;
 
     // Get projects for this subspace
     const subspaceProjects: RushConfigurationProject[] = projects.filter(
@@ -353,7 +358,7 @@ export class PackageJsonUpdater {
       allVersionsByPackageName,
       implicitlyPreferredVersionByPackageName,
       commonVersionsConfiguration
-    }: IDependencyAnalysis = dependencyAnalyzer.getAnalysis(subspace, options.actionName === 'add');
+    }: IDependencyAnalysis = dependencyAnalyzer.getAnalysis(subspace, variant, options.actionName === 'add');
 
     this._terminal.writeLine();
     const dependenciesToAddOrUpdate: Record<string, string> = {};
@@ -395,7 +400,7 @@ export class PackageJsonUpdater {
         const existingVersionList: string = Array.from(existingSpecifiedVersions).join(', ');
         throw new Error(
           `Adding '${packageName}@${version}' ` +
-            `causes mismatched dependencies. Use the "--make-consistent" flag to update other packages to use ` +
+            `causes mismatched dependencies. Use the "${MAKE_CONSISTENT_FLAG_NAME}" flag to update other packages to use ` +
             `this version, or try specify one of the existing versions (${existingVersionList}).`
         );
       }
@@ -418,7 +423,8 @@ export class PackageJsonUpdater {
         const mismatchFinder: VersionMismatchFinder = VersionMismatchFinder.getMismatches(
           this._rushConfiguration,
           {
-            subspace
+            subspace,
+            variant
           }
         );
         otherPackageUpdates = this._getUpdates(mismatchFinder, Object.entries(dependenciesToAddOrUpdate));
@@ -887,7 +893,7 @@ export class PackageJsonUpdater {
     }
   }
 
-  private _normalizeDepsToUpgrade(deps: NpmCheck.INpmCheckPackage[]): IPackageForRushAdd[] {
+  private _normalizeDepsToUpgrade(deps: INpmCheckPackageSummary[]): IPackageForRushAdd[] {
     return deps.map((dep) => {
       return {
         packageName: dep.moduleName,

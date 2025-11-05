@@ -20,7 +20,7 @@ export default class RushResolverCachePlugin implements IRushPlugin {
   public apply(rushSession: RushSession, rushConfiguration: RushConfiguration): void {
     rushSession.hooks.afterInstall.tapPromise(
       this.pluginName,
-      async (command: IRushCommand, subspace: Subspace) => {
+      async (command: IRushCommand, subspace: Subspace, variant: string | undefined) => {
         const logger: ILogger = rushSession.getLogger('RushResolverCachePlugin');
 
         if (rushConfiguration.packageManager !== 'pnpm') {
@@ -30,10 +30,7 @@ export default class RushResolverCachePlugin implements IRushPlugin {
           return;
         }
 
-        const pnpmMajorVersion: number = parseInt(
-          rushConfiguration.packageManagerToolVersion.split('.')[0],
-          /* radix */ 10
-        );
+        const pnpmMajorVersion: number = parseInt(rushConfiguration.packageManagerToolVersion, 10);
         // Lockfile format parsing logic changed in pnpm v8.
         if (pnpmMajorVersion < 8) {
           logger.emitError(new Error('The RushResolverCachePlugin currently only supports pnpm version >=8'));
@@ -47,7 +44,7 @@ export default class RushResolverCachePlugin implements IRushPlugin {
           './afterInstallAsync'
         );
 
-        await afterInstallAsync(rushSession, rushConfiguration, subspace, logger);
+        await afterInstallAsync(rushSession, rushConfiguration, subspace, variant, logger);
       }
     );
   }

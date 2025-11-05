@@ -10,6 +10,7 @@ import { IRigConfig } from '@rushstack/rig-package';
 import { JsonSchema } from '@rushstack/node-core-library';
 import { NewlineKind } from '@rushstack/node-core-library';
 import { PackageJsonLookup } from '@rushstack/node-core-library';
+import { ReleaseTag } from '@microsoft/api-extractor-model';
 import type * as tsdoc from '@microsoft/tsdoc';
 import { TSDocConfigFile } from '@microsoft/tsdoc-config';
 import { TSDocConfiguration } from '@microsoft/tsdoc';
@@ -27,6 +28,7 @@ export class CompilerState {
 export enum ConsoleMessageId {
     ApiReportCopied = "console-api-report-copied",
     ApiReportCreated = "console-api-report-created",
+    ApiReportDiff = "console-api-report-diff",
     ApiReportFolderMissing = "console-api-report-folder-missing",
     ApiReportNotCopied = "console-api-report-not-copied",
     ApiReportUnchanged = "console-api-report-unchanged",
@@ -56,7 +58,8 @@ export class ExtractorConfig {
     readonly apiReportIncludeForgottenExports: boolean;
     readonly betaTrimmedFilePath: string;
     readonly bundledPackages: string[];
-    readonly docModelEnabled: boolean;
+    // @beta
+    readonly docModelGenerationOptions: IApiModelGenerationOptions | undefined;
     readonly docModelIncludeForgottenExports: boolean;
     readonly enumMemberOrder: EnumMemberOrder;
     static readonly FILENAME: 'api-extractor.json';
@@ -87,6 +90,7 @@ export class ExtractorConfig {
     readonly reportTempFolder: string;
     readonly rollupEnabled: boolean;
     readonly skipLibCheck: boolean;
+    readonly tagsToReport: Readonly<Record<`@${string}`, boolean>>;
     readonly testMode: boolean;
     static tryLoadForFolder(options: IExtractorConfigLoadForFolderOptions): IExtractorConfigPrepareOptions | undefined;
     readonly tsconfigFilePath: string;
@@ -172,6 +176,11 @@ export class ExtractorResult {
     readonly warningCount: number;
 }
 
+// @beta (undocumented)
+export interface IApiModelGenerationOptions {
+    releaseTagsToTrim: Set<ReleaseTag>;
+}
+
 // @public
 export interface ICompilerStateCreateOptions {
     additionalEntryPoints?: string[];
@@ -186,6 +195,7 @@ export interface IConfigApiReport {
     reportFolder?: string;
     reportTempFolder?: string;
     reportVariants?: ApiReportVariant[];
+    tagsToReport?: Readonly<Record<`@${string}`, boolean>>;
 }
 
 // @public
@@ -201,6 +211,7 @@ export interface IConfigDocModel {
     enabled: boolean;
     includeForgottenExports?: boolean;
     projectFolderUrl?: string;
+    releaseTagsToTrim?: ReleaseTagForTrim[];
 }
 
 // @public
@@ -278,6 +289,7 @@ export interface IExtractorInvokeOptions {
     compilerState?: CompilerState;
     localBuild?: boolean;
     messageCallback?: (message: ExtractorMessage) => void;
+    printApiReportDiff?: boolean;
     showDiagnostics?: boolean;
     showVerboseMessages?: boolean;
     typescriptCompilerFolder?: string;
@@ -294,5 +306,8 @@ export interface IExtractorMessagesConfig {
     extractorMessageReporting?: IConfigMessageReportingTable;
     tsdocMessageReporting?: IConfigMessageReportingTable;
 }
+
+// @public
+export type ReleaseTagForTrim = '@internal' | '@alpha' | '@beta' | '@public';
 
 ```

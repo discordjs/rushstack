@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type * as fs from 'fs';
-import * as path from 'path';
+import type * as fs from 'node:fs';
+import * as path from 'node:path';
+
 import glob, { type FileSystemAdapter, type Entry } from 'fast-glob';
 
 import { Async } from '@rushstack/node-core-library';
@@ -178,13 +179,17 @@ export async function getFileSelectionSpecifierPathsAsync(
   return results;
 }
 
-export function normalizeFileSelectionSpecifier(
+export function asAbsoluteFileSelectionSpecifier<TSpecifier extends IFileSelectionSpecifier>(
   rootPath: string,
-  fileGlobSpecifier: IFileSelectionSpecifier
-): void {
+  fileGlobSpecifier: TSpecifier
+): TSpecifier {
   const { sourcePath } = fileGlobSpecifier;
-  fileGlobSpecifier.sourcePath = sourcePath ? path.resolve(rootPath, sourcePath) : rootPath;
-  fileGlobSpecifier.includeGlobs = getIncludedGlobPatterns(fileGlobSpecifier);
+  return {
+    ...fileGlobSpecifier,
+    sourcePath: sourcePath ? path.resolve(rootPath, sourcePath) : rootPath,
+    includeGlobs: getIncludedGlobPatterns(fileGlobSpecifier),
+    fileExtensions: undefined
+  };
 }
 
 function getIncludedGlobPatterns(fileGlobSpecifier: IFileSelectionSpecifier): string[] {

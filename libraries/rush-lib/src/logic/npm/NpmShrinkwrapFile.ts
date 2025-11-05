@@ -89,7 +89,7 @@ export class NpmShrinkwrapFile extends BaseShrinkwrapFile {
       return undefined;
     }
 
-    return new DependencySpecifier(dependencyName, dependencyJson.version);
+    return DependencySpecifier.parseWithCache(dependencyName, dependencyJson.version);
   }
 
   /**
@@ -121,7 +121,7 @@ export class NpmShrinkwrapFile extends BaseShrinkwrapFile {
       return this.getTopLevelDependencyVersion(dependencySpecifier.packageName);
     }
 
-    return new DependencySpecifier(dependencySpecifier.packageName, dependencyJson.version);
+    return DependencySpecifier.parseWithCache(dependencySpecifier.packageName, dependencyJson.version);
   }
 
   /** @override */
@@ -134,7 +134,8 @@ export class NpmShrinkwrapFile extends BaseShrinkwrapFile {
   /** @override */
   public async isWorkspaceProjectModifiedAsync(
     project: RushConfigurationProject,
-    subspace: Subspace
+    subspace: Subspace,
+    variant: string | undefined
   ): Promise<boolean> {
     throw new InternalError('Not implemented');
   }

@@ -7,11 +7,11 @@ import type {
   IHeftTaskRunHookOptions,
   IHeftTaskSession,
   HeftConfiguration,
-  IHeftTaskRunIncrementalHookOptions
+  IHeftTaskRunIncrementalHookOptions,
+  ConfigurationFile
 } from '@rushstack/heft';
-import { ConfigurationFile } from '@rushstack/heft-config-file';
 
-import { ApiExtractorRunner } from './ApiExtractorRunner';
+import { invokeApiExtractorAsync } from './ApiExtractorRunner';
 import apiExtractorConfigSchema from './schemas/api-extractor-task.schema.json';
 
 // eslint-disable-next-line @rushstack/no-new-null
@@ -22,6 +22,12 @@ const TASK_CONFIG_RELATIVE_PATH: string = './config/api-extractor-task.json';
 const EXTRACTOR_CONFIG_FILENAME: typeof TApiExtractor.ExtractorConfig.FILENAME = 'api-extractor.json';
 const LEGACY_EXTRACTOR_CONFIG_RELATIVE_PATH: string = `./${EXTRACTOR_CONFIG_FILENAME}`;
 const EXTRACTOR_CONFIG_RELATIVE_PATH: string = `./config/${EXTRACTOR_CONFIG_FILENAME}`;
+
+const API_EXTRACTOR_CONFIG_SPECIFICATION: ConfigurationFile.IProjectConfigurationFileSpecification<IApiExtractorTaskConfiguration> =
+  {
+    projectRelativeFilePath: TASK_CONFIG_RELATIVE_PATH,
+    jsonSchemaObject: apiExtractorConfigSchema
+  };
 
 export interface IApiExtractorConfigurationResult {
   apiExtractorPackage: typeof TApiExtractor;
@@ -45,14 +51,20 @@ export interface IApiExtractorTaskConfiguration {
    * If set to true, do a full run of api-extractor on every build.
    */
   runInWatchMode?: boolean;
+
+  /**
+   * Controls whether API Extractor prints a diff of the API report file if it's changed.
+   * If set to `"production"`, this will only be printed if Heft is run in `--production`
+   * mode, and if set to `"always"`, this will always be printed if the API report is changed.
+   * This corresponds to API Extractor's `IExtractorInvokeOptions.printApiReportDiff` API option.
+   * This option defaults to `"never"`.
+   */
+  printApiReportDiff?: 'production' | 'always' | 'never';
 }
 
 export default class ApiExtractorPlugin implements IHeftTaskPlugin {
   private _apiExtractor: typeof TApiExtractor | undefined;
   private _apiExtractorConfigurationFilePath: string | undefined | typeof UNINITIALIZED = UNINITIALIZED;
-  private _apiExtractorTaskConfigurationFileLoader:
-    | ConfigurationFile<IApiExtractorTaskConfiguration>
-    | undefined;
   private _printedWatchWarning: boolean = false;
 
   public apply(taskSession: IHeftTaskSession, heftConfiguration: HeftConfiguration): void {
@@ -151,24 +163,6 @@ export default class ApiExtractorPlugin implements IHeftTaskPlugin {
     return this._apiExtractor;
   }
 
-  private async _getApiExtractorTaskConfigurationAsync(
-    taskSession: IHeftTaskSession,
-    heftConfiguration: HeftConfiguration
-  ): Promise<IApiExtractorTaskConfiguration | undefined> {
-    if (!this._apiExtractorTaskConfigurationFileLoader) {
-      this._apiExtractorTaskConfigurationFileLoader = new ConfigurationFile<IApiExtractorTaskConfiguration>({
-        projectRelativeFilePath: TASK_CONFIG_RELATIVE_PATH,
-        jsonSchemaObject: apiExtractorConfigSchema
-      });
-    }
-
-    return await this._apiExtractorTaskConfigurationFileLoader.tryLoadConfigurationFileForProjectAsync(
-      taskSession.logger.terminal,
-      heftConfiguration.buildFolderPath,
-      heftConfiguration.rigConfig
-    );
-  }
-
   private async _runApiExtractorAsync(
     taskSession: IHeftTaskSession,
     heftConfiguration: HeftConfiguration,
@@ -176,11 +170,17 @@ export default class ApiExtractorPlugin implements IHeftTaskPlugin {
     apiExtractor: typeof TApiExtractor,
     apiExtractorConfiguration: TApiExtractor.ExtractorConfig
   ): Promise<void> {
-    const apiExtractorTaskConfiguration: IApiExtractorTaskConfiguration | undefined =
-      await this._getApiExtractorTaskConfigurationAsync(taskSession, heftConfiguration);
+    const {
+      runInWatchMode,
+      useProjectTypescriptVersion,
+      printApiReportDiff: printApiReportDiffOption
+    } = (await heftConfiguration.tryLoadProjectConfigurationFileAsync(
+      API_EXTRACTOR_CONFIG_SPECIFICATION,
+      taskSession.logger.terminal
+    )) ?? {};
 
     if (runOptions.requestRun) {
-      if (!apiExtractorTaskConfiguration?.runInWatchMode) {
+      if (!runInWatchMode) {
         if (!this._printedWatchWarning) {
           this._printedWatchWarning = true;
           taskSession.logger.terminal.writeWarningLine(
@@ -192,23 +192,26 @@ export default class ApiExtractorPlugin implements IHeftTaskPlugin {
     }
 
     let typescriptPackagePath: string | undefined;
-    if (apiExtractorTaskConfiguration?.useProjectTypescriptVersion) {
+    if (useProjectTypescriptVersion) {
       typescriptPackagePath = await heftConfiguration.rigPackageResolver.resolvePackageAsync(
         'typescript',
         taskSession.logger.terminal
       );
     }
 
-    const apiExtractorRunner: ApiExtractorRunner = new ApiExtractorRunner({
+    const production: boolean = taskSession.parameters.production;
+    const printApiReportDiff: boolean =
+      printApiReportDiffOption === 'always' || (printApiReportDiffOption === 'production' && production);
+
+    // Run API Extractor
+    await invokeApiExtractorAsync({
       apiExtractor,
       apiExtractorConfiguration,
       typescriptPackagePath,
       buildFolder: heftConfiguration.buildFolderPath,
-      production: taskSession.parameters.production,
-      scopedLogger: taskSession.logger
+      production,
+      scopedLogger: taskSession.logger,
+      printApiReportDiff
     });
-
-    // Run API Extractor
-    await apiExtractorRunner.invokeAsync();
   }
 }

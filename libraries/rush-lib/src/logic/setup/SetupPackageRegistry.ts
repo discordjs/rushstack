@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
-import type * as child_process from 'child_process';
+import * as path from 'node:path';
+import type * as child_process from 'node:child_process';
+
 import {
   AlreadyReportedError,
   Executable,
@@ -10,14 +11,15 @@ import {
   InternalError,
   type JsonObject,
   NewlineKind,
-  Text
+  Text,
+  User
 } from '@rushstack/node-core-library';
 import { PrintUtilities, Colorize, ConsoleTerminalProvider, Terminal } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../../api/RushConfiguration';
 import { Utilities } from '../../utilities/Utilities';
 import { type IArtifactoryPackageRegistryJson, ArtifactoryConfiguration } from './ArtifactoryConfiguration';
-import type { WebClient as WebClientType, WebClientResponse } from '../../utilities/WebClient';
+import type { WebClient as WebClientType, IWebClientResponse } from '../../utilities/WebClient';
 import { TerminalInput } from './TerminalInput';
 
 interface IArtifactoryCustomizableMessages {
@@ -110,7 +112,8 @@ export class SetupPackageRegistry {
     if (!this._options.syncNpmrcAlreadyCalled) {
       Utilities.syncNpmrc({
         sourceNpmrcFolder: this.rushConfiguration.commonRushConfigFolder,
-        targetNpmrcFolder: this.rushConfiguration.commonTempFolder
+        targetNpmrcFolder: this.rushConfiguration.commonTempFolder,
+        supportEnvVarFallbackSyntax: this.rushConfiguration.isPnpm
       });
     }
 
@@ -300,7 +303,7 @@ export class SetupPackageRegistry {
     // our token.
     queryUrl += `auth/.npm`;
 
-    let response: WebClientResponse;
+    let response: IWebClientResponse;
     try {
       response = await webClient.fetchAsync(queryUrl);
     } catch (e) {
@@ -324,7 +327,7 @@ export class SetupPackageRegistry {
     //   //your-company.jfrog.io/your-artifacts/api/npm/npm-private/:username=your.name@your-company.com
     //   //your-company.jfrog.io/your-artifacts/api/npm/npm-private/:email=your.name@your-company.com
     //   //your-company.jfrog.io/your-artifacts/api/npm/npm-private/:always-auth=true
-    const responseText: string = await response.text();
+    const responseText: string = await response.getTextAsync();
     const responseLines: string[] = Text.convertToLf(responseText).trim().split('\n');
     if (responseLines.length < 2 || !responseLines[0].startsWith('@.npm:')) {
       throw new Error('Unexpected response from Artifactory');
@@ -351,7 +354,7 @@ export class SetupPackageRegistry {
     // ...then append the stuff we got from the REST API, but discard any junk that isn't a proper key/value
     linesToAdd.push(...responseLines.filter((x) => SetupPackageRegistry._getNpmrcKey(x) !== undefined));
 
-    const npmrcPath: string = path.join(Utilities.getHomeFolder(), '.npmrc');
+    const npmrcPath: string = path.join(User.getHomeFolder(), '.npmrc');
 
     this._mergeLinesIntoNpmrc(npmrcPath, linesToAdd);
   }

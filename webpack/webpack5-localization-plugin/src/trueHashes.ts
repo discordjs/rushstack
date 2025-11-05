@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import type { default as webpack, Compilation, Chunk, Asset, sources, util } from 'webpack';
+
 import { Text } from '@rushstack/node-core-library';
 
 import type { ILocalizedWebpackChunk } from './webpackInterfaces';
@@ -196,9 +197,9 @@ export function updateAssetHashes({
                     );
 
                     const regexp: RegExp = new RegExp(
-                      Array.from(relevantHashReplacements.keys())
-                        .map((hashToReplace) => Text.escapeRegExp(hashToReplace))
-                        .join('|'),
+                      Array.from(relevantHashReplacements.keys(), (hashToReplace) =>
+                        Text.escapeRegExp(hashToReplace)
+                      ).join('|'),
                       'g'
                     );
                     let match: RegExpMatchArray | null;
@@ -210,7 +211,7 @@ export function updateAssetHashes({
                       replaceSource.replace(matchStart, matchEnd, replacement);
                     }
 
-                    assetSource = replaceSource;
+                    assetSource = new thisWebpack.sources.CachedSource(replaceSource);
                     compilation.updateAsset(jsAssetName, assetSource);
                   }
                 }
@@ -223,9 +224,10 @@ export function updateAssetHashes({
                     compilation.renameAsset(jsAssetName, newJsFilename);
 
                     if (locale) {
-                      const filesForChunkName: Record<string, string> | undefined = filesByChunkName?.get(
-                        chunk.name
-                      );
+                      const filesForChunkName: Record<string, string> | undefined = chunk.name
+                        ? filesByChunkName?.get(chunk.name)
+                        : undefined;
+
                       if (filesForChunkName) {
                         filesForChunkName[locale] = newJsFilename;
                       }

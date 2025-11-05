@@ -1,6 +1,67 @@
 # Change Log - @rushstack/eslint-plugin
 
-This log was last generated on Wed, 14 Aug 2024 22:37:32 GMT and should not be manually modified.
+This log was last generated on Wed, 22 Oct 2025 00:57:54 GMT and should not be manually modified.
+
+## 0.22.0
+Wed, 22 Oct 2025 00:57:54 GMT
+
+### Minor changes
+
+- Introduce a `@rushstack/import-requires-chunk-name` rule. This rule requires that dynamic imports include a Webpack chunk name magic comment.
+- Introduce a `@rushstack/pair-react-dom-render-unmount` rule. This rule requires that every React DOM `render` call has a matching `unmountComponentAtNode` call.
+
+### Patches
+
+- Include missing rule documentation.
+
+## 0.21.1
+Tue, 14 Oct 2025 15:13:22 GMT
+
+### Patches
+
+- Added documentation for the @rushstack/typedef-var ESLint rule. This clarifies the rule's rationale (readability over writability) and explicitly lists all local variable exemptions, resolving confusion around its usage.
+
+## 0.21.0
+Mon, 13 Oct 2025 15:13:02 GMT
+
+### Minor changes
+
+- Bump `eslint` to `~9.37.0` and the `@typescript-eslint/*` packages to `~8.46.0`.
+
+## 0.20.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 0.19.0
+Thu, 26 Jun 2025 18:57:04 GMT
+
+### Minor changes
+
+- Update for compatibility with ESLint 9
+
+## 0.18.0
+Tue, 11 Mar 2025 02:12:33 GMT
+
+### Minor changes
+
+- Bump the `@typescript-eslint/*` packages to add support for TypeScript 5.8.
+
+## 0.17.0
+Sat, 01 Mar 2025 07:23:16 GMT
+
+### Minor changes
+
+- Bump the `@typescript-eslint/*` dependencies to `~8.24.0` to support newer versions of TypeScript.
+
+## 0.16.1
+Thu, 19 Sep 2024 00:11:08 GMT
+
+### Patches
+
+- Fix ESLint broken links
 
 ## 0.16.0
 Wed, 14 Aug 2024 22:37:32 GMT

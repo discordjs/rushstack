@@ -1,8 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
 import * as ts from 'typescript';
+
+import { ReleaseTag } from '@microsoft/api-extractor-model';
 
 import type { Collector } from '../collector/Collector';
 import { AstSymbol } from '../analyzer/AstSymbol';
@@ -11,9 +14,8 @@ import type { ApiItemMetadata } from '../collector/ApiItemMetadata';
 import type { SymbolMetadata } from '../collector/SymbolMetadata';
 import type { CollectorEntity } from '../collector/CollectorEntity';
 import { ExtractorMessageId } from '../api/ExtractorMessageId';
-import { ReleaseTag } from '@microsoft/api-extractor-model';
 import { AstNamespaceImport } from '../analyzer/AstNamespaceImport';
-import type { AstModuleExportInfo } from '../analyzer/AstModule';
+import type { IAstModuleExportInfo } from '../analyzer/AstModule';
 import type { AstEntity } from '../analyzer/AstEntity';
 
 export class ValidationEnhancer {
@@ -47,7 +49,7 @@ export class ValidationEnhancer {
         // A namespace created using "import * as ___ from ___"
         const astNamespaceImport: AstNamespaceImport = entity.astEntity;
 
-        const astModuleExportInfo: AstModuleExportInfo =
+        const astModuleExportInfo: IAstModuleExportInfo =
           astNamespaceImport.fetchAstModuleExportInfo(collector);
 
         for (const namespaceMemberAstEntity of astModuleExportInfo.exportedLocalEntities.values()) {

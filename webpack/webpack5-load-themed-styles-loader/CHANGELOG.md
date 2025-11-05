@@ -1,6 +1,263 @@
 # Change Log - @microsoft/webpack5-load-themed-styles-loader
 
-This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+This log was last generated on Tue, 04 Nov 2025 08:15:14 GMT and should not be manually modified.
+
+## 0.3.4
+Tue, 04 Nov 2025 08:15:14 GMT
+
+_Version update only_
+
+## 0.3.3
+Fri, 24 Oct 2025 00:13:38 GMT
+
+_Version update only_
+
+## 0.3.2
+Wed, 22 Oct 2025 00:57:54 GMT
+
+_Version update only_
+
+## 0.3.1
+Wed, 08 Oct 2025 00:13:29 GMT
+
+_Version update only_
+
+## 0.3.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 0.2.110
+Tue, 30 Sep 2025 23:57:45 GMT
+
+_Version update only_
+
+## 0.2.109
+Tue, 30 Sep 2025 20:33:51 GMT
+
+_Version update only_
+
+## 0.2.108
+Fri, 12 Sep 2025 15:13:07 GMT
+
+_Version update only_
+
+## 0.2.107
+Thu, 11 Sep 2025 00:22:31 GMT
+
+_Version update only_
+
+## 0.2.106
+Tue, 19 Aug 2025 20:45:02 GMT
+
+_Version update only_
+
+## 0.2.105
+Fri, 01 Aug 2025 00:12:48 GMT
+
+_Version update only_
+
+## 0.2.104
+Wed, 23 Jul 2025 20:55:57 GMT
+
+_Version update only_
+
+## 0.2.103
+Sat, 21 Jun 2025 00:13:15 GMT
+
+_Version update only_
+
+## 0.2.102
+Tue, 13 May 2025 02:09:20 GMT
+
+_Version update only_
+
+## 0.2.101
+Thu, 01 May 2025 15:11:33 GMT
+
+_Version update only_
+
+## 0.2.100
+Thu, 01 May 2025 00:11:12 GMT
+
+_Version update only_
+
+## 0.2.99
+Fri, 25 Apr 2025 00:11:32 GMT
+
+_Version update only_
+
+## 0.2.98
+Mon, 21 Apr 2025 22:24:25 GMT
+
+_Version update only_
+
+## 0.2.97
+Thu, 17 Apr 2025 00:11:21 GMT
+
+_Version update only_
+
+## 0.2.96
+Tue, 15 Apr 2025 15:11:57 GMT
+
+_Version update only_
+
+## 0.2.95
+Wed, 09 Apr 2025 00:11:03 GMT
+
+_Version update only_
+
+## 0.2.94
+Fri, 04 Apr 2025 18:34:35 GMT
+
+_Version update only_
+
+## 0.2.93
+Tue, 25 Mar 2025 15:11:15 GMT
+
+_Version update only_
+
+## 0.2.92
+Wed, 12 Mar 2025 22:41:36 GMT
+
+_Version update only_
+
+## 0.2.91
+Wed, 12 Mar 2025 00:11:31 GMT
+
+_Version update only_
+
+## 0.2.90
+Tue, 11 Mar 2025 02:12:33 GMT
+
+_Version update only_
+
+## 0.2.89
+Tue, 11 Mar 2025 00:11:25 GMT
+
+_Version update only_
+
+## 0.2.88
+Sat, 01 Mar 2025 05:00:09 GMT
+
+_Version update only_
+
+## 0.2.87
+Thu, 27 Feb 2025 01:10:39 GMT
+
+_Version update only_
+
+## 0.2.86
+Wed, 26 Feb 2025 16:11:11 GMT
+
+_Version update only_
+
+## 0.2.85
+Sat, 22 Feb 2025 01:11:12 GMT
+
+_Version update only_
+
+## 0.2.84
+Wed, 19 Feb 2025 18:53:48 GMT
+
+_Version update only_
+
+## 0.2.83
+Wed, 12 Feb 2025 01:10:52 GMT
+
+_Version update only_
+
+## 0.2.82
+Thu, 30 Jan 2025 16:10:36 GMT
+
+_Version update only_
+
+## 0.2.81
+Thu, 30 Jan 2025 01:11:42 GMT
+
+_Version update only_
+
+## 0.2.80
+Thu, 09 Jan 2025 01:10:10 GMT
+
+_Version update only_
+
+## 0.2.79
+Tue, 07 Jan 2025 22:17:32 GMT
+
+_Version update only_
+
+## 0.2.78
+Sat, 14 Dec 2024 01:11:07 GMT
+
+_Version update only_
+
+## 0.2.77
+Mon, 09 Dec 2024 20:31:43 GMT
+
+_Version update only_
+
+## 0.2.76
+Tue, 03 Dec 2024 16:11:07 GMT
+
+_Version update only_
+
+## 0.2.75
+Sat, 23 Nov 2024 01:18:55 GMT
+
+_Version update only_
+
+## 0.2.74
+Fri, 22 Nov 2024 01:10:43 GMT
+
+_Version update only_
+
+## 0.2.73
+Thu, 24 Oct 2024 00:15:47 GMT
+
+_Version update only_
+
+## 0.2.72
+Mon, 21 Oct 2024 18:50:10 GMT
+
+_Version update only_
+
+## 0.2.71
+Thu, 17 Oct 2024 08:35:06 GMT
+
+_Version update only_
+
+## 0.2.70
+Tue, 15 Oct 2024 00:12:31 GMT
+
+_Version update only_
+
+## 0.2.69
+Wed, 02 Oct 2024 00:11:19 GMT
+
+_Version update only_
+
+## 0.2.68
+Tue, 01 Oct 2024 00:11:28 GMT
+
+_Version update only_
+
+## 0.2.67
+Mon, 30 Sep 2024 15:12:19 GMT
+
+_Version update only_
+
+## 0.2.66
+Fri, 13 Sep 2024 00:11:42 GMT
+
+_Version update only_
+
+## 0.2.65
+Tue, 10 Sep 2024 20:08:11 GMT
+
+_Version update only_
 
 ## 0.2.64
 Wed, 21 Aug 2024 05:43:04 GMT

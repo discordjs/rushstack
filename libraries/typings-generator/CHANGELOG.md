@@ -1,6 +1,270 @@
 # Change Log - @rushstack/typings-generator
 
-This log was last generated on Mon, 26 Aug 2024 02:00:11 GMT and should not be manually modified.
+This log was last generated on Tue, 04 Nov 2025 08:15:15 GMT and should not be manually modified.
+
+## 0.15.4
+Tue, 04 Nov 2025 08:15:15 GMT
+
+_Version update only_
+
+## 0.15.3
+Fri, 24 Oct 2025 00:13:38 GMT
+
+_Version update only_
+
+## 0.15.2
+Wed, 22 Oct 2025 00:57:54 GMT
+
+_Version update only_
+
+## 0.15.1
+Wed, 08 Oct 2025 00:13:29 GMT
+
+_Version update only_
+
+## 0.15.0
+Fri, 03 Oct 2025 20:10:00 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 0.14.47
+Tue, 30 Sep 2025 23:57:45 GMT
+
+_Version update only_
+
+## 0.14.46
+Tue, 30 Sep 2025 20:33:51 GMT
+
+_Version update only_
+
+## 0.14.45
+Fri, 12 Sep 2025 15:13:07 GMT
+
+_Version update only_
+
+## 0.14.44
+Thu, 11 Sep 2025 00:22:31 GMT
+
+_Version update only_
+
+## 0.14.43
+Tue, 19 Aug 2025 20:45:02 GMT
+
+_Version update only_
+
+## 0.14.42
+Fri, 01 Aug 2025 00:12:49 GMT
+
+_Version update only_
+
+## 0.14.41
+Wed, 23 Jul 2025 20:55:57 GMT
+
+_Version update only_
+
+## 0.14.40
+Sat, 21 Jun 2025 00:13:15 GMT
+
+_Version update only_
+
+## 0.14.39
+Tue, 13 May 2025 02:09:20 GMT
+
+_Version update only_
+
+## 0.14.38
+Thu, 01 May 2025 15:11:33 GMT
+
+_Version update only_
+
+## 0.14.37
+Thu, 01 May 2025 00:11:12 GMT
+
+_Version update only_
+
+## 0.14.36
+Fri, 25 Apr 2025 00:11:32 GMT
+
+_Version update only_
+
+## 0.14.35
+Mon, 21 Apr 2025 22:24:25 GMT
+
+_Version update only_
+
+## 0.14.34
+Thu, 17 Apr 2025 00:11:21 GMT
+
+_Version update only_
+
+## 0.14.33
+Tue, 15 Apr 2025 15:11:58 GMT
+
+_Version update only_
+
+## 0.14.32
+Wed, 09 Apr 2025 00:11:03 GMT
+
+_Version update only_
+
+## 0.14.31
+Fri, 04 Apr 2025 18:34:35 GMT
+
+_Version update only_
+
+## 0.14.30
+Tue, 25 Mar 2025 15:11:16 GMT
+
+_Version update only_
+
+## 0.14.29
+Wed, 12 Mar 2025 22:41:36 GMT
+
+_Version update only_
+
+## 0.14.28
+Wed, 12 Mar 2025 00:11:32 GMT
+
+_Version update only_
+
+## 0.14.27
+Tue, 11 Mar 2025 02:12:34 GMT
+
+_Version update only_
+
+## 0.14.26
+Tue, 11 Mar 2025 00:11:25 GMT
+
+_Version update only_
+
+## 0.14.25
+Sat, 01 Mar 2025 05:00:09 GMT
+
+_Version update only_
+
+## 0.14.24
+Thu, 27 Feb 2025 01:10:39 GMT
+
+_Version update only_
+
+## 0.14.23
+Wed, 26 Feb 2025 16:11:11 GMT
+
+_Version update only_
+
+## 0.14.22
+Sat, 22 Feb 2025 01:11:12 GMT
+
+_Version update only_
+
+## 0.14.21
+Wed, 19 Feb 2025 18:53:48 GMT
+
+_Version update only_
+
+## 0.14.20
+Wed, 12 Feb 2025 01:10:52 GMT
+
+_Version update only_
+
+## 0.14.19
+Thu, 30 Jan 2025 16:10:36 GMT
+
+_Version update only_
+
+## 0.14.18
+Thu, 30 Jan 2025 01:11:42 GMT
+
+_Version update only_
+
+## 0.14.17
+Thu, 09 Jan 2025 01:10:10 GMT
+
+_Version update only_
+
+## 0.14.16
+Tue, 07 Jan 2025 22:17:32 GMT
+
+_Version update only_
+
+## 0.14.15
+Sat, 14 Dec 2024 01:11:07 GMT
+
+_Version update only_
+
+## 0.14.14
+Mon, 09 Dec 2024 20:31:43 GMT
+
+_Version update only_
+
+## 0.14.13
+Tue, 03 Dec 2024 16:11:08 GMT
+
+_Version update only_
+
+## 0.14.12
+Sat, 23 Nov 2024 01:18:55 GMT
+
+_Version update only_
+
+## 0.14.11
+Fri, 22 Nov 2024 01:10:43 GMT
+
+_Version update only_
+
+## 0.14.10
+Thu, 24 Oct 2024 00:15:48 GMT
+
+_Version update only_
+
+## 0.14.9
+Mon, 21 Oct 2024 18:50:10 GMT
+
+_Version update only_
+
+## 0.14.8
+Thu, 17 Oct 2024 08:35:06 GMT
+
+_Version update only_
+
+## 0.14.7
+Tue, 15 Oct 2024 00:12:32 GMT
+
+_Version update only_
+
+## 0.14.6
+Wed, 02 Oct 2024 00:11:19 GMT
+
+_Version update only_
+
+## 0.14.5
+Tue, 01 Oct 2024 00:11:28 GMT
+
+_Version update only_
+
+## 0.14.4
+Mon, 30 Sep 2024 15:12:19 GMT
+
+_Version update only_
+
+## 0.14.3
+Sat, 28 Sep 2024 00:11:41 GMT
+
+### Patches
+
+- Fix reference to terminal documentation in README
+
+## 0.14.2
+Fri, 13 Sep 2024 00:11:43 GMT
+
+_Version update only_
+
+## 0.14.1
+Tue, 10 Sep 2024 20:08:11 GMT
+
+_Version update only_
 
 ## 0.14.0
 Mon, 26 Aug 2024 02:00:11 GMT

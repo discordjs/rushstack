@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 import type { Comment } from 'estree';
 import type {
@@ -17,13 +17,6 @@ import type {
 } from 'webpack';
 import { AsyncSeriesWaterfallHook, SyncWaterfallHook, type Tap } from 'tapable';
 
-import {
-  CHUNK_MODULE_TOKEN,
-  MODULE_WRAPPER_PREFIX,
-  MODULE_WRAPPER_SUFFIX,
-  STAGE_BEFORE,
-  STAGE_AFTER
-} from './Constants';
 import type {
   IMinifierConnection,
   IModuleMinifier,
@@ -32,6 +25,13 @@ import type {
 } from '@rushstack/module-minifier';
 import { getIdentifier } from '@rushstack/module-minifier';
 
+import {
+  CHUNK_MODULE_TOKEN,
+  MODULE_WRAPPER_PREFIX,
+  MODULE_WRAPPER_SUFFIX,
+  STAGE_BEFORE,
+  STAGE_AFTER
+} from './Constants';
 import type {
   IModuleMinifierPluginOptions,
   IModuleMap,
@@ -196,7 +196,10 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
         parser.hooks.program.tap(PLUGIN_NAME, (program: unknown, comments: Comment[]) => {
           const relevantComments: Comment[] = comments.filter(isLicenseComment);
           if (comments.length > 0) {
-            const module: Module = parser.state.module;
+            // Webpack's typings now restrict the properties on factoryMeta for unknown reasons
+            const module: { factoryMeta?: IFactoryMeta } = parser.state.module as unknown as {
+              factoryMeta?: IFactoryMeta;
+            };
             if (!module.factoryMeta) {
               module.factoryMeta = {
                 comments: relevantComments
@@ -316,7 +319,12 @@ export class ModuleMinifierPlugin implements WebpackPluginInstance {
             return source;
           }
 
-          const id: string | number = compilation.chunkGraph.getModuleId(mod);
+          const id: string | number | null = compilation.chunkGraph.getModuleId(mod);
+
+          if (id === null) {
+            // This module has no id. Abandon per-module minification.
+            return source;
+          }
 
           const metadata: IModuleStats = getOrCreateMetadata(mod);
           const cachedResult: ISourceCacheEntry | undefined = sourceCache.get(source);

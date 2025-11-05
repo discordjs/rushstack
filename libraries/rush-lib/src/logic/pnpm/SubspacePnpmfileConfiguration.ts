@@ -1,10 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
-import { FileSystem, Import, JsonFile, type IDependenciesMetaTable } from '@rushstack/node-core-library';
-import { subspacePnpmfileShimFilename, scriptsFolderPath } from '../../utilities/PathConstants';
+import * as path from 'node:path';
 
+import { FileSystem, Import, JsonFile, type IDependenciesMetaTable } from '@rushstack/node-core-library';
+
+import { subspacePnpmfileShimFilename, scriptsFolderPath } from '../../utilities/PathConstants';
 import type { ISubspacePnpmfileShimSettings, IWorkspaceProjectInfo } from './IPnpmfile';
 import type { RushConfiguration } from '../../api/RushConfiguration';
 import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
@@ -25,7 +26,8 @@ export class SubspacePnpmfileConfiguration {
    */
   public static async writeCommonTempSubspaceGlobalPnpmfileAsync(
     rushConfiguration: RushConfiguration,
-    subspace: Subspace
+    subspace: Subspace,
+    variant: string | undefined
   ): Promise<void> {
     if (rushConfiguration.packageManager !== 'pnpm') {
       throw new Error(
@@ -43,7 +45,7 @@ export class SubspacePnpmfileConfiguration {
     });
 
     const subspaceGlobalPnpmfileShimSettings: ISubspacePnpmfileShimSettings =
-      SubspacePnpmfileConfiguration.getSubspacePnpmfileShimSettings(rushConfiguration, subspace);
+      SubspacePnpmfileConfiguration.getSubspacePnpmfileShimSettings(rushConfiguration, subspace, variant);
 
     // Write the settings file used by the shim
     await JsonFile.saveAsync(
@@ -57,7 +59,8 @@ export class SubspacePnpmfileConfiguration {
 
   public static getSubspacePnpmfileShimSettings(
     rushConfiguration: RushConfiguration,
-    subspace: Subspace
+    subspace: Subspace,
+    variant: string | undefined
   ): ISubspacePnpmfileShimSettings {
     const workspaceProjects: Record<string, IWorkspaceProjectInfo> = {};
     const subspaceProjects: Record<string, IWorkspaceProjectInfo> = {};
@@ -85,7 +88,7 @@ export class SubspacePnpmfileConfiguration {
 
     // common/config/subspaces/<subspace_name>/.pnpmfile.cjs
     const userPnpmfilePath: string = path.join(
-      subspace.getSubspaceConfigFolderPath(),
+      subspace.getVariantDependentSubspaceConfigFolderPath(variant),
       (rushConfiguration.packageManagerWrapper as PnpmPackageManager).pnpmfileFilename
     );
     if (FileSystem.exists(userPnpmfilePath)) {

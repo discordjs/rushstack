@@ -1,7 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
+import * as semver from 'semver';
+
 import {
   FileConstants,
   FileSystem,
@@ -9,7 +12,7 @@ import {
   JsonFile,
   LockFile
 } from '@rushstack/node-core-library';
-import { Colorize } from '@rushstack/terminal';
+import { Colorize, type ITerminal } from '@rushstack/terminal';
 
 import { LastInstallFlag } from '../../api/LastInstallFlag';
 import type { PackageManagerName } from '../../api/packageManager/PackageManager';
@@ -28,8 +31,11 @@ interface ICommonPackageJson extends IPackageJson {
     packageExtensions?: typeof PnpmOptionsConfiguration.prototype.globalPackageExtensions;
     peerDependencyRules?: typeof PnpmOptionsConfiguration.prototype.globalPeerDependencyRules;
     neverBuiltDependencies?: typeof PnpmOptionsConfiguration.prototype.globalNeverBuiltDependencies;
+    ignoredOptionalDependencies?: typeof PnpmOptionsConfiguration.prototype.globalIgnoredOptionalDependencies;
     allowedDeprecatedVersions?: typeof PnpmOptionsConfiguration.prototype.globalAllowedDeprecatedVersions;
     patchedDependencies?: typeof PnpmOptionsConfiguration.prototype.globalPatchedDependencies;
+    minimumReleaseAge?: typeof PnpmOptionsConfiguration.prototype.minimumReleaseAge;
+    minimumReleaseAgeExclude?: typeof PnpmOptionsConfiguration.prototype.minimumReleaseAgeExclude;
   };
 }
 
@@ -37,7 +43,8 @@ export class InstallHelpers {
   public static generateCommonPackageJson(
     rushConfiguration: RushConfiguration,
     subspace: Subspace,
-    dependencies: Map<string, string> = new Map<string, string>()
+    dependencies: Map<string, string> = new Map<string, string>(),
+    terminal: ITerminal
   ): void {
     const commonPackageJson: ICommonPackageJson = {
       dependencies: {},
@@ -47,7 +54,7 @@ export class InstallHelpers {
       version: '0.0.0'
     };
 
-    if (rushConfiguration.packageManager === 'pnpm') {
+    if (rushConfiguration.isPnpm) {
       const pnpmOptions: PnpmOptionsConfiguration =
         subspace.getPnpmOptions() || rushConfiguration.pnpmOptions;
       if (!commonPackageJson.pnpm) {
@@ -69,12 +76,54 @@ export class InstallHelpers {
         commonPackageJson.pnpm.neverBuiltDependencies = pnpmOptions.globalNeverBuiltDependencies;
       }
 
+      if (pnpmOptions.globalIgnoredOptionalDependencies) {
+        if (
+          rushConfiguration.rushConfigurationJson.pnpmVersion !== undefined &&
+          semver.lt(rushConfiguration.rushConfigurationJson.pnpmVersion, '9.0.0')
+        ) {
+          terminal.writeWarningLine(
+            Colorize.yellow(
+              `Your version of pnpm (${rushConfiguration.rushConfigurationJson.pnpmVersion}) ` +
+                `doesn't support the "globalIgnoredOptionalDependencies" field in ` +
+                `${rushConfiguration.commonRushConfigFolder}/${RushConstants.pnpmConfigFilename}. ` +
+                'Remove this field or upgrade to pnpm 9.'
+            )
+          );
+        }
+
+        commonPackageJson.pnpm.ignoredOptionalDependencies = pnpmOptions.globalIgnoredOptionalDependencies;
+      }
+
       if (pnpmOptions.globalAllowedDeprecatedVersions) {
         commonPackageJson.pnpm.allowedDeprecatedVersions = pnpmOptions.globalAllowedDeprecatedVersions;
       }
 
       if (pnpmOptions.globalPatchedDependencies) {
         commonPackageJson.pnpm.patchedDependencies = pnpmOptions.globalPatchedDependencies;
+      }
+
+      if (pnpmOptions.minimumReleaseAge !== undefined || pnpmOptions.minimumReleaseAgeExclude) {
+        if (
+          rushConfiguration.rushConfigurationJson.pnpmVersion !== undefined &&
+          semver.lt(rushConfiguration.rushConfigurationJson.pnpmVersion, '10.16.0')
+        ) {
+          terminal.writeWarningLine(
+            Colorize.yellow(
+              `Your version of pnpm (${rushConfiguration.rushConfigurationJson.pnpmVersion}) ` +
+                `doesn't support the "minimumReleaseAge" or "minimumReleaseAgeExclude" fields in ` +
+                `${rushConfiguration.commonRushConfigFolder}/${RushConstants.pnpmConfigFilename}. ` +
+                'Remove these fields or upgrade to pnpm 10.16.0 or newer.'
+            )
+          );
+        }
+
+        if (pnpmOptions.minimumReleaseAge !== undefined) {
+          commonPackageJson.pnpm.minimumReleaseAge = pnpmOptions.minimumReleaseAge;
+        }
+
+        if (pnpmOptions.minimumReleaseAgeExclude) {
+          commonPackageJson.pnpm.minimumReleaseAgeExclude = pnpmOptions.minimumReleaseAgeExclude;
+        }
       }
 
       if (pnpmOptions.unsupportedPackageJsonSettings) {
@@ -111,7 +160,7 @@ export class InstallHelpers {
       if (rushConfiguration.npmOptions && rushConfiguration.npmOptions.environmentVariables) {
         configurationEnvironment = rushConfiguration.npmOptions.environmentVariables;
       }
-    } else if (rushConfiguration.packageManager === 'pnpm') {
+    } else if (rushConfiguration.isPnpm) {
       if (rushConfiguration.pnpmOptions && rushConfiguration.pnpmOptions.environmentVariables) {
         configurationEnvironment = rushConfiguration.pnpmOptions.environmentVariables;
       }
@@ -167,7 +216,7 @@ export class InstallHelpers {
 
     logIfConsoleOutputIsNotRestricted(`Trying to acquire lock for ${packageManagerAndVersion}`);
 
-    const lock: LockFile = await LockFile.acquire(rushUserFolder, packageManagerAndVersion);
+    const lock: LockFile = await LockFile.acquireAsync(rushUserFolder, packageManagerAndVersion);
 
     logIfConsoleOutputIsNotRestricted(`Acquired lock for ${packageManagerAndVersion}`);
 

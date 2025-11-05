@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import type { ITerminal } from '@rushstack/terminal';
+
 import type { Subspace } from '../../api/Subspace';
 import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
 
@@ -80,6 +81,11 @@ export interface IInstallManagerOptions {
    * If specified when using PNPM, the logs will be in /common/temp/pnpm.log
    */
   collectLogFile: boolean;
+
+  /**
+   * The variant to consider when performing installations and validating shrinkwrap updates.
+   */
+  variant: string | undefined;
 
   /**
    * Retry the install the specified number of times

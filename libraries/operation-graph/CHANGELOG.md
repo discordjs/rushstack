@@ -1,6 +1,108 @@
 # Change Log - @rushstack/operation-graph
 
-This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Oct 2025 00:13:38 GMT and should not be manually modified.
+
+## 0.5.3
+Fri, 24 Oct 2025 00:13:38 GMT
+
+_Version update only_
+
+## 0.5.2
+Wed, 22 Oct 2025 00:57:54 GMT
+
+_Version update only_
+
+## 0.5.1
+Wed, 08 Oct 2025 00:13:29 GMT
+
+_Version update only_
+
+## 0.5.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 0.4.1
+Tue, 30 Sep 2025 23:57:45 GMT
+
+_Version update only_
+
+## 0.4.0
+Tue, 30 Sep 2025 20:33:51 GMT
+
+### Minor changes
+
+- Require the "requestor" parameter and add a new "detail" parameter for watch-mode rerun requests. Make "name" a required field for operations.
+- (BREAKING CHANGE) Revert the extensibility points for `(before/after)ExecuteOperation(Group)?Async` to be synchronous to signify that they are only meant for logging, not for expensive work.
+
+## 0.3.2
+Thu, 11 Sep 2025 00:22:31 GMT
+
+_Version update only_
+
+## 0.3.1
+Wed, 23 Jul 2025 20:55:57 GMT
+
+_Version update only_
+
+## 0.3.0
+Sat, 21 Jun 2025 00:13:15 GMT
+
+### Minor changes
+
+- (BREAKING CHANGE) The OperationExecutionManager `beforeExecute` and `afterExecute` hooks have been made async and renamed to `beforeExecuteAsync` and `afterExecuteAsync`. Operations now have an optional `metadata` field that can be used to store arbitrary data.
+
+## 0.2.41
+Thu, 01 May 2025 00:11:12 GMT
+
+_Version update only_
+
+## 0.2.40
+Tue, 25 Mar 2025 15:11:15 GMT
+
+_Version update only_
+
+## 0.2.39
+Tue, 11 Mar 2025 02:12:33 GMT
+
+_Version update only_
+
+## 0.2.38
+Wed, 12 Feb 2025 01:10:52 GMT
+
+_Version update only_
+
+## 0.2.37
+Thu, 30 Jan 2025 01:11:42 GMT
+
+_Version update only_
+
+## 0.2.36
+Thu, 09 Jan 2025 01:10:10 GMT
+
+_Version update only_
+
+## 0.2.35
+Sat, 14 Dec 2024 01:11:07 GMT
+
+_Version update only_
+
+## 0.2.34
+Fri, 22 Nov 2024 01:10:43 GMT
+
+_Version update only_
+
+## 0.2.33
+Fri, 13 Sep 2024 00:11:43 GMT
+
+_Version update only_
+
+## 0.2.32
+Tue, 10 Sep 2024 20:08:11 GMT
+
+_Version update only_
 
 ## 0.2.31
 Wed, 21 Aug 2024 05:43:04 GMT

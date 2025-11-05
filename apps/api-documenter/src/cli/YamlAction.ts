@@ -8,7 +8,6 @@ import type {
 
 import type { ApiDocumenterCommandLine } from './ApiDocumenterCommandLine';
 import { BaseAction } from './BaseAction';
-
 import { YamlDocumenter, type YamlFormat } from '../documenters/YamlDocumenter';
 import { OfficeYamlDocumenter } from '../documenters/OfficeYamlDocumenter';
 
@@ -50,8 +49,7 @@ export class YamlAction extends BaseAction {
     });
   }
 
-  protected async onExecute(): Promise<void> {
-    // override
+  protected override async onExecuteAsync(): Promise<void> {
     const { apiModel, inputFolder, outputFolder } = this.buildApiModel();
 
     const yamlDocumenter: YamlDocumenter = this._officeParameter.value

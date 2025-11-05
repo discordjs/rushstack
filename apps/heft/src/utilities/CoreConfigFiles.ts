@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
 import {
-  ConfigurationFile,
+  ProjectConfigurationFile,
   InheritanceType,
   PathResolutionMethod,
   type IJsonPathMetadataResolverOptions
@@ -59,9 +60,9 @@ export interface IHeftConfigurationJson {
 }
 
 export class CoreConfigFiles {
-  private static _heftConfigFileLoader: ConfigurationFile<IHeftConfigurationJson> | undefined;
+  private static _heftConfigFileLoader: ProjectConfigurationFile<IHeftConfigurationJson> | undefined;
   private static _nodeServiceConfigurationLoader:
-    | ConfigurationFile<INodeServicePluginConfiguration>
+    | ProjectConfigurationFile<INodeServicePluginConfiguration>
     | undefined;
 
   public static heftConfigurationProjectRelativeFilePath: string = `${Constants.projectConfigFolderName}/${Constants.heftConfigurationFilename}`;
@@ -110,7 +111,7 @@ export class CoreConfigFiles {
       };
 
       const schemaObject: object = await import('../schemas/heft.schema.json');
-      CoreConfigFiles._heftConfigFileLoader = new ConfigurationFile<IHeftConfigurationJson>({
+      CoreConfigFiles._heftConfigFileLoader = new ProjectConfigurationFile<IHeftConfigurationJson>({
         projectRelativeFilePath: CoreConfigFiles.heftConfigurationProjectRelativeFilePath,
         jsonSchemaObject: schemaObject,
         propertyInheritanceDefaults: {
@@ -134,7 +135,7 @@ export class CoreConfigFiles {
       });
     }
 
-    const heftConfigFileLoader: ConfigurationFile<IHeftConfigurationJson> =
+    const heftConfigFileLoader: ProjectConfigurationFile<IHeftConfigurationJson> =
       CoreConfigFiles._heftConfigFileLoader;
 
     let configurationFile: IHeftConfigurationJson;
@@ -158,10 +159,11 @@ export class CoreConfigFiles {
         // want to see if it parses. We will use the ConfigurationFile class to load it to ensure
         // that we follow the "extends" chain for the entire config file.
         const legacySchemaObject: object = await import('../schemas/heft-legacy.schema.json');
-        const legacyConfigFileLoader: ConfigurationFile<unknown> = new ConfigurationFile<unknown>({
-          projectRelativeFilePath: CoreConfigFiles.heftConfigurationProjectRelativeFilePath,
-          jsonSchemaObject: legacySchemaObject
-        });
+        const legacyConfigFileLoader: ProjectConfigurationFile<unknown> =
+          new ProjectConfigurationFile<unknown>({
+            projectRelativeFilePath: CoreConfigFiles.heftConfigurationProjectRelativeFilePath,
+            jsonSchemaObject: legacySchemaObject
+          });
         await legacyConfigFileLoader.loadConfigurationFileForProjectAsync(terminal, projectPath, rigConfig);
       } catch (e2) {
         // It doesn't match the legacy schema either. Throw the original error.
@@ -232,7 +234,7 @@ export class CoreConfigFiles {
     if (!CoreConfigFiles._nodeServiceConfigurationLoader) {
       const schemaObject: object = await import('../schemas/node-service.schema.json');
       CoreConfigFiles._nodeServiceConfigurationLoader =
-        new ConfigurationFile<INodeServicePluginConfiguration>({
+        new ProjectConfigurationFile<INodeServicePluginConfiguration>({
           projectRelativeFilePath: CoreConfigFiles.nodeServiceConfigurationProjectRelativeFilePath,
           jsonSchemaObject: schemaObject
         });

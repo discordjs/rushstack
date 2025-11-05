@@ -1,6 +1,49 @@
 # Change Log - @rushstack/eslint-patch
 
-This log was last generated on Sat, 27 Jul 2024 00:10:27 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Oct 2025 11:22:09 GMT and should not be manually modified.
+
+## 1.14.1
+Fri, 24 Oct 2025 11:22:09 GMT
+
+### Patches
+
+- Fix an issue where suppressed rule violations still show up in the report in ESLint >=9.37.0.
+- Fix an issue where the ESLint process will crash when running in the ESLint VSCode extension in ESLint >=9.37.0.
+
+## 1.14.0
+Mon, 13 Oct 2025 15:13:02 GMT
+
+### Minor changes
+
+- Bump `eslint` to `~9.37.0` and the `@typescript-eslint/*` packages to `~8.46.0`.
+
+## 1.13.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 1.12.0
+Thu, 26 Jun 2025 18:57:04 GMT
+
+### Minor changes
+
+- Update for compatibility with ESLint 9
+
+## 1.11.0
+Tue, 11 Mar 2025 02:12:33 GMT
+
+### Minor changes
+
+- Bump the `@typescript-eslint/*` packages to add support for TypeScript 5.8.
+
+## 1.10.5
+Tue, 07 Jan 2025 16:11:06 GMT
+
+### Patches
+
+- Fix a performance issue when locating ".eslint-bulk-suppressions.json".
 
 ## 1.10.4
 Sat, 27 Jul 2024 00:10:27 GMT

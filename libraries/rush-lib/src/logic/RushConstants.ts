@@ -1,6 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
+import type { RUSH_USER_FOLDER_NAME } from '@rushstack/credential-cache';
+
+// Use the typing here to enforce consistency between the two libraries
+const rushUserConfigurationFolderName: typeof RUSH_USER_FOLDER_NAME = '.rush-user';
+
 /**
  * Constants used by the Rush tool.
  * @beta
@@ -53,6 +58,13 @@ export class RushConstants {
   public static readonly rushTempNpmScope: '@rush-temp' = '@rush-temp';
 
   /**
+   * The folder name ("variants") under which named variant configurations for
+   * alternate dependency sets may be found.
+   * Example: `C:\MyRepo\common\config\rush\variants`
+   */
+  public static readonly rushVariantsFolderName: 'variants' = 'variants';
+
+  /**
    * The folder name ("temp") under the common folder, or under the .rush folder in each project's directory where
    * temporary files will be stored.
    * Example: `C:\MyRepo\common\temp`
@@ -95,6 +107,11 @@ export class RushConstants {
    * The filename (".modules.yaml") used by pnpm to specify configurations in the node_modules directory
    */
   public static readonly pnpmModulesFilename: '.modules.yaml' = '.modules.yaml';
+
+  /**
+   * The folder name (".pnpm") used by pnpm to store the code of the dependencies for this subspace
+   */
+  public static readonly pnpmVirtualStoreFolderName: '.pnpm' = '.pnpm';
 
   /**
    * The filename ("global-pnpmfile.cjs") used to add custom configuration to subspaces
@@ -286,7 +303,7 @@ export class RushConstants {
   /**
    * The name of the per-user Rush configuration data folder.
    */
-  public static readonly rushUserConfigurationFolderName: '.rush-user' = '.rush-user';
+  public static readonly rushUserConfigurationFolderName: '.rush-user' = rushUserConfigurationFolderName;
 
   /**
    * The name of the project `rush-logs` folder.
@@ -332,7 +349,18 @@ export class RushConstants {
   public static readonly rushAlertsConfigFilename: 'rush-alerts.json' = 'rush-alerts.json';
 
   /**
-   * The filename for the machine-generated file that tracks state for Rush alerts.
+   * The filename for the file that tracks which variant is currently installed.
    */
-  public static readonly rushAlertsStateFilename: 'rush-alerts-state.json' = 'rush-alerts-state.json';
+  public static readonly currentVariantsFilename: 'current-variants.json' = 'current-variants.json';
+
+  /**
+   * The filename ("rush-hotlink-state.json") used to store information about packages connected via
+   * "rush link-package" and "rush bridge-package" commands.
+   */
+  public static readonly rushHotlinkStateFilename: 'rush-hotlink-state.json' = 'rush-hotlink-state.json';
+
+  /**
+   * The filename ("pnpm-sync.json") used to store the state of the pnpm sync command.
+   */
+  public static readonly pnpmSyncFilename: '.pnpm-sync.json' = '.pnpm-sync.json';
 }

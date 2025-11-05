@@ -1,6 +1,298 @@
 # Change Log - @rushstack/heft-webpack5-plugin
 
-This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+This log was last generated on Tue, 04 Nov 2025 08:15:14 GMT and should not be manually modified.
+
+## 1.2.4
+Tue, 04 Nov 2025 08:15:14 GMT
+
+_Version update only_
+
+## 1.2.3
+Fri, 24 Oct 2025 00:13:38 GMT
+
+_Version update only_
+
+## 1.2.2
+Wed, 22 Oct 2025 00:57:54 GMT
+
+_Version update only_
+
+## 1.2.1
+Fri, 17 Oct 2025 23:22:33 GMT
+
+### Patches
+
+- dev-server: add ipv6 loopback address support in terminal output
+- add debug log when Webpack is imported from the rig package
+
+## 1.2.0
+Wed, 08 Oct 2025 00:13:28 GMT
+
+### Minor changes
+
+- Allow infrastructure logs to be printed.
+- Use project-level webpack dependency when it's installed.
+
+## 1.1.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 1.0.0
+Tue, 30 Sep 2025 23:57:45 GMT
+
+### Breaking changes
+
+- Release Heft version 1.0.0
+
+## 0.11.43
+Tue, 30 Sep 2025 20:33:51 GMT
+
+_Version update only_
+
+## 0.11.42
+Fri, 12 Sep 2025 15:13:07 GMT
+
+_Version update only_
+
+## 0.11.41
+Thu, 11 Sep 2025 00:22:31 GMT
+
+_Version update only_
+
+## 0.11.40
+Fri, 29 Aug 2025 00:08:01 GMT
+
+_Version update only_
+
+## 0.11.39
+Tue, 26 Aug 2025 00:12:57 GMT
+
+_Version update only_
+
+## 0.11.38
+Tue, 19 Aug 2025 20:45:02 GMT
+
+_Version update only_
+
+## 0.11.37
+Fri, 01 Aug 2025 00:12:48 GMT
+
+_Version update only_
+
+## 0.11.36
+Sat, 26 Jul 2025 00:12:22 GMT
+
+_Version update only_
+
+## 0.11.35
+Wed, 23 Jul 2025 20:55:57 GMT
+
+_Version update only_
+
+## 0.11.34
+Sat, 21 Jun 2025 00:13:15 GMT
+
+_Version update only_
+
+## 0.11.33
+Tue, 13 May 2025 02:09:20 GMT
+
+_Version update only_
+
+## 0.11.32
+Thu, 01 May 2025 15:11:33 GMT
+
+_Version update only_
+
+## 0.11.31
+Thu, 01 May 2025 00:11:12 GMT
+
+_Version update only_
+
+## 0.11.30
+Fri, 25 Apr 2025 00:11:32 GMT
+
+_Version update only_
+
+## 0.11.29
+Mon, 21 Apr 2025 22:24:25 GMT
+
+_Version update only_
+
+## 0.11.28
+Thu, 17 Apr 2025 00:11:21 GMT
+
+_Version update only_
+
+## 0.11.27
+Tue, 15 Apr 2025 15:11:57 GMT
+
+_Version update only_
+
+## 0.11.26
+Wed, 09 Apr 2025 00:11:03 GMT
+
+_Version update only_
+
+## 0.11.25
+Fri, 04 Apr 2025 18:34:35 GMT
+
+_Version update only_
+
+## 0.11.24
+Tue, 25 Mar 2025 15:11:15 GMT
+
+_Version update only_
+
+## 0.11.23
+Wed, 12 Mar 2025 22:41:36 GMT
+
+_Version update only_
+
+## 0.11.22
+Wed, 12 Mar 2025 00:11:32 GMT
+
+_Version update only_
+
+## 0.11.21
+Tue, 11 Mar 2025 02:12:34 GMT
+
+_Version update only_
+
+## 0.11.20
+Tue, 11 Mar 2025 00:11:25 GMT
+
+_Version update only_
+
+## 0.11.19
+Sat, 01 Mar 2025 05:00:09 GMT
+
+_Version update only_
+
+## 0.11.18
+Thu, 27 Feb 2025 01:10:39 GMT
+
+_Version update only_
+
+## 0.11.17
+Wed, 26 Feb 2025 16:11:11 GMT
+
+_Version update only_
+
+## 0.11.16
+Sat, 22 Feb 2025 01:11:12 GMT
+
+_Version update only_
+
+## 0.11.15
+Wed, 19 Feb 2025 18:53:48 GMT
+
+_Version update only_
+
+## 0.11.14
+Wed, 12 Feb 2025 01:10:52 GMT
+
+_Version update only_
+
+## 0.11.13
+Thu, 30 Jan 2025 16:10:36 GMT
+
+_Version update only_
+
+## 0.11.12
+Thu, 30 Jan 2025 01:11:42 GMT
+
+_Version update only_
+
+## 0.11.11
+Thu, 09 Jan 2025 01:10:10 GMT
+
+_Version update only_
+
+## 0.11.10
+Tue, 07 Jan 2025 22:17:32 GMT
+
+_Version update only_
+
+## 0.11.9
+Sat, 14 Dec 2024 01:11:07 GMT
+
+_Version update only_
+
+## 0.11.8
+Mon, 09 Dec 2024 20:31:43 GMT
+
+_Version update only_
+
+## 0.11.7
+Tue, 03 Dec 2024 16:11:08 GMT
+
+_Version update only_
+
+## 0.11.6
+Sat, 23 Nov 2024 01:18:55 GMT
+
+_Version update only_
+
+## 0.11.5
+Fri, 22 Nov 2024 01:10:43 GMT
+
+_Version update only_
+
+## 0.11.4
+Thu, 24 Oct 2024 00:15:48 GMT
+
+_Version update only_
+
+## 0.11.3
+Mon, 21 Oct 2024 18:50:10 GMT
+
+_Version update only_
+
+## 0.11.2
+Thu, 17 Oct 2024 08:35:06 GMT
+
+_Version update only_
+
+## 0.11.1
+Tue, 15 Oct 2024 00:12:31 GMT
+
+_Version update only_
+
+## 0.11.0
+Wed, 02 Oct 2024 00:11:19 GMT
+
+### Minor changes
+
+- Update the `webpack` peer dependency to `^5.82.1` from `~5.82.1`. Also bump `webpack-dev-server` to `^5.1.0`. This drops support for Node 16 and includes some breaking configuration changes. See https://github.com/webpack/webpack-dev-server/blob/master/migration-v5.md.
+
+## 0.10.14
+Tue, 01 Oct 2024 00:11:28 GMT
+
+_Version update only_
+
+## 0.10.13
+Mon, 30 Sep 2024 15:12:19 GMT
+
+_Version update only_
+
+## 0.10.12
+Sat, 21 Sep 2024 00:10:27 GMT
+
+_Version update only_
+
+## 0.10.11
+Fri, 13 Sep 2024 00:11:43 GMT
+
+_Version update only_
+
+## 0.10.10
+Tue, 10 Sep 2024 20:08:11 GMT
+
+_Version update only_
 
 ## 0.10.9
 Wed, 21 Aug 2024 05:43:04 GMT

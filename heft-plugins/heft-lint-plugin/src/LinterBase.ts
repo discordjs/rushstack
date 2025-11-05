@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
-import { performance } from 'perf_hooks';
-import { createHash, type Hash } from 'crypto';
+import * as path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { createHash, type Hash } from 'node:crypto';
+
 import { FileSystem, JsonFile, Path } from '@rushstack/node-core-library';
 import type { ITerminal } from '@rushstack/terminal';
 import type { IScopedLogger } from '@rushstack/heft';
@@ -21,6 +22,7 @@ export interface ILinterBaseOptions {
   linterConfigFilePath: string;
   tsProgram: IExtendedProgram;
   fix?: boolean;
+  sarifLogPath?: string;
 }
 
 export interface IRunLinterOptions {
@@ -128,7 +130,7 @@ export abstract class LinterBase<TLintResult> {
     // Some of this code comes from here:
     // https://github.com/palantir/tslint/blob/24d29e421828348f616bf761adb3892bcdf51662/src/linter.ts#L161-L179
     // Modified to only lint files that have changed and that we care about
-    const lintFailures: TLintResult[] = [];
+    const lintResults: TLintResult[] = [];
     for (const sourceFile of options.tsProgram.getSourceFiles()) {
       const filePath: string = sourceFile.fileName;
       const relative: string | undefined = relativePaths.get(filePath);
@@ -137,8 +139,7 @@ export abstract class LinterBase<TLintResult> {
         continue;
       }
 
-      // Compute the version from the source file content
-      const version: string = sourceFile.version || '';
+      const version: string = await this.getSourceFileHashAsync(sourceFile);
       const cachedVersion: string = cachedNoFailureFileVersions.get(relative) || '';
       if (
         cachedVersion === '' ||
@@ -147,12 +148,12 @@ export abstract class LinterBase<TLintResult> {
         options.changedFiles.has(sourceFile)
       ) {
         fileCount++;
-        const failures: TLintResult[] = await this.lintFileAsync(sourceFile);
-        if (failures.length === 0) {
+        const results: TLintResult[] = await this.lintFileAsync(sourceFile);
+        if (results.length === 0) {
           newNoFailureFileVersions.set(relative, version);
         } else {
-          for (const failure of failures) {
-            lintFailures.push(failure);
+          for (const result of results) {
+            lintResults.push(result);
           }
         }
       } else {
@@ -161,7 +162,7 @@ export abstract class LinterBase<TLintResult> {
     }
     //#endregion
 
-    await this.lintingFinishedAsync(lintFailures);
+    await this.lintingFinishedAsync(lintResults);
 
     if (!this._fix && this._fixesPossible) {
       this._terminal.writeWarningLine(
@@ -178,6 +179,19 @@ export abstract class LinterBase<TLintResult> {
     const duration: number = performance.now() - startTime;
 
     this._terminal.writeVerboseLine(`Lint: ${duration}ms (${fileCount} files)`);
+  }
+
+  protected async getSourceFileHashAsync(sourceFile: IExtendedSourceFile): Promise<string> {
+    // TypeScript only computes the version during an incremental build.
+    let version: string = sourceFile.version;
+    if (!version) {
+      // Compute the version from the source file content
+      const sourceFileHash: Hash = createHash('sha1');
+      sourceFileHash.update(sourceFile.text);
+      version = sourceFileHash.digest('base64');
+    }
+
+    return version;
   }
 
   protected abstract getCacheVersionAsync(): Promise<string>;

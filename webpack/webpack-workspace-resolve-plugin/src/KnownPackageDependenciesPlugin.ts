@@ -2,7 +2,9 @@
 // See LICENSE in the project root for license information.
 
 import type { Resolver } from 'webpack';
+
 import type { IPrefixMatch } from '@rushstack/lookup-by-path';
+
 import type { IResolveContext, WorkspaceLayoutCache } from './WorkspaceLayoutCache';
 
 type ResolveRequest = Parameters<Resolver['hooks']['resolveStep']['call']>[1];
@@ -56,7 +58,11 @@ export class KnownPackageDependenciesPlugin {
         let scope: IPrefixMatch<IResolveContext> | undefined =
           cache.contextForPackage.get(descriptionFileData);
         if (!scope) {
-          return callback(new Error(`Expected context for ${request.descriptionFileRoot}`));
+          scope = cache.contextLookup.findLongestPrefixMatch(path);
+          if (!scope) {
+            return callback(new Error(`Expected context for ${request.descriptionFileRoot}`));
+          }
+          cache.contextForPackage.set(descriptionFileData, scope);
         }
 
         let dependency: IPrefixMatch<IResolveContext> | undefined;
@@ -76,18 +82,26 @@ export class KnownPackageDependenciesPlugin {
           (remainingPath.length > 1 && cache.normalizeToSlash?.(remainingPath)) || remainingPath;
         const { descriptionFileRoot } = dependency.value;
         const obj: ResolveRequest = {
-          ...request,
           path: descriptionFileRoot,
+          context: request.context,
+          descriptionFilePath: `${descriptionFileRoot}${cache.resolverPathSeparator}package.json`,
           descriptionFileRoot,
           descriptionFileData: undefined,
-          descriptionFilePath: `${descriptionFileRoot}${cache.resolverPathSeparator}package.json`,
-
-          relativePath: relativePath,
-          request: relativePath,
+          relativePath,
+          ignoreSymlinks: request.ignoreSymlinks,
           fullySpecified,
-          module: false
+          __innerRequest: request.__innerRequest,
+          __innerRequest_request: request.__innerRequest_request,
+          __innerRequest_relativePath: request.__innerRequest_relativePath,
+
+          request: relativePath,
+          query: request.query,
+          fragment: request.fragment,
+          module: false,
+          directory: request.directory,
+          file: request.file,
+          internal: request.internal
         };
-        // eslint-disable-next-line @rushstack/no-new-null
         resolver.doResolve(target, obj, null, resolveContext, callback);
       });
   }

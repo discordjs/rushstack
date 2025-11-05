@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
 import type { CommandLineFlagParameter, CommandLineStringParameter } from '@rushstack/ts-command-line';
 import type {
   PackageExtractor,
@@ -159,11 +160,14 @@ export class DeployAction extends BaseRushAction {
     }
 
     const projects: RushConfigurationProject[] = this.rushConfiguration.projects;
-    if (this.rushConfiguration.packageManager === 'pnpm') {
+    if (this.rushConfiguration.isPnpm) {
+      const currentlyInstalledVariant: string | undefined =
+        await this.rushConfiguration.getCurrentlyInstalledVariantAsync();
       for (const project of projects) {
         const pnpmfileConfiguration: PnpmfileConfiguration = await PnpmfileConfiguration.initializeAsync(
           this.rushConfiguration,
-          project.subspace
+          project.subspace,
+          currentlyInstalledVariant
         );
         const subspace: IExtractorSubspace = {
           subspaceName: project.subspace.subspaceName,

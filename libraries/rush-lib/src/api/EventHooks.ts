@@ -1,8 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type { IEventHooksJson } from './RushConfiguration';
 import { Enum } from '@rushstack/node-core-library';
+
+import type { IEventHooksJson } from './RushConfiguration';
 
 /**
  * Events happen during Rush runs.
@@ -52,7 +53,7 @@ export class EventHooks {
     for (const [name, eventHooks] of Object.entries(eventHooksJson)) {
       const eventName: Event | undefined = Enum.tryGetValueByKey(Event, name);
       if (eventName) {
-        this._hooks.set(eventName, [...eventHooks] || []);
+        this._hooks.set(eventName, [...eventHooks]);
       }
     }
   }

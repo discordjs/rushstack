@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import * as semver from 'semver';
+
 import { Colorize, type ITerminal } from '@rushstack/terminal';
 
 import { RushConstants } from '../RushConstants';
@@ -154,12 +155,14 @@ export abstract class BaseShrinkwrapFile {
    * a given package.json. Returns true if any dependencies are not aligned with the shrinkwrap.
    *
    * @param project - the Rush project that is being validated against the shrinkwrap
+   * @param variant - the variant that is being validated
    *
    * @virtual
    */
   public abstract isWorkspaceProjectModifiedAsync(
     project: RushConfigurationProject,
-    subspace: Subspace
+    subspace: Subspace,
+    variant: string | undefined
   ): Promise<boolean>;
 
   /** @virtual */

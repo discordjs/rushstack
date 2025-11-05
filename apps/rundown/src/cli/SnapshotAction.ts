@@ -2,7 +2,6 @@
 // See LICENSE in the project root for license information.
 
 import { BaseReportAction } from './BaseReportAction';
-
 import { Rundown } from '../Rundown';
 
 export class SnapshotAction extends BaseReportAction {
@@ -16,7 +15,7 @@ export class SnapshotAction extends BaseReportAction {
     });
   }
 
-  protected async onExecute(): Promise<void> {
+  protected override async onExecuteAsync(): Promise<void> {
     const rundown: Rundown = new Rundown();
     await rundown.invokeAsync(
       this.scriptParameter.value,

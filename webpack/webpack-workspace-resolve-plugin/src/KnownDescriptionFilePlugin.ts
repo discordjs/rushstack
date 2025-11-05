@@ -1,8 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type { Resolver } from 'webpack';
+import type { InputFileSystem, Resolver } from 'webpack';
+
 import type { IPrefixMatch } from '@rushstack/lookup-by-path';
+
 import type { IResolveContext, WorkspaceLayoutCache } from './WorkspaceLayoutCache';
 
 type ResolveRequest = Parameters<Resolver['hooks']['resolveStep']['call']>[1];
@@ -41,22 +43,23 @@ export class KnownDescriptionFilePlugin {
     const target: ReturnType<Resolver['ensureHook']> = resolver.ensureHook(this.target);
     const { fileSystem } = resolver;
 
+    type JsonObjectTypes = ReturnType<NonNullable<InputFileSystem['readJsonSync']>>;
+
     function readDescriptionFileWithParse(
       descriptionFilePath: string,
-      callback: (err: Error | null | undefined, data?: object) => void
+      callback: (err: Error | null | undefined, data?: JsonObjectTypes) => void
     ): void {
       fileSystem.readFile(descriptionFilePath, (err: Error | null | undefined, data?: string | Buffer) => {
         if (!data?.length) {
           return callback(err);
         }
-        // eslint-disable-next-line @rushstack/no-new-null
         callback(null, JSON.parse(data.toString()));
       });
     }
 
     const readDescriptionFile: (
       descriptionFilePath: string,
-      cb: (err: Error | null | undefined, data?: object) => void
+      cb: (err: Error | null | undefined, data?: JsonObjectTypes) => void
     ) => void = fileSystem.readJson?.bind(fileSystem) ?? readDescriptionFileWithParse;
 
     resolver
@@ -94,12 +97,27 @@ export class KnownDescriptionFilePlugin {
           // Store the resolver context since a WeakMap lookup is cheaper than walking the tree again
           contextForPackage.set(descriptionFileData, match);
 
+          // Using the object literal is an order of magnitude faster, at least on node 18.19.1
           const obj: ResolveRequest = {
-            ...request,
-            descriptionFileRoot,
+            path: request.path,
+            context: request.context,
             descriptionFilePath,
+            descriptionFileRoot,
             descriptionFileData,
-            relativePath
+            relativePath,
+            ignoreSymlinks: request.ignoreSymlinks,
+            fullySpecified: request.fullySpecified,
+            __innerRequest: request.__innerRequest,
+            __innerRequest_request: request.__innerRequest_request,
+            __innerRequest_relativePath: request.__innerRequest_relativePath,
+
+            request: request.request,
+            query: request.query,
+            fragment: request.fragment,
+            module: request.module,
+            directory: request.directory,
+            file: request.file,
+            internal: request.internal
           };
 
           // Delegate to the resolver step at `target`.
@@ -108,17 +126,15 @@ export class KnownDescriptionFilePlugin {
             obj,
             'using description file: ' + descriptionFilePath + ' (relative path: ' + relativePath + ')',
             resolveContext,
-            (e: Error | undefined, result: ResolveRequest | undefined) => {
+            (e: Error | null | undefined, result: ResolveRequest | undefined) => {
               if (e) {
                 return callback(e);
               }
 
               // Don't allow other processing
               if (result === undefined) {
-                // eslint-disable-next-line @rushstack/no-new-null
                 return callback(null, null);
               }
-              // eslint-disable-next-line @rushstack/no-new-null
               callback(null, result);
             }
           );

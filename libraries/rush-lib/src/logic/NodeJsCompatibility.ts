@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import * as semver from 'semver';
+
 import { Colorize } from '@rushstack/terminal';
 
 // Minimize dependencies to avoid compatibility errors that might be encountered before
@@ -16,7 +17,7 @@ import { RushConstants } from './RushConstants';
  * LTS schedule: https://nodejs.org/en/about/releases/
  * LTS versions: https://nodejs.org/en/download/releases/
  */
-const UPCOMING_NODE_LTS_VERSION: number = 20;
+const UPCOMING_NODE_LTS_VERSION: number = 22;
 const nodeVersion: string = process.versions.node;
 const nodeMajorVersion: number = semver.major(nodeVersion);
 

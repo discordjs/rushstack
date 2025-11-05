@@ -1,9 +1,10 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
+import { randomUUID } from 'node:crypto';
+
 import { FileSystem, JsonFile, JsonSchema } from '@rushstack/node-core-library';
 import type { ITerminal } from '@rushstack/terminal';
-import { v4 as uuidv4 } from 'uuid';
 
 import { EnvironmentConfiguration } from './EnvironmentConfiguration';
 import type { CobuildLockProviderFactory, RushSession } from '../pluginFramework/RushSession';
@@ -69,18 +70,26 @@ export class CobuildConfiguration {
    */
   public readonly cobuildLeafProjectLogOnlyAllowed: boolean;
 
+  /**
+   * If true, operations can opt into leveraging cobuilds without restoring from the build cache.
+   *  Operations will need to us the allowCobuildWithoutCache flag to opt into this behavior per phase.
+   */
+  public readonly cobuildWithoutCacheAllowed: boolean;
+
   private _cobuildLockProvider: ICobuildLockProvider | undefined;
   private readonly _cobuildLockProviderFactory: CobuildLockProviderFactory;
   private readonly _cobuildJson: ICobuildJson;
 
   private constructor(options: ICobuildConfigurationOptions) {
-    const { cobuildJson, cobuildLockProviderFactory } = options;
+    const { cobuildJson, cobuildLockProviderFactory, rushConfiguration } = options;
 
     this.cobuildContextId = EnvironmentConfiguration.cobuildContextId;
     this.cobuildFeatureEnabled = this.cobuildContextId ? cobuildJson.cobuildFeatureEnabled : false;
-    this.cobuildRunnerId = EnvironmentConfiguration.cobuildRunnerId || uuidv4();
+    this.cobuildRunnerId = EnvironmentConfiguration.cobuildRunnerId || randomUUID();
     this.cobuildLeafProjectLogOnlyAllowed =
       EnvironmentConfiguration.cobuildLeafProjectLogOnlyAllowed ?? false;
+    this.cobuildWithoutCacheAllowed =
+      rushConfiguration.experimentsConfiguration.configuration.allowCobuildWithoutCache ?? false;
 
     this._cobuildLockProviderFactory = cobuildLockProviderFactory;
     this._cobuildJson = cobuildJson;

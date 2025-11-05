@@ -1,12 +1,19 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { createFsFromVolume, Volume, type IFs } from 'memfs';
-import path from 'path';
-import type { StatsCompilation as WebpackStatsCompilation } from 'webpack';
-import webpackMerge from 'webpack-merge';
+import path from 'node:path';
 
-import type { MultiStats, Stats, Configuration, Compiler, StatsError } from 'webpack';
+import { createFsFromVolume, Volume, type IFs } from 'memfs';
+import type {
+  StatsCompilation as WebpackStatsCompilation,
+  MultiStats,
+  Stats,
+  Configuration,
+  Compiler,
+  StatsError,
+  OutputFileSystem
+} from 'webpack';
+import webpackMerge from 'webpack-merge';
 
 /**
  * @public
@@ -78,8 +85,11 @@ export async function getTestingWebpackCompilerAsync(
   const compilerOptions: Configuration = webpackMerge(_defaultWebpackConfig(entry), additionalConfig);
   const compiler: Compiler = webpackModule(compilerOptions);
 
-  compiler.outputFileSystem = memFs;
-  compiler.outputFileSystem.join = path.join.bind(path);
+  // The memFs Volume satisfies the interface contract, but the types aren't happy due to strict null checks
+  const outputFileSystem: OutputFileSystem = memFs as unknown as OutputFileSystem;
+  outputFileSystem.join = path.join.bind(path);
+
+  compiler.outputFileSystem = outputFileSystem;
 
   return new Promise((resolve, reject) => {
     compiler.run((err, stats) => {

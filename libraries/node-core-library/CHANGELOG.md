@@ -1,6 +1,126 @@
 # Change Log - @rushstack/node-core-library
 
-This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Oct 2025 00:13:38 GMT and should not be manually modified.
+
+## 5.18.0
+Fri, 24 Oct 2025 00:13:38 GMT
+
+### Minor changes
+
+- Add "Objects.areDeepEqual" and "User.getHomeFolder" APIs.
+
+## 5.17.1
+Wed, 22 Oct 2025 00:57:54 GMT
+
+### Patches
+
+- Update the return type of `Executable.waitForExitAsync` to omit `stdout` and `stderr` if an `encoding` parameter isn't passed to the options object.
+
+## 5.17.0
+Wed, 08 Oct 2025 00:13:28 GMT
+
+### Minor changes
+
+- Add an `allowOversubscription` option to the `Async` API functions which prevents running tasks from exceeding concurrency.  Change its default to `false`.
+
+## 5.16.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+
+## 5.15.1
+Tue, 30 Sep 2025 23:57:45 GMT
+
+_Version update only_
+
+## 5.15.0
+Tue, 30 Sep 2025 20:33:51 GMT
+
+### Minor changes
+
+- Add `FileError.getProblemMatcher()` which returns the problem matcher compatible with `IOperationExecutionResult.problemCollector` as well as VS Code, GitHub Actions
+
+## 5.14.0
+Wed, 23 Jul 2025 20:55:57 GMT
+
+### Minor changes
+
+- Add a `Async.runWithTimeoutAsync` function that executes an async function, resolving if the specified timeout elapses first.
+
+## 5.13.1
+Thu, 01 May 2025 00:11:12 GMT
+
+### Patches
+
+- Fix a bug in `FileSystem.isErrnoException` that failed to identify errors if the underlying method was invoked using only a file descriptor, e.g. for `fs.readSync`.
+
+## 5.13.0
+Tue, 25 Mar 2025 15:11:15 GMT
+
+### Minor changes
+
+- Expand `FileSystem.writeBuffersToFile` and `FileSystem.writeBuffersToFileAsync` to take more kinds of buffers.
+
+## 5.12.0
+Tue, 11 Mar 2025 02:12:33 GMT
+
+### Minor changes
+
+- Add `useNodeJSResolver` option to `Import.resolvePackage` to rely on the built-in `require.resolve` and share its cache.
+- In `RealNodeModulePathResolver`, add the option to configure to throw or not throw for non-existent paths.
+
+### Patches
+
+- In `RealNodeModulePathResolver`, add negative caching when a path segment that might be a symbolic link is not.
+
+## 5.11.0
+Thu, 30 Jan 2025 01:11:42 GMT
+
+### Minor changes
+
+- Update fs-extra to 11.3.0.
+
+## 5.10.2
+Thu, 09 Jan 2025 01:10:10 GMT
+
+### Patches
+
+- Provide the `retryCount` parameter to actions executed using `Async.runWithRetriesAsync`
+
+## 5.10.1
+Sat, 14 Dec 2024 01:11:07 GMT
+
+### Patches
+
+- Fix handling of trailing slashes and relative paths in RealNodeModulePath to match semantics of `fs.realpathSync.native`.
+
+## 5.10.0
+Fri, 22 Nov 2024 01:10:43 GMT
+
+### Minor changes
+
+- Add `RealNodeModulePathResolver` class to get equivalent behavior to `realpath` with fewer system calls (and therefore higher performance) in the typical scenario where the only symlinks in the repository are inside of `node_modules` folders and are links to package folders.
+
+## 5.9.0
+Fri, 13 Sep 2024 00:11:42 GMT
+
+### Minor changes
+
+- Add a `Sort.sortKeys` function for sorting keys in an object
+- Rename `LockFile.acquire` to `Lockfile.acquireAsync`.
+
+### Patches
+
+- Fix an issue where attempting to acquire multiple `LockFile`s at the same time on POSIX would cause the second to immediately be acquired without releasing the first.
+
+## 5.8.0
+Tue, 10 Sep 2024 20:08:11 GMT
+
+### Minor changes
+
+- Add a `customFormats` option to `JsonSchema`.
 
 ## 5.7.0
 Wed, 21 Aug 2024 05:43:04 GMT

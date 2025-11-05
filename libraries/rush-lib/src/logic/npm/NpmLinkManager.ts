@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
 import * as semver from 'semver';
 import * as tar from 'tar';
 import readPackageTree from 'read-package-tree';
+
 import { FileSystem, FileConstants, LegacyAdapters } from '@rushstack/node-core-library';
 import { Colorize } from '@rushstack/terminal';
 
@@ -43,7 +45,7 @@ export class NpmLinkManager extends BaseLinkManager {
     for (const rushProject of this._rushConfiguration.projects) {
       // eslint-disable-next-line no-console
       console.log(`\nLINKING: ${rushProject.packageName}`);
-      this._linkProject(rushProject, commonRootPackage, commonPackageLookup);
+      await this._linkProjectAsync(rushProject, commonRootPackage, commonPackageLookup);
     }
   }
 
@@ -53,11 +55,11 @@ export class NpmLinkManager extends BaseLinkManager {
    * @param commonRootPackage   The common/temp/package.json package
    * @param commonPackageLookup A dictionary for finding packages under common/temp/node_modules
    */
-  private _linkProject(
+  private async _linkProjectAsync(
     project: RushConfigurationProject,
     commonRootPackage: NpmPackage,
     commonPackageLookup: PackageLookup
-  ): void {
+  ): Promise<void> {
     let commonProjectPackage: NpmPackage | undefined = commonRootPackage.getChildByName(
       project.tempProjectName
     ) as NpmPackage;
@@ -300,7 +302,7 @@ export class NpmLinkManager extends BaseLinkManager {
     // to the console:
     // localProjectPackage.printTree();
 
-    NpmLinkManager._createSymlinksForTopLevelProject(localProjectPackage);
+    await NpmLinkManager._createSymlinksForTopLevelProjectAsync(localProjectPackage);
 
     // Also symlink the ".bin" folder
     if (localProjectPackage.children.length > 0) {
@@ -311,8 +313,9 @@ export class NpmLinkManager extends BaseLinkManager {
       );
       const projectBinFolder: string = path.join(localProjectPackage.folderPath, 'node_modules', '.bin');
 
-      if (FileSystem.exists(commonBinFolder)) {
-        NpmLinkManager._createSymlink({
+      const commonBinFolderExists: boolean = await FileSystem.existsAsync(commonBinFolder);
+      if (commonBinFolderExists) {
+        await NpmLinkManager._createSymlinkAsync({
           linkTargetPath: commonBinFolder,
           newLinkPath: projectBinFolder,
           symlinkKind: SymlinkKind.Directory

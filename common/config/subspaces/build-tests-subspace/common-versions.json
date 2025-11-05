@@ -29,10 +29,10 @@
     // Preferring it avoids errors for indirect dependencies that request it as a peer dependency.
     // It's also the newest supported compiler, used by most build tests and used as the bundled compiler
     // engine for API Extractor.
-    "typescript": "~5.4.2",
+    "typescript": "~5.8.2",
 
     // Workaround for https://github.com/microsoft/rushstack/issues/1466
-    "eslint": "~8.57.0"
+    "eslint": "~9.25.1"
   },
 
   /**
@@ -75,13 +75,6 @@
    * This design avoids unnecessary churn in this file.
    */
   "allowedAlternativeVersions": {
-    "eslint": [
-      "7.7.0", // Used by build-tests/eslint-7-7-test
-      "7.11.0", // Used by build-tests/eslint-7-11-test
-      "~7.30.0", // Used by build-tests/eslint-7-test
-      "8.6.0", // Used by build-tests/eslint-bulk-suppressions-test
-      "~8.23.1" // Used by build-tests/eslint-bulk-suppressions-test
-    ],
     /**
      * For example, allow some projects to use an older TypeScript compiler
      * (in addition to whatever "usual" version is being used by other projects in the repo):
@@ -94,10 +87,7 @@
       // For testing Heft with TS V3
       "~3.9.10",
       // For testing Heft with TS V4
-      "~4.9.5",
-
-      // API Extractor bundles a specific TypeScript version because it calls internal APIs
-      "5.4.2"
+      "~4.9.5"
     ],
     "source-map": [
       "~0.6.1" // API Extractor is using an older version of source-map because newer versions are async

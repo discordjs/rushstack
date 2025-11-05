@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { TSESLint } from '@typescript-eslint/utils';
+import type { TSESLint } from '@typescript-eslint/utils';
 
 import { hoistJestMock } from './hoist-jest-mock';
 import { noBackslashImportsRule } from './no-backslash-imports';
@@ -12,6 +12,8 @@ import { noTransitiveDependencyImportsRule } from './no-transitive-dependency-im
 import { noUntypedUnderscoreRule } from './no-untyped-underscore';
 import { normalizedImportsRule } from './normalized-imports';
 import { typedefVar } from './typedef-var';
+import { importRequiresChunkNameRule } from './import-requires-chunk-name';
+import { pairReactDomRenderUnmountRule } from './pair-react-dom-render-unmount';
 
 interface IPlugin {
   rules: { [ruleName: string]: TSESLint.RuleModule<string, unknown[]> };
@@ -44,7 +46,13 @@ const plugin: IPlugin = {
     'normalized-imports': normalizedImportsRule,
 
     // Full name: "@rushstack/typedef-var"
-    'typedef-var': typedefVar
+    'typedef-var': typedefVar,
+
+    // Full name: "@rushstack/import-requires-chunk-name"
+    'import-requires-chunk-name': importRequiresChunkNameRule,
+
+    // Full name: "@rushstack/pair-react-dom-render-unmount"
+    'pair-react-dom-render-unmount': pairReactDomRenderUnmountRule
   }
 };
 

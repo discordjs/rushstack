@@ -1,13 +1,22 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
+/// <reference types="node" preserve="true" />
+
 /**
  * A library for writing scripts that interact with the {@link https://rushjs.io/ | Rush} tool.
  * @packageDocumentation
  */
 
-// For backwards compatibility
+// #region Backwards compatibility
 export { LookupByPath as LookupByPath, type IPrefixMatch } from '@rushstack/lookup-by-path';
+
+export {
+  type ICredentialCacheOptions,
+  type ICredentialCacheEntry,
+  CredentialCache
+} from '@rushstack/credential-cache';
+// #endregion
 
 export { ApprovedPackagesPolicy } from './api/ApprovedPackagesPolicy';
 
@@ -105,7 +114,12 @@ export {
   VersionPolicy
 } from './api/VersionPolicy';
 
-export { VersionPolicyConfiguration } from './api/VersionPolicyConfiguration';
+export {
+  VersionPolicyConfiguration,
+  type ILockStepVersionJson,
+  type IIndividualVersionJson,
+  type IVersionPolicyJson
+} from './api/VersionPolicyConfiguration';
 
 export { type ILaunchOptions, Rush } from './api/Rush';
 export { RushInternals as _RushInternals } from './api/RushInternals';
@@ -121,11 +135,12 @@ export {
   CustomTipType
 } from './api/CustomTipsConfiguration';
 
-export {
-  ProjectChangeAnalyzer,
-  type IGetChangedProjectsOptions,
-  type IRawRepoState as _IRawRepoState
-} from './logic/ProjectChangeAnalyzer';
+export { ProjectChangeAnalyzer, type IGetChangedProjectsOptions } from './logic/ProjectChangeAnalyzer';
+export type {
+  IInputsSnapshot,
+  GetInputsSnapshotAsyncFn as GetInputsSnapshotAsyncFn,
+  IRushConfigurationProjectForSnapshot
+} from './logic/incremental/InputsSnapshot';
 
 export type { IOperationRunner, IOperationRunnerContext } from './logic/operations/IOperationRunner';
 export type {
@@ -134,6 +149,7 @@ export type {
 } from './logic/operations/IOperationExecutionResult';
 export { type IOperationOptions, Operation } from './logic/operations/Operation';
 export { OperationStatus } from './logic/operations/OperationStatus';
+export type { ILogFilePaths } from './logic/operations/ProjectLogWritable';
 
 export {
   RushSession,
@@ -167,12 +183,6 @@ export type {
   ICobuildCompletedState
 } from './logic/cobuild/ICobuildLockProvider';
 
-export {
-  type ICredentialCacheOptions,
-  type ICredentialCacheEntry,
-  CredentialCache
-} from './logic/CredentialCache';
-
 export type { ITelemetryData, ITelemetryMachineInfo, ITelemetryOperationResult } from './logic/Telemetry';
 
 export type { IStopwatchResult } from './utilities/Stopwatch';
@@ -193,3 +203,9 @@ export {
   type IRushCommandLineParameter,
   type IRushCommandLineAction
 } from './api/RushCommandLine';
+
+export { OperationBuildCache as _OperationBuildCache } from './logic/buildCache/OperationBuildCache';
+export type {
+  IOperationBuildCacheOptions as _IOperationBuildCacheOptions,
+  IProjectBuildCacheOptions as _IProjectBuildCacheOptions
+} from './logic/buildCache/OperationBuildCache';

@@ -2,6 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import type { Compilation, Compiler, WebpackPluginInstance } from 'webpack';
+
 import type { IModuleStats, IModuleMinifierPluginStats, IAssetStats } from '../ModuleMinifierPlugin.types';
 import { ModuleMinifierPlugin } from '../ModuleMinifierPlugin';
 
@@ -36,9 +37,9 @@ export class RecordMetadataPlugin implements WebpackPluginInstance {
       metadata.byAssetFilename = metadataByAssetFileName;
 
       for (const module of compilation.modules) {
-        const id: string | number = chunkGraph.getModuleId(module);
+        const id: string | number | null = chunkGraph.getModuleId(module);
         const metadataForModule: IModuleStats | undefined = metadataByModule.get(module);
-        if (metadataForModule) {
+        if (metadataForModule && id !== null) {
           const flattenedModule: IFlattenedModuleMetadata = new Map();
           for (const [chunk, hash] of metadataForModule.hashByChunk) {
             const chunkId: string | number | null = chunk.id;

@@ -1,6 +1,150 @@
 # Change Log - @rushstack/heft-config-file
 
-This log was last generated on Wed, 21 Aug 2024 05:43:04 GMT and should not be manually modified.
+This log was last generated on Fri, 24 Oct 2025 00:13:38 GMT and should not be manually modified.
+
+## 0.19.3
+Fri, 24 Oct 2025 00:13:38 GMT
+
+_Version update only_
+
+## 0.19.2
+Wed, 22 Oct 2025 00:57:54 GMT
+
+_Version update only_
+
+## 0.19.1
+Wed, 08 Oct 2025 00:13:29 GMT
+
+_Version update only_
+
+## 0.19.0
+Fri, 03 Oct 2025 20:09:59 GMT
+
+### Minor changes
+
+- Normalize import of builtin modules to use the `node:` protocol.
+- Add the ability to get the original value of the `$schema` property.
+
+## 0.18.6
+Tue, 30 Sep 2025 23:57:45 GMT
+
+_Version update only_
+
+## 0.18.5
+Tue, 30 Sep 2025 20:33:51 GMT
+
+_Version update only_
+
+## 0.18.4
+Thu, 11 Sep 2025 00:22:31 GMT
+
+_Version update only_
+
+## 0.18.3
+Wed, 23 Jul 2025 20:55:57 GMT
+
+_Version update only_
+
+## 0.18.2
+Thu, 01 May 2025 00:11:12 GMT
+
+_Version update only_
+
+## 0.18.1
+Fri, 25 Apr 2025 00:11:32 GMT
+
+### Patches
+
+- Fix Node 16 compatibility by using non-built-in structuredClone
+
+## 0.18.0
+Thu, 17 Apr 2025 00:11:21 GMT
+
+### Minor changes
+
+- Allow use of the value `null` to discard any value set for the property from a parent config file..
+
+## 0.17.0
+Wed, 09 Apr 2025 00:11:02 GMT
+
+### Minor changes
+
+- Fix an issue with `PathResolutionMethod.resolvePathRelativeToProjectRoot` when extending files across packages.
+- Add a new `customValidationFunction` option for custom validation logic on loaded configuration files.
+
+## 0.16.8
+Tue, 25 Mar 2025 15:11:15 GMT
+
+_Version update only_
+
+## 0.16.7
+Tue, 11 Mar 2025 02:12:33 GMT
+
+_Version update only_
+
+## 0.16.6
+Wed, 19 Feb 2025 18:53:48 GMT
+
+### Patches
+
+- Bump `jsonpath-plus` to `~10.3.0`.
+
+## 0.16.5
+Wed, 12 Feb 2025 01:10:52 GMT
+
+_Version update only_
+
+## 0.16.4
+Thu, 30 Jan 2025 01:11:42 GMT
+
+_Version update only_
+
+## 0.16.3
+Thu, 09 Jan 2025 01:10:10 GMT
+
+_Version update only_
+
+## 0.16.2
+Sat, 14 Dec 2024 01:11:07 GMT
+
+_Version update only_
+
+## 0.16.1
+Mon, 09 Dec 2024 20:31:43 GMT
+
+### Patches
+
+- Bump `jsonpath-plus` to `~10.2.0`.
+
+## 0.16.0
+Tue, 03 Dec 2024 16:11:07 GMT
+
+### Minor changes
+
+- Add a new `NonProjectConfigurationFile` class that is designed to load absolute-pathed configuration files without rig support.
+- Rename `ConfigurationFile` to `ProjectConfigurationFile` and mark `ConfigurationFile` as `@deprecated`.
+
+## 0.15.9
+Fri, 22 Nov 2024 01:10:43 GMT
+
+_Version update only_
+
+## 0.15.8
+Thu, 24 Oct 2024 00:15:47 GMT
+
+### Patches
+
+- Update the `jsonpath-plus` dependency to mitigate CVE-2024-21534."
+
+## 0.15.7
+Fri, 13 Sep 2024 00:11:43 GMT
+
+_Version update only_
+
+## 0.15.6
+Tue, 10 Sep 2024 20:08:11 GMT
+
+_Version update only_
 
 ## 0.15.5
 Wed, 21 Aug 2024 05:43:04 GMT

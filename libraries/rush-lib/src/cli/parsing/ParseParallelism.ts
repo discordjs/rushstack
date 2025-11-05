@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as os from 'os';
+import * as os from 'node:os';
 
 /**
  * Parses a command line specification for desired parallelism.
@@ -9,7 +9,7 @@ import * as os from 'os';
  */
 export function parseParallelism(
   rawParallelism: string | undefined,
-  numberOfCores: number = os.cpus().length
+  numberOfCores: number = os.availableParallelism?.() ?? os.cpus().length
 ): number {
   if (rawParallelism) {
     if (rawParallelism === 'max') {

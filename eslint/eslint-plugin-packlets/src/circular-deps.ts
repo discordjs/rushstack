@@ -2,12 +2,11 @@
 // See LICENSE in the project root for license information.
 
 import type * as ts from 'typescript';
-
 import type { TSESLint, TSESTree } from '@typescript-eslint/utils';
 import { ESLintUtils } from '@typescript-eslint/utils';
 
 import { PackletAnalyzer } from './PackletAnalyzer';
-import { DependencyAnalyzer, IPackletImport } from './DependencyAnalyzer';
+import { DependencyAnalyzer, type IPackletImport } from './DependencyAnalyzer';
 import { Path } from './Path';
 
 export type MessageIds = 'circular-import';

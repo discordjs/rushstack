@@ -1,10 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+
 import * as semver from 'semver';
 import * as ssri from 'ssri';
+
 import {
   JsonFile,
   Text,
@@ -90,6 +92,8 @@ export class RushInstallManager extends BaseInstallManager {
   ): Promise<{ shrinkwrapIsUpToDate: boolean; shrinkwrapWarnings: string[] }> {
     const stopwatch: Stopwatch = Stopwatch.start();
 
+    const { fullUpgrade, variant } = this.options;
+
     // Example: "C:\MyRepo\common\temp\projects"
     const tempProjectsFolder: string = path.join(
       this.rushConfiguration.commonTempFolder,
@@ -109,7 +113,7 @@ export class RushInstallManager extends BaseInstallManager {
 
     if (!shrinkwrapFile) {
       shrinkwrapIsUpToDate = false;
-    } else if (shrinkwrapFile.isWorkspaceCompatible && !this.options.fullUpgrade) {
+    } else if (shrinkwrapFile.isWorkspaceCompatible && !fullUpgrade) {
       // eslint-disable-next-line no-console
       console.log();
       // eslint-disable-next-line no-console
@@ -124,13 +128,16 @@ export class RushInstallManager extends BaseInstallManager {
 
     // dependency name --> version specifier
     const allExplicitPreferredVersions: Map<string, string> = this.rushConfiguration.defaultSubspace
-      .getCommonVersions()
+      .getCommonVersions(variant)
       .getAllPreferredVersions();
 
     if (shrinkwrapFile) {
       // Check any (explicitly) preferred dependencies first
       allExplicitPreferredVersions.forEach((version: string, dependency: string) => {
-        const dependencySpecifier: DependencySpecifier = new DependencySpecifier(dependency, version);
+        const dependencySpecifier: DependencySpecifier = DependencySpecifier.parseWithCache(
+          dependency,
+          version
+        );
 
         if (!shrinkwrapFile.hasCompatibleTopLevelDependency(dependencySpecifier)) {
           shrinkwrapWarnings.push(
@@ -167,7 +174,7 @@ export class RushInstallManager extends BaseInstallManager {
     // dependency name --> version specifier
     const commonDependencies: Map<string, string> = new Map([
       ...allExplicitPreferredVersions,
-      ...this.rushConfiguration.getImplicitlyPreferredVersions(subspace)
+      ...this.rushConfiguration.getImplicitlyPreferredVersions(subspace, variant)
     ]);
 
     // To make the common/package.json file more readable, sort alphabetically
@@ -228,7 +235,10 @@ export class RushInstallManager extends BaseInstallManager {
       Sort.sortMapKeys(tempDependencies);
 
       for (const [packageName, packageVersion] of tempDependencies.entries()) {
-        const dependencySpecifier: DependencySpecifier = new DependencySpecifier(packageName, packageVersion);
+        const dependencySpecifier: DependencySpecifier = DependencySpecifier.parseWithCache(
+          packageName,
+          packageVersion
+        );
 
         // Is there a locally built Rush project that could satisfy this dependency?
         // If so, then we will symlink to the project folder rather than to common/temp/node_modules.
@@ -330,7 +340,7 @@ export class RushInstallManager extends BaseInstallManager {
       // with the shrinkwrap file, since these will cause install to fail.
       if (
         shrinkwrapFile &&
-        this.rushConfiguration.packageManager === 'pnpm' &&
+        this.rushConfiguration.isPnpm &&
         this.rushConfiguration.experimentsConfiguration.configuration.usePnpmFrozenLockfileForRushInstall
       ) {
         const pnpmShrinkwrapFile: PnpmShrinkwrapFile = shrinkwrapFile as PnpmShrinkwrapFile;
@@ -359,7 +369,7 @@ export class RushInstallManager extends BaseInstallManager {
     }
 
     // Remove the workspace file if it exists
-    if (this.rushConfiguration.packageManager === 'pnpm') {
+    if (this.rushConfiguration.isPnpm) {
       const workspaceFilePath: string = path.join(
         this.rushConfiguration.commonTempFolder,
         'pnpm-workspace.yaml'
@@ -377,7 +387,8 @@ export class RushInstallManager extends BaseInstallManager {
     InstallHelpers.generateCommonPackageJson(
       this.rushConfiguration,
       this.rushConfiguration.defaultSubspace,
-      commonDependencies
+      commonDependencies,
+      this._terminal
     );
 
     stopwatch.stop();
@@ -388,7 +399,10 @@ export class RushInstallManager extends BaseInstallManager {
   }
 
   private _revertWorkspaceNotation(dependency: PackageJsonDependency): boolean {
-    const specifier: DependencySpecifier = new DependencySpecifier(dependency.name, dependency.version);
+    const specifier: DependencySpecifier = DependencySpecifier.parseWithCache(
+      dependency.name,
+      dependency.version
+    );
     if (specifier.specifierType !== DependencySpecifierType.Workspace) {
       return false;
     }
@@ -438,8 +452,12 @@ export class RushInstallManager extends BaseInstallManager {
    *
    * @override
    */
-  protected canSkipInstall(lastModifiedDate: Date, subspace: Subspace): boolean {
-    if (!super.canSkipInstall(lastModifiedDate, subspace)) {
+  protected async canSkipInstallAsync(
+    lastModifiedDate: Date,
+    subspace: Subspace,
+    variant: string | undefined
+  ): Promise<boolean> {
+    if (!(await super.canSkipInstallAsync(lastModifiedDate, subspace, variant))) {
       return false;
     }
 
@@ -454,7 +472,7 @@ export class RushInstallManager extends BaseInstallManager {
       })
     );
 
-    return Utilities.isFileTimestampCurrent(lastModifiedDate, potentiallyChangedFiles);
+    return Utilities.isFileTimestampCurrentAsync(lastModifiedDate, potentiallyChangedFiles);
   }
 
   /**
@@ -615,7 +633,7 @@ export class RushInstallManager extends BaseInstallManager {
       },
       this.options.maxInstallAttempts,
       () => {
-        if (this.rushConfiguration.packageManager === 'pnpm') {
+        if (this.rushConfiguration.isPnpm) {
           // eslint-disable-next-line no-console
           console.log(Colorize.yellow(`Deleting the "node_modules" folder`));
           this.installRecycler.moveFolder(commonNodeModulesFolder);

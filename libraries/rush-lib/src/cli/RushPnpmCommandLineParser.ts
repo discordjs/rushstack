@@ -1,37 +1,39 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
 import {
   AlreadyReportedError,
   EnvironmentMap,
   FileConstants,
   FileSystem,
   JsonFile,
-  type JsonObject
+  type JsonObject,
+  Objects
 } from '@rushstack/node-core-library';
 import {
   Colorize,
   ConsoleTerminalProvider,
   type ITerminal,
   type ITerminalProvider,
-  Terminal
+  Terminal,
+  PrintUtilities
 } from '@rushstack/terminal';
 
 import { RushConfiguration } from '../api/RushConfiguration';
 import { NodeJsCompatibility } from '../logic/NodeJsCompatibility';
-import { PrintUtilities } from '@rushstack/terminal';
 import { RushConstants } from '../logic/RushConstants';
 import { RushGlobalFolder } from '../api/RushGlobalFolder';
 import { PurgeManager } from '../logic/PurgeManager';
-
 import type { IBuiltInPluginConfiguration } from '../pluginFramework/PluginLoader/BuiltInPluginLoader';
 import type { BaseInstallManager } from '../logic/base/BaseInstallManager';
 import type { IInstallManagerOptions } from '../logic/base/BaseInstallManagerTypes';
-import { objectsAreDeepEqual } from '../utilities/objectUtilities';
 import { Utilities } from '../utilities/Utilities';
 import type { Subspace } from '../api/Subspace';
 import type { PnpmOptionsConfiguration } from '../logic/pnpm/PnpmOptionsConfiguration';
+import { EnvironmentVariableNames } from '../api/EnvironmentConfiguration';
+import { initializeDotEnv } from '../logic/dotenv';
 
 const RUSH_SKIP_CHECKS_PARAMETER: string = '--rush-skip-checks';
 
@@ -77,10 +79,17 @@ export class RushPnpmCommandLineParser {
     this._terminal = terminal;
 
     // Are we in a Rush repo?
-    const rushConfiguration: RushConfiguration | undefined = RushConfiguration.tryLoadFromDefaultLocation({
+    const rushJsonFilePath: string | undefined = RushConfiguration.tryFindRushJsonLocation({
       // showVerbose is false because the logging message may break JSON output
       showVerbose: false
     });
+
+    initializeDotEnv(terminal, rushJsonFilePath);
+
+    const rushConfiguration: RushConfiguration | undefined = rushJsonFilePath
+      ? RushConfiguration.loadFromConfigurationFile(rushJsonFilePath)
+      : undefined;
+
     NodeJsCompatibility.warnAboutCompatibilityIssues({
       isRushLib: true,
       alreadyReportedNodeTooNewError: !!options.alreadyReportedNodeTooNewError,
@@ -334,6 +343,22 @@ export class RushPnpmCommandLineParser {
           }
           break;
         }
+        case 'patch-remove': {
+          const semver: typeof import('semver') = await import('semver');
+          /**
+           * The "patch-remove" command was introduced in pnpm version 8.5.0
+           */
+          if (semver.lt(this._rushConfiguration.packageManagerToolVersion, '8.5.0')) {
+            this._terminal.writeErrorLine(
+              PrintUtilities.wrapWords(
+                `Error: The "pnpm patch-remove" command is added after pnpm@8.5.0.` +
+                  ` Please update "pnpmVersion" >= 8.5.0 in ${RushConstants.rushJsonFilename} file and run "rush update" to use this command.`
+              ) + '\n'
+            );
+            throw new AlreadyReportedError();
+          }
+          break;
+        }
 
         // Known safe
         case 'audit':
@@ -444,15 +469,16 @@ export class RushPnpmCommandLineParser {
     }
 
     const subspaceTempFolder: string = this._subspace.getSubspaceTempFolderPath();
-    const subspaceConfigFolder: string = this._subspace.getSubspaceConfigFolderPath();
 
     switch (commandName) {
+      case 'patch-remove':
       case 'patch-commit': {
         // why need to throw error when pnpm-config.json not exists?
         // 1. pnpm-config.json is required for `rush-pnpm patch-commit`. Rush writes the patched dependency to the pnpm-config.json when finishes.
         // 2. we can not fallback to use Monorepo config folder (common/config/rush) due to that this command is intended to apply to input subspace only.
         //    It will produce unexpected behavior if we use the fallback.
         if (this._subspace.getPnpmOptions() === undefined) {
+          const subspaceConfigFolder: string = this._subspace.getSubspaceConfigFolderPath();
           this._terminal.writeErrorLine(
             `The "rush-pnpm patch-commit" command cannot proceed without a pnpm-config.json file.` +
               `  Create one in this folder: ${subspaceConfigFolder}`
@@ -469,7 +495,7 @@ export class RushPnpmCommandLineParser {
         const currentGlobalPatchedDependencies: Record<string, string> | undefined =
           pnpmOptions?.globalPatchedDependencies;
 
-        if (!objectsAreDeepEqual(currentGlobalPatchedDependencies, newGlobalPatchedDependencies)) {
+        if (!Objects.areDeepEqual(currentGlobalPatchedDependencies, newGlobalPatchedDependencies)) {
           const commonTempPnpmPatchesFolder: string = `${subspaceTempFolder}/${RushConstants.pnpmPatchesFolderName}`;
           const rushPnpmPatchesFolder: string = this._subspace.getSubspacePnpmPatchesFolderPath();
 
@@ -526,6 +552,7 @@ export class RushPnpmCommandLineParser {
       networkConcurrency: undefined,
       offline: false,
       collectLogFile: false,
+      variant: process.env[EnvironmentVariableNames.RUSH_VARIANT], // For `rush-pnpm`, only use the env var
       maxInstallAttempts: RushConstants.defaultMaxInstallAttempts,
       pnpmFilterArgumentValues: [],
       selectedProjects: new Set(this._rushConfiguration.projects),

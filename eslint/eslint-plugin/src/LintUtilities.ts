@@ -1,7 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as path from 'path';
+import * as path from 'node:path';
+
 import { ESLintUtils, TSESTree, type TSESLint } from '@typescript-eslint/utils';
 import type { Program } from 'typescript';
 
@@ -19,7 +20,6 @@ export interface IParsedImportSpecifier {
 const LOADER_CAPTURE_GROUP: 'loader' = 'loader';
 const IMPORT_TARGET_CAPTURE_GROUP: 'importTarget' = 'importTarget';
 const LOADER_OPTIONS_CAPTURE_GROUP: 'loaderOptions' = 'loaderOptions';
-// eslint-disable-next-line @rushstack/security/no-unsafe-regexp
 const SPECIFIER_REGEX: RegExp = new RegExp(
   `^((?<${LOADER_CAPTURE_GROUP}>(!|-!|!!).+)!)?` +
     `(?<${IMPORT_TARGET_CAPTURE_GROUP}>[^!?]+)` +

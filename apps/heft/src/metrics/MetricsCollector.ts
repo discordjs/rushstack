@@ -1,9 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as os from 'os';
+import * as os from 'node:os';
+import { performance } from 'node:perf_hooks';
+
 import { AsyncParallelHook } from 'tapable';
-import { performance } from 'perf_hooks';
+
 import { InternalError } from '@rushstack/node-core-library';
 
 /**
@@ -143,6 +145,8 @@ export class MetricsCollector {
 
     const { taskTotalExecutionMs } = filledPerformanceData;
 
+    const cpus: os.CpuInfo[] = os.cpus();
+
     const metricData: IMetricsData = {
       command: command,
       encounteredError: filledPerformanceData.encounteredError,
@@ -151,8 +155,10 @@ export class MetricsCollector {
       totalUptimeMs: process.uptime() * 1000,
       machineOs: process.platform,
       machineArch: process.arch,
-      machineCores: os.cpus().length,
-      machineProcessor: os.cpus()[0].model,
+      machineCores: cpus.length,
+      // The Node.js model is sometimes padded, for example:
+      // "AMD Ryzen 7 3700X 8-Core Processor
+      machineProcessor: cpus[0].model.trim(),
       machineTotalMemoryMB: os.totalmem(),
       commandParameters: parameters || {}
     };

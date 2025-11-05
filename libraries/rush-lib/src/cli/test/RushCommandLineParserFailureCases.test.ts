@@ -2,15 +2,19 @@
 // See LICENSE in the project root for license information.
 
 // Mock child_process so we can verify tasks are (or are not) invoked as we expect
-jest.mock('child_process');
+jest.mock('node:child_process', () => jest.requireActual('./mock_child_process'));
 jest.mock('@rushstack/terminal');
 jest.mock(`@rushstack/package-deps-hash`, () => {
   return {
     getRepoRoot(dir: string): string {
       return dir;
     },
-    getRepoStateAsync(): ReadonlyMap<string, string> {
-      return new Map();
+    getDetailedRepoStateAsync(): IDetailedRepoState {
+      return {
+        hasSubmodules: false,
+        hasUncommittedChanges: false,
+        files: new Map()
+      };
     },
     getRepoChangesAsync(): ReadonlyMap<string, string> {
       return new Map();
@@ -19,6 +23,7 @@ jest.mock(`@rushstack/package-deps-hash`, () => {
 });
 
 import { FileSystem, JsonFile } from '@rushstack/node-core-library';
+import type { IDetailedRepoState } from '@rushstack/package-deps-hash';
 import { Autoinstaller } from '../../logic/Autoinstaller';
 import type { ITelemetryData } from '../../logic/Telemetry';
 import { getCommandLineParserInstanceAsync, setSpawnMock } from './TestUtils';

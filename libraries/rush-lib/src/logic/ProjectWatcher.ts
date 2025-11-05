@@ -1,25 +1,28 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import * as fs from 'fs';
-import * as os from 'os';
-import * as readline from 'readline';
-import { once } from 'events';
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as readline from 'node:readline';
+import { once } from 'node:events';
+
 import { getRepoRoot } from '@rushstack/package-deps-hash';
-import { Path, type FileSystemStats, FileSystem } from '@rushstack/node-core-library';
+import { AlreadyReportedError, Path, type FileSystemStats, FileSystem } from '@rushstack/node-core-library';
 import { Colorize, type ITerminal } from '@rushstack/terminal';
 
 import { Git } from './Git';
-import { ProjectChangeAnalyzer } from './ProjectChangeAnalyzer';
+import type { IInputsSnapshot, GetInputsSnapshotAsyncFn } from './incremental/InputsSnapshot';
 import type { RushConfiguration } from '../api/RushConfiguration';
 import type { RushConfigurationProject } from '../api/RushConfigurationProject';
 
 export interface IProjectWatcherOptions {
+  abortSignal: AbortSignal;
+  getInputsSnapshotAsync: GetInputsSnapshotAsyncFn;
   debounceMs?: number;
   rushConfiguration: RushConfiguration;
   projectsToWatch: ReadonlySet<RushConfigurationProject>;
   terminal: ITerminal;
-  initialState?: ProjectChangeAnalyzer | undefined;
+  initialSnapshot?: IInputsSnapshot | undefined;
 }
 
 export interface IProjectChangeResult {
@@ -30,7 +33,7 @@ export interface IProjectChangeResult {
   /**
    * Contains the git hashes for all tracked files in the repo
    */
-  state: ProjectChangeAnalyzer;
+  inputsSnapshot: IInputsSnapshot;
 }
 
 export interface IPromptGeneratorFunction {
@@ -45,32 +48,48 @@ interface IPathWatchOptions {
  * This class is for incrementally watching a set of projects in the repository for changes.
  *
  * We are manually using fs.watch() instead of `chokidar` because all we want from the file system watcher is a boolean
- * signal indicating that "at least 1 file in a watched project changed". We then defer to ProjectChangeAnalyzer (which
+ * signal indicating that "at least 1 file in a watched project changed". We then defer to getInputsSnapshotAsync (which
  * is responsible for change detection in all incremental builds) to determine what actually chanaged.
  *
  * Calling `waitForChange()` will return a promise that resolves when the package-deps of one or
  * more projects differ from the value the previous time it was invoked. The first time will always resolve with the full selection.
  */
 export class ProjectWatcher {
+  private readonly _abortSignal: AbortSignal;
+  private readonly _getInputsSnapshotAsync: GetInputsSnapshotAsyncFn;
   private readonly _debounceMs: number;
   private readonly _repoRoot: string;
   private readonly _rushConfiguration: RushConfiguration;
   private readonly _projectsToWatch: ReadonlySet<RushConfigurationProject>;
   private readonly _terminal: ITerminal;
 
-  private _initialState: ProjectChangeAnalyzer | undefined;
-  private _previousState: ProjectChangeAnalyzer | undefined;
+  private _initialSnapshot: IInputsSnapshot | undefined;
+  private _previousSnapshot: IInputsSnapshot | undefined;
   private _forceChangedProjects: Map<RushConfigurationProject, string> = new Map();
   private _resolveIfChanged: undefined | (() => Promise<void>);
+  private _onAbort: undefined | (() => void);
   private _getPromptLines: undefined | IPromptGeneratorFunction;
 
+  private _lastStatus: string | undefined;
   private _renderedStatusLines: number;
 
   public isPaused: boolean = false;
 
   public constructor(options: IProjectWatcherOptions) {
-    const { debounceMs = 1000, rushConfiguration, projectsToWatch, terminal, initialState } = options;
+    const {
+      abortSignal,
+      getInputsSnapshotAsync: snapshotProvider,
+      debounceMs = 1000,
+      rushConfiguration,
+      projectsToWatch,
+      terminal,
+      initialSnapshot: initialState
+    } = options;
 
+    this._abortSignal = abortSignal;
+    abortSignal.addEventListener('abort', () => {
+      this._onAbort?.();
+    });
     this._debounceMs = debounceMs;
     this._rushConfiguration = rushConfiguration;
     this._projectsToWatch = projectsToWatch;
@@ -78,12 +97,15 @@ export class ProjectWatcher {
 
     const gitPath: string = new Git(rushConfiguration).getGitPathOrThrow();
     this._repoRoot = Path.convertToSlashes(getRepoRoot(rushConfiguration.rushJsonFolder, gitPath));
+    this._resolveIfChanged = undefined;
+    this._onAbort = undefined;
 
-    this._initialState = initialState;
-    this._previousState = initialState;
+    this._initialSnapshot = initialState;
+    this._previousSnapshot = initialState;
 
     this._renderedStatusLines = 0;
     this._getPromptLines = undefined;
+    this._getInputsSnapshotAsync = snapshotProvider;
   }
 
   public pause(): void {
@@ -120,6 +142,10 @@ export class ProjectWatcher {
     this._renderedStatusLines = 0;
   }
 
+  public rerenderStatus(): void {
+    this._setStatus(this._lastStatus ?? 'Waiting for changes...');
+  }
+
   public setPromptGenerator(promptGenerator: IPromptGeneratorFunction): void {
     this._getPromptLines = promptGenerator;
   }
@@ -131,9 +157,16 @@ export class ProjectWatcher {
    * `waitForChange` is not allowed to be called multiple times concurrently.
    */
   public async waitForChangeAsync(onWatchingFiles?: () => void): Promise<IProjectChangeResult> {
+    if (this.isPaused) {
+      this._setStatus(`Project watcher paused.`);
+      await new Promise<void>((resolve) => {
+        this._resolveIfChanged = async () => resolve();
+      });
+    }
+
     const initialChangeResult: IProjectChangeResult = await this._computeChangedAsync();
     // Ensure that the new state is recorded so that we don't loop infinitely
-    this._commitChanges(initialChangeResult.state);
+    this._commitChanges(initialChangeResult.inputsSnapshot);
     if (initialChangeResult.changedProjects.size) {
       // We can't call `clear()` here due to the async tick in the end of _computeChanged
       for (const project of initialChangeResult.changedProjects) {
@@ -145,7 +178,7 @@ export class ProjectWatcher {
       return initialChangeResult;
     }
 
-    const previousState: ProjectChangeAnalyzer = initialChangeResult.state;
+    const previousState: IInputsSnapshot = initialChangeResult.inputsSnapshot;
     const repoRoot: string = Path.convertToSlashes(this._rushConfiguration.rushJsonFolder);
 
     // Map of path to whether config for the path
@@ -170,10 +203,8 @@ export class ProjectWatcher {
       }
     } else {
       for (const project of this._projectsToWatch) {
-        const projectState: Map<string, string> = (await previousState._tryGetProjectDependenciesAsync(
-          project,
-          this._terminal
-        ))!;
+        const projectState: ReadonlyMap<string, string> =
+          previousState.getTrackedFileHashesForOperation(project);
 
         const prefixLength: number = project.projectFolder.length - repoRoot.length - 1;
         // Watch files in the root of the project, or
@@ -183,7 +214,12 @@ export class ProjectWatcher {
       }
     }
 
+    if (this._abortSignal.aborted) {
+      return initialChangeResult;
+    }
+
     const watchers: Map<string, fs.FSWatcher> = new Map();
+    const closePromises: Promise<void>[] = [];
 
     const watchedResult: IProjectChangeResult = await new Promise(
       (resolve: (result: IProjectChangeResult) => void, reject: (err: Error) => void) => {
@@ -194,7 +230,21 @@ export class ProjectWatcher {
 
         const debounceMs: number = this._debounceMs;
 
+        const abortSignal: AbortSignal = this._abortSignal;
+
         this.clearStatus();
+
+        this._onAbort = function onAbort(): void {
+          if (timeout) {
+            clearTimeout(timeout);
+          }
+          terminated = true;
+          resolve(initialChangeResult);
+        };
+
+        if (abortSignal.aborted) {
+          return this._onAbort();
+        }
 
         const resolveIfChanged: () => Promise<void> = (this._resolveIfChanged = async (): Promise<void> => {
           timeout = undefined;
@@ -230,7 +280,7 @@ export class ProjectWatcher {
                 }
               }
 
-              this._commitChanges(result.state);
+              this._commitChanges(result.inputsSnapshot);
 
               const hasForcedChanges: boolean = this._forceChangedProjects.size > 0;
               if (hasForcedChanges) {
@@ -288,15 +338,23 @@ export class ProjectWatcher {
             watchedPath,
             {
               encoding: 'utf-8',
-              recursive: recursive && useNativeRecursiveWatch
+              recursive: recursive && useNativeRecursiveWatch,
+              signal: abortSignal
             },
             listener
           );
           watchers.set(watchedPath, watcher);
-          watcher.on('error', (err) => {
-            watchers.delete(watchedPath);
+          watcher.once('error', (err) => {
+            watcher.close();
             onError(err);
           });
+          closePromises.push(
+            once(watcher, 'close').then(() => {
+              watchers.delete(watchedPath);
+              watcher.removeAllListeners();
+              watcher.unref();
+            })
+          );
         }
 
         function innerListener(
@@ -354,20 +412,18 @@ export class ProjectWatcher {
         }
       }
     ).finally(() => {
+      this._onAbort = undefined;
       this._resolveIfChanged = undefined;
     });
 
-    const closePromises: Promise<void>[] = [];
-    for (const [watchedPath, watcher] of watchers) {
-      closePromises.push(
-        once(watcher, 'close').then(() => {
-          watchers.delete(watchedPath);
-        })
-      );
+    this._terminal.writeDebugLine(`Closing watchers...`);
+
+    for (const watcher of watchers.values()) {
       watcher.close();
     }
 
     await Promise.all(closePromises);
+    this._terminal.writeDebugLine(`Closed ${closePromises.length} watchers`);
 
     return watchedResult;
   }
@@ -384,6 +440,7 @@ export class ProjectWatcher {
       readline.clearScreenDown(process.stdout);
     }
     this._renderedStatusLines = statusLines.length;
+    this._lastStatus = status;
 
     this._terminal.writeLine(Colorize.bold(Colorize.cyan(statusLines.join('\n'))));
   }
@@ -392,23 +449,27 @@ export class ProjectWatcher {
    * Determines which, if any, projects (within the selection) have new hashes for files that are not in .gitignore
    */
   private async _computeChangedAsync(): Promise<IProjectChangeResult> {
-    const state: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(this._rushConfiguration);
+    const currentSnapshot: IInputsSnapshot | undefined = await this._getInputsSnapshotAsync();
 
-    const previousState: ProjectChangeAnalyzer | undefined = this._previousState;
+    if (!currentSnapshot) {
+      throw new AlreadyReportedError();
+    }
 
-    if (!previousState) {
+    const previousSnapshot: IInputsSnapshot | undefined = this._previousSnapshot;
+
+    if (!previousSnapshot) {
       return {
         changedProjects: this._projectsToWatch,
-        state
+        inputsSnapshot: currentSnapshot
       };
     }
 
     const changedProjects: Set<RushConfigurationProject> = new Set();
     for (const project of this._projectsToWatch) {
-      const [previous, current] = await Promise.all([
-        previousState._tryGetProjectDependenciesAsync(project, this._terminal),
-        state._tryGetProjectDependenciesAsync(project, this._terminal)
-      ]);
+      const previous: ReadonlyMap<string, string> | undefined =
+        previousSnapshot.getTrackedFileHashesForOperation(project);
+      const current: ReadonlyMap<string, string> | undefined =
+        currentSnapshot.getTrackedFileHashesForOperation(project);
 
       if (ProjectWatcher._haveProjectDepsChanged(previous, current)) {
         // May need to detect if the nature of the change will break the process, e.g. changes to package.json
@@ -422,14 +483,14 @@ export class ProjectWatcher {
 
     return {
       changedProjects,
-      state
+      inputsSnapshot: currentSnapshot
     };
   }
 
-  private _commitChanges(state: ProjectChangeAnalyzer): void {
-    this._previousState = state;
-    if (!this._initialState) {
-      this._initialState = state;
+  private _commitChanges(state: IInputsSnapshot): void {
+    this._previousSnapshot = state;
+    if (!this._initialSnapshot) {
+      this._initialSnapshot = state;
     }
   }
 
@@ -439,8 +500,8 @@ export class ProjectWatcher {
    * @returns `true` if the maps are different, `false` otherwise
    */
   private static _haveProjectDepsChanged(
-    prev: Map<string, string> | undefined,
-    next: Map<string, string> | undefined
+    prev: ReadonlyMap<string, string> | undefined,
+    next: ReadonlyMap<string, string> | undefined
   ): boolean {
     if (!prev && !next) {
       return false;
