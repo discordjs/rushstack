@@ -1,6 +1,265 @@
 # Change Log - @rushstack/heft-node-rig
 
-This log was last generated on Tue, 04 Nov 2025 08:15:15 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 2.11.55
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 2.11.54
+Wed, 14 Oct 2026 00:20:26 GMT
+
+_Version update only_
+
+## 2.11.53
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 2.11.52
+Mon, 28 Sep 2026 20:08:27 GMT
+
+_Version update only_
+
+## 2.11.51
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 2.11.50
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 2.11.49
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 2.11.48
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 2.11.47
+Thu, 20 Aug 2026 00:16:38 GMT
+
+### Patches
+
+- Update the default TypeScript library definitions to ES2022.
+- Expose ES2022 library definitions in the default TypeScript configuration.
+
+## 2.11.46
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 2.11.45
+Tue, 21 Jul 2026 02:53:23 GMT
+
+_Version update only_
+
+## 2.11.44
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 2.11.43
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 2.11.42
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 2.11.41
+Wed, 10 Jun 2026 00:15:42 GMT
+
+_Version update only_
+
+## 2.11.40
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 2.11.39
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 2.11.38
+Mon, 20 Apr 2026 15:15:24 GMT
+
+_Version update only_
+
+## 2.11.37
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 2.11.36
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 2.11.35
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 2.11.34
+Wed, 15 Apr 2026 17:59:12 GMT
+
+### Patches
+
+- Replace the `@types/heft-jest` types package with `@types/jest`. The `@types/jest` package now correctly includes the mocking typings.
+
+## 2.11.33
+Tue, 14 Apr 2026 01:25:46 GMT
+
+_Version update only_
+
+## 2.11.32
+Fri, 10 Apr 2026 22:46:34 GMT
+
+_Version update only_
+
+## 2.11.31
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 2.11.30
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 2.11.29
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 2.11.28
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 2.11.27
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 2.11.26
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 2.11.25
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 2.11.24
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 2.11.23
+Mon, 23 Feb 2026 00:42:21 GMT
+
+_Version update only_
+
+## 2.11.22
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 2.11.21
+Fri, 20 Feb 2026 00:15:04 GMT
+
+_Version update only_
+
+## 2.11.20
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Patches
+
+- Add `sideEffects` field to package.json.
+
+## 2.11.19
+Sat, 07 Feb 2026 01:13:26 GMT
+
+_Version update only_
+
+## 2.11.18
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 2.11.17
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 2.11.16
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 2.11.15
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 2.11.14
+Wed, 07 Jan 2026 01:12:25 GMT
+
+_Version update only_
+
+## 2.11.13
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 2.11.12
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 2.11.11
+Wed, 03 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 2.11.10
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 2.11.9
+Wed, 12 Nov 2025 01:57:54 GMT
+
+_Version update only_
+
+## 2.11.8
+Wed, 12 Nov 2025 01:12:56 GMT
+
+_Version update only_
+
+## 2.11.7
+Tue, 11 Nov 2025 16:13:26 GMT
+
+_Version update only_
+
+## 2.11.6
+Mon, 10 Nov 2025 16:12:32 GMT
+
+### Patches
+
+- Include lib-dts and lib-esm folders in default files to clean
 
 ## 2.11.5
 Tue, 04 Nov 2025 08:15:15 GMT

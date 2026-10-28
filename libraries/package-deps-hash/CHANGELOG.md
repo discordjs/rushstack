@@ -1,6 +1,250 @@
 # Change Log - @rushstack/package-deps-hash
 
-This log was last generated on Tue, 04 Nov 2025 08:15:15 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 4.8.1
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 4.8.0
+Tue, 06 Oct 2026 00:04:37 GMT
+
+### Minor changes
+
+- Add a (beta) `RepoStateCache` class that keeps Git repository state between calls in long-lived processes. Fix `getDetailedRepoStateAsync` for paths that `git hash-object` can't read, such as sparse-checkout, assume-unchanged or skip-worktree files and dangling symbolic links, and for an unhandled rejection when `git hash-object` fails early. Errors now name the Git command that failed.
+
+## 4.7.31
+Mon, 28 Sep 2026 20:08:27 GMT
+
+_Version update only_
+
+## 4.7.30
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 4.7.29
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 4.7.28
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 4.7.27
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 4.7.26
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 4.7.25
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 4.7.24
+Tue, 21 Jul 2026 02:53:23 GMT
+
+_Version update only_
+
+## 4.7.23
+Fri, 17 Jul 2026 00:16:00 GMT
+
+_Version update only_
+
+## 4.7.22
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 4.7.21
+Mon, 15 Jun 2026 15:15:33 GMT
+
+### Patches
+
+- Strip GIT_DIR and GIT_WORK_TREE Node env variables to fix issues with miscalculating the git repo root when working in a linked worktree
+
+## 4.7.20
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 4.7.19
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 4.7.18
+Mon, 25 May 2026 15:14:32 GMT
+
+### Patches
+
+- Skip untracked files whose basename is a Windows reserved device name (e.g. `nul`, `con`, `aux`, `com1`-`com9`, `lpt1`-`lpt9`) when computing repo state on Windows. `git hash-object` cannot open such paths and otherwise aborts the entire repo-state calculation.
+
+## 4.7.17
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 4.7.16
+Mon, 20 Apr 2026 15:15:25 GMT
+
+_Version update only_
+
+## 4.7.15
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 4.7.14
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 4.7.13
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 4.7.12
+Fri, 10 Apr 2026 22:46:35 GMT
+
+_Version update only_
+
+## 4.7.11
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 4.7.10
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 4.7.9
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 4.7.8
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 4.7.7
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 4.7.6
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 4.7.5
+Wed, 25 Feb 2026 00:34:30 GMT
+
+_Version update only_
+
+## 4.7.4
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 4.7.3
+Mon, 23 Feb 2026 00:42:21 GMT
+
+_Version update only_
+
+## 4.7.2
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 4.7.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 4.7.0
+Thu, 19 Feb 2026 00:04:53 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 4.6.8
+Sat, 07 Feb 2026 01:13:26 GMT
+
+_Version update only_
+
+## 4.6.7
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 4.6.6
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 4.6.5
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 4.6.4
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 4.6.3
+Wed, 07 Jan 2026 01:12:25 GMT
+
+_Version update only_
+
+## 4.6.2
+Mon, 05 Jan 2026 16:12:50 GMT
+
+_Version update only_
+
+## 4.6.1
+Mon, 29 Dec 2025 22:42:58 GMT
+
+### Patches
+
+- Update MINIMUM_GIT_VERSION to 2.35.0 to account for usage of the --format argument with git ls-files
+
+## 4.6.0
+Fri, 12 Dec 2025 01:12:05 GMT
+
+### Minor changes
+
+- Replace "git ls-tree" with "git ls-files" to improve performance. Identify symbolic links and return them separately in "getDetailedRepoStateAsync". Symbolic links will be omitted from the result returned by "getRepoStateAsync", as they are not "files".
+
+## 4.5.7
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 4.5.6
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 4.5.5
+Wed, 12 Nov 2025 01:12:56 GMT
+
+_Version update only_
 
 ## 4.5.4
 Tue, 04 Nov 2025 08:15:15 GMT

@@ -27,20 +27,19 @@ import {
   type IPnpmVersionSpecifier,
   normalizePnpmVersionSpecifier
 } from './PnpmShrinkwrapFile';
+import type { Subspace } from '../../api/Subspace';
+import { IS_WINDOWS } from '../../utilities/executionUtilities';
 
 // special flag for debugging, will print extra diagnostic information,
 // but comes with performance cost
 const DEBUG: boolean = false;
 
 export class PnpmLinkManager extends BaseLinkManager {
-  private readonly _pnpmVersion: semver.SemVer = new semver.SemVer(
+  readonly #pnpmVersion: semver.SemVer = new semver.SemVer(
     this._rushConfiguration.packageManagerToolVersion
   );
 
-  /**
-   * @override
-   */
-  public async createSymlinksForProjectsAsync(force: boolean): Promise<void> {
+  public override async createSymlinksForProjectsAsync(force: boolean): Promise<void> {
     const useWorkspaces: boolean =
       this._rushConfiguration.pnpmOptions && this._rushConfiguration.pnpmOptions.useWorkspaces;
     if (useWorkspaces) {
@@ -59,10 +58,12 @@ export class PnpmLinkManager extends BaseLinkManager {
 
   protected async _linkProjectsAsync(): Promise<void> {
     if (this._rushConfiguration.projects.length > 0) {
+      const subspace: Subspace = this._rushConfiguration.defaultSubspace;
       // Use shrinkwrap from temp as the committed shrinkwrap may not always be up to date
       // See https://github.com/microsoft/rushstack/issues/1273#issuecomment-492779995
       const pnpmShrinkwrapFile: PnpmShrinkwrapFile | undefined = PnpmShrinkwrapFile.loadFromFile(
-        this._rushConfiguration.defaultSubspace.getTempShrinkwrapFilename()
+        subspace.getTempShrinkwrapFilename(),
+        { subspaceHasNoProjects: subspace.getProjects().length === 0 }
       );
 
       if (!pnpmShrinkwrapFile) {
@@ -72,7 +73,7 @@ export class PnpmLinkManager extends BaseLinkManager {
       }
 
       for (const rushProject of this._rushConfiguration.projects) {
-        await this._linkProjectAsync(rushProject, pnpmShrinkwrapFile);
+        await this.#linkProjectAsync(rushProject, pnpmShrinkwrapFile);
       }
     } else {
       // eslint-disable-next-line no-console
@@ -90,7 +91,7 @@ export class PnpmLinkManager extends BaseLinkManager {
    * @param project             The local project that we will create symlinks for
    * @param rushLinkJson        The common/temp/rush-link.json output file
    */
-  private async _linkProjectAsync(
+  async #linkProjectAsync(
     project: RushConfigurationProject,
     pnpmShrinkwrapFile: PnpmShrinkwrapFile
   ): Promise<void> {
@@ -227,7 +228,7 @@ export class PnpmLinkManager extends BaseLinkManager {
         : '';
 
     // e.g.: C:\wbt\common\temp\node_modules\.local\C%3A%2Fwbt%2Fcommon%2Ftemp%2Fprojects%2Fapi-documenter.tgz\node_modules
-    const pathToLocalInstallation: string = await this._getPathToLocalInstallationAsync(
+    const pathToLocalInstallation: string = await this.#getPathToLocalInstallationAsync(
       tarballEntry,
       absolutePathToTgzFile,
       folderNameSuffix,
@@ -243,7 +244,7 @@ export class PnpmLinkManager extends BaseLinkManager {
     }
 
     for (const dependencyName of Object.keys(commonPackage.packageJson!.dependencies || {})) {
-      const newLocalPackage: BasePackage = this._createLocalPackageForDependency(
+      const newLocalPackage: BasePackage = this.#createLocalPackageForDependency(
         project,
         parentShrinkwrapEntry,
         localPackage,
@@ -288,13 +289,13 @@ export class PnpmLinkManager extends BaseLinkManager {
     });
   }
 
-  private async _getPathToLocalInstallationAsync(
+  async #getPathToLocalInstallationAsync(
     tarballEntry: string,
     absolutePathToTgzFile: string,
     folderSuffix: string,
     tempProjectDependencyKey: string
   ): Promise<string> {
-    if (this._pnpmVersion.major === 6) {
+    if (this.#pnpmVersion.major === 6) {
       // PNPM 6 changed formatting to replace all ':' and '/' chars with '+'. Additionally, folder names > 120
       // are trimmed and hashed. NOTE: PNPM internally uses fs.realpath.native, which will cause additional
       // issues in environments that do not support long paths.
@@ -322,16 +323,18 @@ export class PnpmLinkManager extends BaseLinkManager {
         folderName,
         RushConstants.nodeModulesFolderName
       );
-    } else if (this._pnpmVersion.major >= 10) {
-      const { depPathToFilename } = await import('@pnpm/dependency-path');
+    } else if (this.#pnpmVersion.major >= 10) {
+      const pnpmKitV10: typeof import('@rushstack/rush-pnpm-kit-v10') = await import(
+        '@rushstack/rush-pnpm-kit-v10'
+      );
 
       // project@file+projects+presentation-integration-tests.tgz_jsdom@11.12.0
       // The second parameter is max length of virtual store dir,
       // for v10 default is 120 on Linux/MacOS and 60 on Windows https://pnpm.io/next/settings#virtualstoredirmaxlength
       // TODO Read virtual-store-dir-max-length from .npmrc
-      const folderName: string = depPathToFilename(
+      const folderName: string = pnpmKitV10.dependencyPath.depPathToFilename(
         tempProjectDependencyKey,
-        process.platform === 'win32' ? 60 : 120
+        IS_WINDOWS ? 60 : 120
       );
       return path.join(
         this._rushConfiguration.commonTempFolder,
@@ -340,13 +343,15 @@ export class PnpmLinkManager extends BaseLinkManager {
         folderName,
         RushConstants.nodeModulesFolderName
       );
-    } else if (this._pnpmVersion.major >= 9) {
-      const { depPathToFilename } = await import('@pnpm/dependency-path-lockfile-pre-v10');
+    } else if (this.#pnpmVersion.major >= 9) {
+      const pnpmKitV9: typeof import('@rushstack/rush-pnpm-kit-v9') = await import(
+        '@rushstack/rush-pnpm-kit-v9'
+      );
 
       // project@file+projects+presentation-integration-tests.tgz_jsdom@11.12.0
       // The second parameter is max length of virtual store dir, for v9 default is 120 https://pnpm.io/9.x/npmrc#virtual-store-dir-max-length
       // TODO Read virtual-store-dir-max-length from .npmrc
-      const folderName: string = depPathToFilename(tempProjectDependencyKey, 120);
+      const folderName: string = pnpmKitV9.dependencyPath.depPathToFilename(tempProjectDependencyKey, 120);
       return path.join(
         this._rushConfiguration.commonTempFolder,
         RushConstants.nodeModulesFolderName,
@@ -354,14 +359,16 @@ export class PnpmLinkManager extends BaseLinkManager {
         folderName,
         RushConstants.nodeModulesFolderName
       );
-    } else if (this._pnpmVersion.major >= 8) {
-      const { depPathToFilename } = await import('@pnpm/dependency-path-lockfile-pre-v9');
+    } else if (this.#pnpmVersion.major >= 8) {
+      const pnpmKitV8: typeof import('@rushstack/rush-pnpm-kit-v8') = await import(
+        '@rushstack/rush-pnpm-kit-v8'
+      );
       // PNPM 8 changed the local path format again and the hashing algorithm, and
       // is now using the scoped '@pnpm/dependency-path' package
       // See https://github.com/pnpm/pnpm/releases/tag/v8.0.0
       // e.g.:
       //   file+projects+presentation-integration-tests.tgz_jsdom@11.12.0
-      const folderName: string = depPathToFilename(`${tarballEntry}${folderSuffix}`);
+      const folderName: string = pnpmKitV8.dependencyPath.depPathToFilename(`${tarballEntry}${folderSuffix}`);
       return path.join(
         this._rushConfiguration.commonTempFolder,
         RushConstants.nodeModulesFolderName,
@@ -369,7 +376,7 @@ export class PnpmLinkManager extends BaseLinkManager {
         folderName,
         RushConstants.nodeModulesFolderName
       );
-    } else if (this._pnpmVersion.major >= 7) {
+    } else if (this.#pnpmVersion.major >= 7) {
       const { depPathToFilename } = await import('dependency-path');
       // PNPM 7 changed the local path format again and the hashing algorithm
       // See https://github.com/pnpm/pnpm/releases/tag/v7.0.0
@@ -403,7 +410,7 @@ export class PnpmLinkManager extends BaseLinkManager {
       );
     }
   }
-  private _createLocalPackageForDependency(
+  #createLocalPackageForDependency(
     project: RushConfigurationProject,
     parentShrinkwrapEntry: IPnpmShrinkwrapDependencyYaml,
     localPackage: BasePackage,

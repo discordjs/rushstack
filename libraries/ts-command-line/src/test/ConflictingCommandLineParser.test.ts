@@ -20,9 +20,9 @@ class GenericCommandLine extends CommandLineParser {
 
 class TestAction extends CommandLineAction {
   public done: boolean = false;
-  private _scope1Arg: CommandLineStringParameter;
-  private _scope2Arg: CommandLineStringParameter;
-  private _nonConflictingArg: CommandLineStringParameter;
+  #scope1Arg: CommandLineStringParameter;
+  #scope2Arg: CommandLineStringParameter;
+  #nonConflictingArg: CommandLineStringParameter;
 
   public constructor() {
     super({
@@ -32,14 +32,14 @@ class TestAction extends CommandLineAction {
     });
 
     // Used to validate that conflicting parameters with different scopes return different values
-    this._scope1Arg = this.defineStringParameter({
+    this.#scope1Arg = this.defineStringParameter({
       parameterLongName: '--arg',
       parameterScope: 'scope1',
       argumentName: 'ARG',
       description: 'The argument'
     });
     // Used to validate that conflicting parameters with different scopes return different values
-    this._scope2Arg = this.defineStringParameter({
+    this.#scope2Arg = this.defineStringParameter({
       parameterLongName: '--arg',
       parameterScope: 'scope2',
       argumentName: 'ARG',
@@ -47,7 +47,7 @@ class TestAction extends CommandLineAction {
     });
     // Used to validate that non-conflicting args can be reference by both the unscoped and the
     // scoped parameter names
-    this._nonConflictingArg = this.defineStringParameter({
+    this.#nonConflictingArg = this.defineStringParameter({
       parameterLongName: '--non-conflicting-arg',
       parameterScope: 'scope3',
       argumentName: 'ARG',
@@ -56,9 +56,9 @@ class TestAction extends CommandLineAction {
   }
 
   protected override async onExecuteAsync(): Promise<void> {
-    expect(this._scope1Arg.value).toEqual('scope1value');
-    expect(this._scope2Arg.value).toEqual('scope2value');
-    expect(this._nonConflictingArg.value).toEqual('nonconflictingvalue');
+    expect(this.#scope1Arg.value).toEqual('scope1value');
+    expect(this.#scope2Arg.value).toEqual('scope2value');
+    expect(this.#nonConflictingArg.value).toEqual('nonconflictingvalue');
     this.done = true;
   }
 }
@@ -176,7 +176,7 @@ describe(`Conflicting ${CommandLineParser.name}`, () => {
         '--scope:arg',
         'value'
       ])
-    ).rejects.toThrowError(/The parameter "--arg" is defined multiple times with the same long name/);
+    ).rejects.toThrow(/The parameter "--arg" is defined multiple times with the same long name/);
   });
 
   it('fails to execute an action with conflicting parameters with the same scope', async () => {
@@ -190,6 +190,6 @@ describe(`Conflicting ${CommandLineParser.name}`, () => {
         '--scope:arg',
         'value'
       ])
-    ).rejects.toThrowError(/argument "\-\-scope:arg": Conflicting option string\(s\): \-\-scope:arg/);
+    ).rejects.toThrow(/argument "\-\-scope:arg": Conflicting option string\(s\): \-\-scope:arg/);
   });
 });

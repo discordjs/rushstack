@@ -1,9 +1,32 @@
 {
   "name": "@rushstack/webpack4-module-minifier-plugin",
-  "version": "0.14.4",
+  "version": "0.15.33",
   "description": "This plugin splits minification of webpack compilations into smaller units.",
-  "main": "lib/index.js",
-  "typings": "dist/webpack4-module-minifier-plugin.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/webpack4-module-minifier-plugin.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/webpack4-module-minifier-plugin.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -11,11 +34,12 @@
     "directory": "webpack/webpack4-module-minifier-plugin"
   },
   "engines": {
-    "node": ">=10.17.1"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "peerDependencies": {
@@ -53,6 +77,7 @@
     "webpack": "~4.47.0"
   },
   "sideEffects": [
-    "./lib/OverrideWebpackIdentifierAllocation"
+    "lib-esm/OverrideWebpackIdentifierAllocation.js",
+    "lib-commonjs/OverrideWebpackIdentifierAllocation.js"
   ]
 }

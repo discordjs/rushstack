@@ -23,6 +23,7 @@ import type {
   IScopedLogger,
   IHeftTaskPlugin,
   CommandLineFlagParameter,
+  CommandLineStringParameter,
   IHeftTaskRunHookOptions
 } from '@rushstack/heft';
 import type {
@@ -33,10 +34,12 @@ import type {
   PluginName as Webpack5PluginName,
   IWebpackPluginAccessor as IWebpack5PluginAccessor
 } from '@rushstack/heft-webpack5-plugin';
+import type { IRspackPluginAccessor, PluginName as RspackPluginName } from '@rushstack/heft-rspack-plugin';
 
 const PLUGIN_NAME: 'storybook-plugin' = 'storybook-plugin';
 const WEBPACK4_PLUGIN_NAME: typeof Webpack4PluginName = 'webpack4-plugin';
 const WEBPACK5_PLUGIN_NAME: typeof Webpack5PluginName = 'webpack5-plugin';
+const RSPACK_PLUGIN_NAME: typeof RspackPluginName = 'rspack-plugin';
 
 /**
  * Storybook CLI build type targets
@@ -58,7 +61,8 @@ enum StorybookBuildMode {
 enum StorybookCliVersion {
   STORYBOOK6 = 'storybook6',
   STORYBOOK7 = 'storybook7',
-  STORYBOOK8 = 'storybook8'
+  STORYBOOK8 = 'storybook8',
+  STORYBOOK9 = 'storybook9'
 }
 
 /**
@@ -155,6 +159,19 @@ export interface IStorybookPluginOptions {
    * Specifies whether to capture the webpack stats for the storybook build by adding the `--webpack-stats-json` CLI flag.
    */
   captureWebpackStats?: boolean;
+
+  /**
+   * If true, sets the `STORYBOOK_DISABLE_TELEMETRY=1` environment variable when invoking the Storybook subprocess,
+   * which disables Storybook's telemetry data collection.
+   */
+  disableTelemetry?: boolean;
+
+  /**
+   * Specifies whether to run storybook in quiet mode (--quiet).
+   *
+   * @defaultValue `true`
+   */
+  quiet?: boolean;
 }
 
 interface IRunStorybookOptions extends IPrepareStorybookOptions {
@@ -174,6 +191,8 @@ interface IPrepareStorybookOptions extends IStorybookPluginOptions {
   isServeMode: boolean;
   isTestMode: boolean;
   isDocsMode: boolean;
+  isNoOpenMode: boolean;
+  port: string | undefined;
 }
 
 const DEFAULT_STORYBOOK_VERSION: StorybookCliVersion = StorybookCliVersion.STORYBOOK7;
@@ -198,12 +217,21 @@ const DEFAULT_STORYBOOK_CLI_CONFIG: Record<StorybookCliVersion, IStorybookCliCal
       watch: ['sb', 'dev'],
       build: ['sb', 'build']
     }
+  },
+  [StorybookCliVersion.STORYBOOK9]: {
+    packageName: 'storybook',
+    command: {
+      watch: ['sb', 'dev'],
+      build: ['sb', 'build']
+    }
   }
 };
 
 const STORYBOOK_FLAG_NAME: '--storybook' = '--storybook';
 const STORYBOOK_TEST_FLAG_NAME: '--storybook-test' = '--storybook-test';
 const DOCS_FLAG_NAME: '--docs' = '--docs';
+const NO_OPEN_FLAG_NAME: '--no-open' = '--no-open';
+const PORT_FLAG_NAME: '--port' = '--port';
 
 /** @public */
 export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPluginOptions> {
@@ -221,6 +249,10 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
     const storybookTestParameter: CommandLineFlagParameter =
       taskSession.parameters.getFlagParameter(STORYBOOK_TEST_FLAG_NAME);
     const docsParameter: CommandLineFlagParameter = taskSession.parameters.getFlagParameter(DOCS_FLAG_NAME);
+    const noOpenParameter: CommandLineFlagParameter =
+      taskSession.parameters.getFlagParameter(NO_OPEN_FLAG_NAME);
+    const portParameter: CommandLineStringParameter =
+      taskSession.parameters.getStringParameter(PORT_FLAG_NAME);
 
     const parseResult: IParsedPackageNameOrError = PackageName.tryParse(options.storykitPackageName);
     if (parseResult.error) {
@@ -233,13 +265,14 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
 
     // Only tap if the --storybook flag is present.
     if (storybookParameter.value) {
-      const configureWebpackTap: () => Promise<false> = async () => {
-        // Discard Webpack's configuration to prevent Webpack from running
-        logger.terminal.writeLine(
-          'The command line includes "--storybook", redirecting Webpack to Storybook'
-        );
-        return false;
-      };
+      const configurePackagerTap: (packager: 'Webpack' | 'Rspack') => () => Promise<false> =
+        (packager: string) => async () => {
+          // Discard Webpack's configuration to prevent Webpack from running
+          logger.terminal.writeLine(
+            'The command line includes "--storybook", redirecting ' + packager + ' to Storybook'
+          );
+          return false;
+        };
 
       let isServeMode: boolean = false;
       taskSession.requestAccessToPluginByName(
@@ -249,7 +282,7 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
           isServeMode = accessor.parameters.isServeMode;
 
           // Discard Webpack's configuration to prevent Webpack from running only when performing Storybook build
-          accessor.hooks.onLoadConfiguration.tapPromise(PLUGIN_NAME, configureWebpackTap);
+          accessor.hooks.onLoadConfiguration.tapPromise(PLUGIN_NAME, configurePackagerTap('Webpack'));
         }
       );
 
@@ -260,26 +293,39 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
           isServeMode = accessor.parameters.isServeMode;
 
           // Discard Webpack's configuration to prevent Webpack from running only when performing Storybook build
-          accessor.hooks.onLoadConfiguration.tapPromise(PLUGIN_NAME, configureWebpackTap);
+          accessor.hooks.onLoadConfiguration.tapPromise(PLUGIN_NAME, configurePackagerTap('Webpack'));
+        }
+      );
+
+      taskSession.requestAccessToPluginByName(
+        '@rushstack/heft-rspack-plugin',
+        RSPACK_PLUGIN_NAME,
+        (accessor: IRspackPluginAccessor) => {
+          isServeMode = accessor.parameters.isServeMode;
+
+          // Discard Rspack's configuration to prevent Rspack from running only when performing Storybook build
+          accessor.hooks.onLoadConfiguration.tapPromise(PLUGIN_NAME, configurePackagerTap('Rspack'));
         }
       );
 
       taskSession.hooks.run.tapPromise(PLUGIN_NAME, async (runOptions: IHeftTaskRunHookOptions) => {
-        const runStorybookOptions: IRunStorybookOptions = await this._prepareStorybookAsync({
+        const runStorybookOptions: IRunStorybookOptions = await this.#prepareStorybookAsync({
           logger,
           taskSession,
           heftConfiguration,
           isServeMode,
           isTestMode: storybookTestParameter.value,
           isDocsMode: docsParameter.value,
+          isNoOpenMode: noOpenParameter.value,
+          port: portParameter.value,
           ...options
         });
-        await this._runStorybookAsync(runStorybookOptions, options);
+        await this.#runStorybookAsync(runStorybookOptions, options);
       });
     }
   }
 
-  private async _prepareStorybookAsync(options: IPrepareStorybookOptions): Promise<IRunStorybookOptions> {
+  async #prepareStorybookAsync(options: IPrepareStorybookOptions): Promise<IRunStorybookOptions> {
     const {
       logger,
       taskSession,
@@ -288,7 +334,7 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
       staticBuildOutputFolder,
       isTestMode
     } = options;
-    const storybookCliVersion: `${StorybookCliVersion}` = this._getStorybookVersion(options);
+    const storybookCliVersion: `${StorybookCliVersion}` = this.#getStorybookVersion(options);
     const storyBookCliConfig: IStorybookCliCallingConfig = DEFAULT_STORYBOOK_CLI_CONFIG[storybookCliVersion];
     const cliPackageName: string = options.cliPackageName ?? storyBookCliConfig.packageName;
     const buildMode: StorybookBuildMode = taskSession.parameters.watch
@@ -340,13 +386,26 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
 
     const storyBookPackagePackageJsonFile: string = path.join(storyBookCliPackage, FileConstants.PackageJson);
     const packageJson: IPackageJson = await JsonFile.loadAsync(storyBookPackagePackageJsonFile);
-    if (!packageJson.bin || typeof packageJson.bin === 'string') {
+    if (!packageJson.bin) {
       throw new Error(
         `The cli package "${cliPackageName}" does not provide a 'bin' executables in the 'package.json'`
       );
     }
+
     const [moduleExecutableName, ...moduleDefaultArgs] = storyBookCliConfig.command[buildMode];
-    const modulePath: string | undefined = packageJson.bin[moduleExecutableName];
+    const modulePath: string | undefined = (() => {
+      if (storybookCliVersion === StorybookCliVersion.STORYBOOK9 && typeof packageJson.bin === 'string') {
+        return packageJson.bin;
+      }
+
+      if (typeof packageJson.bin !== 'string') {
+        return packageJson.bin[moduleExecutableName];
+      } else {
+        throw new Error(
+          `The cli package "${cliPackageName}" provides a 'bin' executables in the 'package.json' but it is a string`
+        );
+      }
+    })();
     logger.terminal.writeVerboseLine(
       `Found storybook "${modulePath}" for "${buildMode}" mode in "${cliPackageName}"`
     );
@@ -413,15 +472,16 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
     };
   }
 
-  private async _runStorybookAsync(
+  async #runStorybookAsync(
     runStorybookOptions: IRunStorybookOptions,
     options: IStorybookPluginOptions
   ): Promise<void> {
-    const { logger, resolvedModulePath, verbose, isServeMode, isTestMode, isDocsMode } = runStorybookOptions;
+    const { logger, resolvedModulePath, verbose, isServeMode, isTestMode, isDocsMode, isNoOpenMode, port } =
+      runStorybookOptions;
     let { workingDirectory, outputFolder } = runStorybookOptions;
     logger.terminal.writeLine('Running Storybook compilation');
     logger.terminal.writeVerboseLine(`Loading Storybook module "${resolvedModulePath}"`);
-    const storybookCliVersion: `${StorybookCliVersion}` = this._getStorybookVersion(options);
+    const storybookCliVersion: `${StorybookCliVersion}` = this.#getStorybookVersion(options);
 
     /**
      * Support \'cwdPackageName\' option
@@ -452,7 +512,7 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
       storybookArgs.push('--webpack-stats-json');
     }
 
-    if (!verbose) {
+    if (options.quiet !== false && !verbose) {
       storybookArgs.push('--quiet');
     }
 
@@ -464,17 +524,41 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
       storybookArgs.push('--docs');
     }
 
+    if (isServeMode && isNoOpenMode) {
+      storybookArgs.push('--no-open');
+    }
+
+    if (isServeMode && port) {
+      storybookArgs.push('--port', port);
+    }
+
+    const storybookEnv: NodeJS.ProcessEnv = {
+      ...process.env,
+      // Prevent corepack from prompting to pin a package manager version
+      COREPACK_ENABLE_AUTO_PIN: '0'
+    };
+    if (options.disableTelemetry) {
+      storybookEnv.STORYBOOK_DISABLE_TELEMETRY = '1';
+    }
+
     if (isServeMode) {
       // Instantiate storybook runner synchronously for incremental builds
       // this ensure that the process is not killed when heft watcher detects file changes
-      this._invokeSync(
+      this.#invokeSync(
         logger,
         resolvedModulePath,
         storybookArgs,
+        storybookEnv,
         storybookCliVersion === StorybookCliVersion.STORYBOOK8
       );
     } else {
-      await this._invokeAsSubprocessAsync(logger, resolvedModulePath, storybookArgs, workingDirectory);
+      await this.#invokeAsSubprocessAsync(
+        logger,
+        resolvedModulePath,
+        storybookArgs,
+        workingDirectory,
+        storybookEnv
+      );
     }
   }
 
@@ -485,19 +569,19 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
    * @param cwd - working directory
    * @returns
    */
-  private async _invokeAsSubprocessAsync(
+  async #invokeAsSubprocessAsync(
     logger: IScopedLogger,
     command: string,
     args: string[],
-    cwd: string
+    cwd: string,
+    env: NodeJS.ProcessEnv
   ): Promise<void> {
     return await new Promise<void>((resolve, reject) => {
-      const storybookEnv: NodeJS.ProcessEnv = { ...process.env };
       const forkedProcess: child_process.ChildProcess = child_process.fork(command, args, {
         execArgv: process.execArgv,
         cwd,
         stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
-        env: storybookEnv,
+        env,
         ...SubprocessTerminator.RECOMMENDED_OPTIONS
       });
 
@@ -548,10 +632,11 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
    * @param args - storybook args
    * @param cwd - working directory
    */
-  private _invokeSync(
+  #invokeSync(
     logger: IScopedLogger,
     command: string,
     args: string[],
+    env: NodeJS.ProcessEnv,
     patchNpmConfigUserAgent: boolean
   ): void {
     logger.terminal.writeLine('Launching ' + command);
@@ -573,6 +658,13 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
       process.env.npm_config_user_agent = 'npm';
     }
 
+    // Apply custom environment variables
+    for (const [key, value] of Object.entries(env)) {
+      if (value !== undefined) {
+        process.env[key] = value;
+      }
+    }
+
     // invoke command synchronously
     require(command);
 
@@ -582,7 +674,7 @@ export default class StorybookPlugin implements IHeftTaskPlugin<IStorybookPlugin
     logger.terminal.writeVerboseLine('Completed synchronous portion of launching startupModulePath');
   }
 
-  private _getStorybookVersion(options: IStorybookPluginOptions): `${StorybookCliVersion}` {
+  #getStorybookVersion(options: IStorybookPluginOptions): `${StorybookCliVersion}` {
     return options.cliCallingConvention ?? DEFAULT_STORYBOOK_VERSION;
   }
 }

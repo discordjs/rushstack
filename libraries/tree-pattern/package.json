@@ -1,23 +1,51 @@
 {
   "name": "@rushstack/tree-pattern",
-  "version": "0.3.4",
+  "version": "0.4.1",
   "description": "A fast, lightweight pattern matcher for tree structures such as an Abstract Syntax Tree (AST)",
-  "main": "lib/index.js",
-  "typings": "dist/tree-pattern.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/tree-pattern.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/tree-pattern.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "repository": {
     "url": "https://github.com/microsoft/rushstack.git",
     "type": "git",
     "directory": "libraries/tree-pattern"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "devDependencies": {
-    "@rushstack/heft": "1.1.3",
+    "@rushstack/heft": "1.3.4",
     "decoupled-local-node-rig": "workspace:*",
     "eslint": "~9.37.0"
-  }
+  },
+  "sideEffects": false
 }

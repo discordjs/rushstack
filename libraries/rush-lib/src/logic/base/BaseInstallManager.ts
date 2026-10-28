@@ -10,7 +10,6 @@ import { readFile, unlink } from 'node:fs/promises';
 import * as semver from 'semver';
 import {
   type ILockfile,
-  type ILockfilePackage,
   type ILogMessageCallbackOptions,
   pnpmSyncGetJsonVersion,
   pnpmSyncPrepareAsync
@@ -59,9 +58,9 @@ import { SubspacePnpmfileConfiguration } from '../pnpm/SubspacePnpmfileConfigura
 import type { Subspace } from '../../api/Subspace';
 import { ProjectImpactGraphGenerator } from '../ProjectImpactGraphGenerator';
 import { FlagFile } from '../../api/FlagFile';
-import { PnpmShrinkwrapFile } from '../pnpm/PnpmShrinkwrapFile';
 import { PnpmSyncUtilities } from '../../utilities/PnpmSyncUtilities';
 import { HotlinkManager } from '../../utilities/HotlinkManager';
+import { detectAndReportWorkspaceCycles } from '../WorkspaceCycleDetector';
 
 /**
  * Pnpm don't support --ignore-compatibility-db, so use --config.ignoreCompatibilityDb for now.
@@ -76,9 +75,9 @@ const gitLfsHooks: ReadonlySet<string> = new Set(['post-checkout', 'post-commit'
  * This class implements common logic between "rush install" and "rush update".
  */
 export abstract class BaseInstallManager {
-  private readonly _commonTempLinkFlag: FlagFile;
-  private _npmSetupValidated: boolean = false;
-  private _syncNpmrcAlreadyCalled: boolean = false;
+  readonly #commonTempLinkFlag: FlagFile;
+  #npmSetupValidated: boolean = false;
+  #syncNpmrcAlreadyCalled: boolean = false;
 
   protected readonly _terminal: ITerminal;
 
@@ -101,7 +100,7 @@ export abstract class BaseInstallManager {
     this.installRecycler = purgeManager.commonTempFolderRecycler;
     this.options = options;
 
-    this._commonTempLinkFlag = new FlagFile(
+    this.#commonTempLinkFlag = new FlagFile(
       options.subspace.getSubspaceTempFolderPath(),
       RushConstants.lastLinkFlagFilename,
       {}
@@ -225,7 +224,7 @@ export abstract class BaseInstallManager {
       if (!this.rushConfiguration.rushConfigurationJson.suppressRushIsPublicVersionCheck) {
         let publishedRelease: boolean | undefined;
         try {
-          publishedRelease = await this._checkIfReleaseIsPublishedAsync();
+          publishedRelease = await this.#checkIfReleaseIsPublishedAsync();
         } catch {
           // If the user is working in an environment that can't reach the registry,
           // don't bother them with errors.
@@ -245,7 +244,7 @@ export abstract class BaseInstallManager {
 
         // Since we're going to be tampering with common/node_modules, delete the "rush link" flag file if it exists;
         // this ensures that a full "rush link" is required next time
-        await this._commonTempLinkFlag.clearAsync();
+        await this.#commonTempLinkFlag.clearAsync();
       }
 
       // Give plugins an opportunity to act before invoking the installation process
@@ -261,14 +260,15 @@ export abstract class BaseInstallManager {
       ]);
 
       if (this.options.allowShrinkwrapUpdates && !shrinkwrapIsUpToDate) {
-        const committedShrinkwrapFileName: string = subspace.getCommittedShrinkwrapFilePath(variant);
-        const shrinkwrapFile: BaseShrinkwrapFile | undefined = ShrinkwrapFileFactory.getShrinkwrapFile(
-          this.rushConfiguration.packageManager,
-          committedShrinkwrapFileName
-        );
+        const shrinkwrapFilePath: string = subspace.getCommittedShrinkwrapFilePath(variant);
+        const shrinkwrapFile: BaseShrinkwrapFile | undefined = ShrinkwrapFileFactory.getShrinkwrapFile({
+          packageManager: this.rushConfiguration.packageManager,
+          shrinkwrapFilePath,
+          subspaceHasNoProjects: subspace.getProjects().length === 0
+        });
         shrinkwrapFile?.validateShrinkwrapAfterUpdate(this.rushConfiguration, subspace, this._terminal);
         // Copy (or delete) common\temp\pnpm-lock.yaml --> common\config\rush\pnpm-lock.yaml
-        Utilities.syncFile(subspace.getTempShrinkwrapFilename(), committedShrinkwrapFileName);
+        Utilities.syncFile(subspace.getTempShrinkwrapFilename(), shrinkwrapFilePath);
       } else {
         // TODO: Validate whether the package manager updated it in a nontrivial way
       }
@@ -296,54 +296,68 @@ export abstract class BaseInstallManager {
       const pnpmLockfilePath: string = subspace.getTempShrinkwrapFilename();
       const dotPnpmFolder: string = `${subspace.getSubspaceTempFolderPath()}/node_modules/.pnpm`;
       const modulesFilePath: string = `${subspace.getSubspaceTempFolderPath()}/node_modules/.modules.yaml`;
+      const useInstalledInjectedDeps: boolean = semver.gte(
+        this.rushConfiguration.packageManagerToolVersion,
+        '12.0.0'
+      );
 
       // we have an edge case here
       // if a package.json has no dependencies, pnpm will still generate the pnpm-lock.yaml but not .pnpm folder
-      // so we need to make sure pnpm-lock.yaml and .pnpm exists before calling the pnpmSync APIs
+      // Native PNPM records its virtual-store location in .modules.yaml instead.
       if (
         (await FileSystem.existsAsync(pnpmLockfilePath)) &&
-        (await FileSystem.existsAsync(dotPnpmFolder)) &&
-        (await FileSystem.existsAsync(modulesFilePath))
+        (await FileSystem.existsAsync(modulesFilePath)) &&
+        (useInstalledInjectedDeps || (await FileSystem.existsAsync(dotPnpmFolder)))
       ) {
-        await pnpmSyncPrepareAsync({
-          lockfilePath: pnpmLockfilePath,
-          dotPnpmFolder,
-          lockfileId: subspace.subspaceName,
-          ensureFolderAsync: FileSystem.ensureFolderAsync.bind(FileSystem),
-          // eslint-disable-next-line @typescript-eslint/naming-convention
-          readPnpmLockfile: async (lockfilePath: string) => {
-            const wantedPnpmLockfile: PnpmShrinkwrapFile | undefined = PnpmShrinkwrapFile.loadFromFile(
-              lockfilePath,
-              { withCaching: true }
-            );
+        if (useInstalledInjectedDeps) {
+          await PnpmSyncUtilities.prepareFromModulesAsync({
+            modulesFilePath,
+            lockfileFolder: path.dirname(pnpmLockfilePath),
+            lockfileId: subspace.subspaceName,
+            pnpmVersion: this.rushConfiguration.packageManagerToolVersion,
+            sourceProjectFolders: this.rushConfiguration.projects.map((project) => project.projectFolder),
+            terminal: this._terminal
+          });
+        } else {
+          await pnpmSyncPrepareAsync({
+            lockfilePath: pnpmLockfilePath,
+            dotPnpmFolder,
+            lockfileId: subspace.subspaceName,
+            ensureFolderAsync: FileSystem.ensureFolderAsync.bind(FileSystem),
+            // eslint-disable-next-line @typescript-eslint/naming-convention
+            readPnpmLockfile: async (lockfilePath: string, options): Promise<ILockfile | undefined> => {
+              const pnpmLockFolder: string = path.dirname(lockfilePath);
 
-            if (!wantedPnpmLockfile) {
-              return undefined;
-            } else {
-              const lockfilePackages: Record<string, ILockfilePackage> = Object.create(null);
-              for (const versionPath of wantedPnpmLockfile.packages.keys()) {
-                lockfilePackages[versionPath] = {
-                  dependencies: wantedPnpmLockfile.packages.get(versionPath)?.dependencies as Record<
-                    string,
-                    string
-                  >,
-                  optionalDependencies: wantedPnpmLockfile.packages.get(versionPath)
-                    ?.optionalDependencies as Record<string, string>
-                };
+              // TODO: Rework this to pre-parse out the version first, then load
+              // the relevant `@rushstack/rush-pnpm-kit-*` package.
+              const { lockfileFs: lockfileFsV9 } = await import('@rushstack/rush-pnpm-kit-v9');
+              const lockfileV9: ILockfile | null = (await lockfileFsV9.readWantedLockfile(
+                pnpmLockFolder,
+                options
+                // TODO: pnpm-sync-lib.d.ts was at some point generalized to support multiple lockfile formats,
+                // however its API still returns a single "ILockfile" that is incompatible with the newer interfaces
+              )) as ILockfile | null;
+
+              if (lockfileV9?.lockfileVersion.toString().startsWith('9')) {
+                return lockfileV9;
               }
 
-              const result: ILockfile = {
-                lockfileVersion: wantedPnpmLockfile.shrinkwrapFileMajorVersion,
-                importers: Object.fromEntries(wantedPnpmLockfile.importers.entries()),
-                packages: lockfilePackages
-              };
+              const { lockfileFs: lockfileFsV6 } = await import('@rushstack/rush-pnpm-kit-v8');
+              const lockfileV6: ILockfile | null = await lockfileFsV6.readWantedLockfile(
+                pnpmLockFolder,
+                options
+              );
 
-              return result;
-            }
-          },
-          logMessageCallback: (logMessageOptions: ILogMessageCallbackOptions) =>
-            PnpmSyncUtilities.processLogMessage(logMessageOptions, this._terminal)
-        });
+              if (lockfileV6?.lockfileVersion.toString().startsWith('6')) {
+                return lockfileV6;
+              }
+
+              return undefined;
+            },
+            logMessageCallback: (logMessageOptions: ILogMessageCallbackOptions) =>
+              PnpmSyncUtilities.processLogMessage(logMessageOptions, this._terminal)
+          });
+        }
       }
 
       // clean up the out of date .pnpm-sync.json
@@ -444,7 +458,12 @@ export abstract class BaseInstallManager {
     // Check the policies
     await PolicyValidator.validatePolicyAsync(this.rushConfiguration, subspace, variant, this.options);
 
-    await this._installGitHooksAsync();
+    // Fail fast if there are undeclared cycles in the workspace package dependency graph.
+    // Pnpm cannot install a workspace with cycles, so this gives a clearer error message
+    // than whatever pnpm would emit.
+    detectAndReportWorkspaceCycles(this.rushConfiguration, terminal);
+
+    await this.#installGitHooksAsync();
 
     const approvedPackagesChecker: ApprovedPackagesChecker = new ApprovedPackagesChecker(
       this.rushConfiguration
@@ -473,12 +492,13 @@ export abstract class BaseInstallManager {
 
     // (If it's a full update, then we ignore the shrinkwrap from Git since it will be overwritten)
     if (!this.options.fullUpgrade) {
-      const committedShrinkwrapFileName: string = subspace.getCommittedShrinkwrapFilePath(variant);
+      const shrinkwrapFilePath: string = subspace.getCommittedShrinkwrapFilePath(variant);
       try {
-        shrinkwrapFile = ShrinkwrapFileFactory.getShrinkwrapFile(
-          this.rushConfiguration.packageManager,
-          committedShrinkwrapFileName
-        );
+        shrinkwrapFile = ShrinkwrapFileFactory.getShrinkwrapFile({
+          packageManager: this.rushConfiguration.packageManager,
+          shrinkwrapFilePath,
+          subspaceHasNoProjects: subspace.getProjects().length === 0
+        });
       } catch (ex) {
         terminal.writeLine();
         terminal.writeLine(
@@ -538,6 +558,9 @@ export abstract class BaseInstallManager {
         extraNpmrcLines.push(...commonNpmrcFileLines);
       }
 
+      // NOTE: pnpm 11+ only reads auth/registry settings from .npmrc, so it ignores this line;
+      // for pnpm 11+ the global pnpmfile path is emitted via the generated pnpm-workspace.yaml
+      // instead (see InstallHelpers.resolvePnpmSettings). The line is kept for pnpm 10 and earlier.
       extraNpmrcLines.push(
         `global-pnpmfile=${subspace.getSubspaceTempFolderPath()}/${RushConstants.pnpmfileGlobalFilename}`
       );
@@ -546,14 +569,40 @@ export abstract class BaseInstallManager {
     // Also copy down the committed .npmrc file, if there is one
     // "common\config\rush\.npmrc" --> "common\temp\.npmrc"
     // Also ensure that we remove any old one that may be hanging around
+    const {
+      isPnpm,
+      packageManagerToolVersion,
+      experimentsConfiguration: {
+        configuration: { provideNpmrcCredentialsViaEnvironment }
+      }
+    } = this.rushConfiguration;
+    const shouldWarnAboutIgnoredEnvironmentVariables: boolean | undefined =
+      isPnpm && provideNpmrcCredentialsViaEnvironment && semver.gte(packageManagerToolVersion, '11.6.0');
+    const environmentVariableSettingNames: Set<string> | undefined =
+      shouldWarnAboutIgnoredEnvironmentVariables ? new Set() : undefined;
     const npmrcText: string | undefined = Utilities.syncNpmrc({
       sourceNpmrcFolder: subspace.getSubspaceConfigFolderPath(),
       targetNpmrcFolder: subspace.getSubspaceTempFolderPath(),
       linesToPrepend: extraNpmrcLines,
       createIfMissing: this.rushConfiguration.subspacesFeatureEnabled,
-      supportEnvVarFallbackSyntax: this.rushConfiguration.isPnpm
+      supportEnvVarFallbackSyntax: this.rushConfiguration.isPnpm,
+      moveSensitiveSettingsToEnvironment: InstallHelpers.shouldProvideNpmrcCredentialsViaEnvironment(
+        this.rushConfiguration
+      ),
+      environmentVariableSettingNames
     });
-    this._syncNpmrcAlreadyCalled = true;
+    this.#syncNpmrcAlreadyCalled = true;
+
+    if (environmentVariableSettingNames?.size) {
+      terminal.writeWarningLine(
+        `The "provideNpmrcCredentialsViaEnvironment" experiment does not translate project ` +
+          `.npmrc settings for PNPM ${packageManagerToolVersion}. PNPM will ignore environment ` +
+          `variables in these settings: ${Array.from(environmentVariableSettingNames).join(', ')}. ` +
+          `Supply credentials using URL-scoped "pnpm_config_//..." environment variables, or move ` +
+          `the settings to trusted user, global, CLI, or environment configuration. See the PNPM ` +
+          `11.6.0 section in the Rush upgrade notes.`
+      );
+    }
 
     const npmrcHash: string | undefined = npmrcText
       ? crypto.createHash('sha1').update(npmrcText).digest('hex')
@@ -640,7 +689,7 @@ export abstract class BaseInstallManager {
       ]);
     shrinkwrapIsUpToDate = shrinkwrapIsUpToDate && !this.options.recheckShrinkwrap;
 
-    this._syncTempShrinkwrap(subspace, variant, shrinkwrapFile);
+    this.#syncTempShrinkwrap(subspace, variant, shrinkwrapFile);
 
     // Write out the reported warnings
     if (shrinkwrapWarnings.length > 0) {
@@ -690,7 +739,7 @@ export abstract class BaseInstallManager {
   /**
    * Git hooks are only installed if the repo opts in by including files in /common/git-hooks
    */
-  private async _installGitHooksAsync(): Promise<void> {
+  async #installGitHooksAsync(): Promise<void> {
     const hookSource: string = path.join(this.rushConfiguration.commonFolder, 'git-hooks');
     const git: Git = new Git(this.rushConfiguration);
     const hookDestination: string | undefined = git.getHooksFolder();
@@ -769,7 +818,7 @@ fi
 `
             : '';
 
-          const hookFileContent: string = `#!/bin/bash
+          const hookFileContent: string = `#!/usr/bin/env bash
 set -e
 SCRIPT_DIR="$( cd "$( dirname "\${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 SCRIPT_IMPLEMENTATION_PATH="$SCRIPT_DIR/${hookRelativePath}/${filename}"
@@ -919,10 +968,13 @@ ${gitLfsHookHandling}
         args.push('--resolution-only');
       }
 
+      const pnpmVersion: string = this.rushConfiguration.packageManagerToolVersion;
+      const supportsNpmrcSettings: boolean = semver.lt(pnpmVersion, '11.0.0');
+
       /*
         If user set auto-install-peers in pnpm-config.json only, use the value in pnpm-config.json
         If user set auto-install-peers in pnpm-config.json and .npmrc, use the value in pnpm-config.json
-        If user set auto-install-peers in .npmrc only, do nothing, let pnpm handle it
+        For PNPM 10 and earlier, if user set auto-install-peers in .npmrc only, let pnpm handle it
         If user does not set auto-install-peers in both pnpm-config.json and .npmrc, rush will default it to "false"
       */
       const isAutoInstallPeersInNpmrc: boolean = isVariableSetInNpmrcFile(
@@ -931,16 +983,23 @@ ${gitLfsHookHandling}
         this.rushConfiguration.isPnpm
       );
 
+      if (isAutoInstallPeersInNpmrc && !supportsNpmrcSettings) {
+        this._terminal.writeWarningLine(
+          `PNPM ${pnpmVersion} ignores "auto-install-peers" in .npmrc. ` +
+            'Set "autoInstallPeers" in pnpm-config.json instead.'
+        );
+      }
+
       let autoInstallPeers: boolean | undefined = this.rushConfiguration.pnpmOptions.autoInstallPeers;
       if (autoInstallPeers !== undefined) {
-        if (isAutoInstallPeersInNpmrc) {
+        if (isAutoInstallPeersInNpmrc && supportsNpmrcSettings) {
           this._terminal.writeWarningLine(
             `Warning: PNPM's auto-install-peers is specified in both .npmrc and pnpm-config.json. ` +
               `The value in pnpm-config.json will take precedence.`
           );
         }
-      } else if (!isAutoInstallPeersInNpmrc) {
-        // if auto-install-peers isn't specified in either .npmrc or pnpm-config.json,
+      } else if (!isAutoInstallPeersInNpmrc || !supportsNpmrcSettings) {
+        // If auto-install-peers isn't specified in a supported configuration,
         // then rush will default it to "false"
         autoInstallPeers = false;
       }
@@ -951,7 +1010,7 @@ ${gitLfsHookHandling}
       /*
         If user set resolution-mode in pnpm-config.json only, use the value in pnpm-config.json
         If user set resolution-mode in pnpm-config.json and .npmrc, use the value in pnpm-config.json
-        If user set resolution-mode in .npmrc only, do nothing, let pnpm handle it
+        For PNPM 10 and earlier, if user set resolution-mode in .npmrc only, let pnpm handle it
         If user does not set resolution-mode in pnpm-config.json and .npmrc, rush will default it to "highest"
       */
       const isResolutionModeInNpmrc: boolean = isVariableSetInNpmrcFile(
@@ -960,16 +1019,23 @@ ${gitLfsHookHandling}
         this.rushConfiguration.isPnpm
       );
 
+      if (isResolutionModeInNpmrc && !supportsNpmrcSettings) {
+        this._terminal.writeWarningLine(
+          `PNPM ${pnpmVersion} ignores "resolution-mode" in .npmrc. ` +
+            'Set "resolutionMode" in pnpm-config.json instead.'
+        );
+      }
+
       let resolutionMode: PnpmResolutionMode | undefined = this.rushConfiguration.pnpmOptions.resolutionMode;
       if (resolutionMode) {
-        if (isResolutionModeInNpmrc) {
+        if (isResolutionModeInNpmrc && supportsNpmrcSettings) {
           this._terminal.writeWarningLine(
             `Warning: PNPM's resolution-mode is specified in both .npmrc and pnpm-config.json. ` +
               `The value in pnpm-config.json will take precedence.`
           );
         }
-      } else if (!isResolutionModeInNpmrc) {
-        // if resolution-mode isn't specified in either .npmrc or pnpm-config.json,
+      } else if (!isResolutionModeInNpmrc || !supportsNpmrcSettings) {
+        // If resolution-mode isn't specified in a supported configuration,
         // then rush will default it to "highest"
         resolutionMode = 'highest';
       }
@@ -994,7 +1060,12 @@ ${gitLfsHookHandling}
         semver.gte(this.rushConfiguration.packageManagerToolVersion, '7.9.0') ||
         semver.satisfies(this.rushConfiguration.packageManagerToolVersion, '^6.34.0')
       ) {
-        args.push(pnpmIgnoreCompatibilityDbParameter);
+        // Native PNPM does not interpret a custom config flag without a value as true.
+        args.push(
+          semver.gte(pnpmVersion, '12.0.0')
+            ? `${pnpmIgnoreCompatibilityDbParameter}=true`
+            : pnpmIgnoreCompatibilityDbParameter
+        );
       }
     } else if (this.rushConfiguration.packageManager === 'yarn') {
       args.push('--link-folder', 'yarn-link');
@@ -1018,7 +1089,7 @@ ${gitLfsHookHandling}
     }
   }
 
-  private async _checkIfReleaseIsPublishedAsync(): Promise<boolean> {
+  async #checkIfReleaseIsPublishedAsync(): Promise<boolean> {
     const lastCheckFile: string = path.join(
       this.rushGlobalFolder.nodeSpecificPath,
       'rush-' + Rush.version,
@@ -1056,7 +1127,7 @@ ${gitLfsHookHandling}
 
     try {
       // For this check we use the official registry, not the private registry
-      const publishedRelease: boolean = await this._queryIfReleaseIsPublishedAsync(
+      const publishedRelease: boolean = await this.#queryIfReleaseIsPublishedAsync(
         'https://registry.npmjs.org:443'
       );
       // Cache the result
@@ -1069,7 +1140,7 @@ ${gitLfsHookHandling}
   }
 
   // Helper for checkIfReleaseIsPublished()
-  private async _queryIfReleaseIsPublishedAsync(registryUrl: string): Promise<boolean> {
+  async #queryIfReleaseIsPublishedAsync(registryUrl: string): Promise<boolean> {
     let queryUrl: string = registryUrl;
     if (queryUrl[-1] !== '/') {
       queryUrl += '/';
@@ -1121,7 +1192,7 @@ ${gitLfsHookHandling}
     return true;
   }
 
-  private _syncTempShrinkwrap(
+  #syncTempShrinkwrap(
     subspace: Subspace,
     variant: string | undefined,
     shrinkwrapFile: BaseShrinkwrapFile | undefined
@@ -1152,7 +1223,7 @@ ${gitLfsHookHandling}
   }
 
   protected async validateNpmSetupAsync(): Promise<void> {
-    if (this._npmSetupValidated) {
+    if (this.#npmSetupValidated) {
       return;
     }
 
@@ -1160,7 +1231,7 @@ ${gitLfsHookHandling}
       const setupPackageRegistry: SetupPackageRegistry = new SetupPackageRegistry({
         rushConfiguration: this.rushConfiguration,
         isDebug: this.options.debug,
-        syncNpmrcAlreadyCalled: this._syncNpmrcAlreadyCalled
+        syncNpmrcAlreadyCalled: this.#syncNpmrcAlreadyCalled
       });
       const valid: boolean = await setupPackageRegistry.checkOnlyAsync();
       if (!valid) {
@@ -1181,6 +1252,6 @@ ${gitLfsHookHandling}
       }
     }
 
-    this._npmSetupValidated = true;
+    this.#npmSetupValidated = true;
   }
 }

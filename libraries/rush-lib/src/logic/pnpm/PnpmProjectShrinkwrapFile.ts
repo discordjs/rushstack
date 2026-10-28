@@ -107,18 +107,18 @@ export class PnpmProjectShrinkwrapFile extends BaseProjectShrinkwrapFile<PnpmShr
       if (name.indexOf(`${RushConstants.rushTempNpmScope}/`) < 0) {
         // Only select the shrinkwrap dependencies that are non-local since we already handle local
         // project changes
-        this._addDependencyRecursive(projectShrinkwrapMap, name, version, parentShrinkwrapEntry);
+        this.#addDependencyRecursive(projectShrinkwrapMap, name, version, parentShrinkwrapEntry);
       }
     }
 
     // Since peer dependencies within on external packages may be hoisted up to the top-level package,
     // we need to resolve and add these dependencies directly
-    this._resolveAndAddPeerDependencies(projectShrinkwrapMap, parentShrinkwrapEntry);
+    this.#resolveAndAddPeerDependencies(projectShrinkwrapMap, parentShrinkwrapEntry);
 
     return projectShrinkwrapMap;
   }
 
-  private _addDependencyRecursive(
+  #addDependencyRecursive(
     projectShrinkwrapMap: Map<string, string>,
     name: string,
     version: IPnpmVersionSpecifier,
@@ -143,35 +143,30 @@ export class PnpmProjectShrinkwrapFile extends BaseProjectShrinkwrapFile<PnpmShr
       return;
     }
 
-    let integrity: string | undefined = shrinkwrapEntry.resolution?.integrity;
-    if (!integrity) {
-      // git dependency specifiers do not have an integrity entry. Instead, they specify the tarball field.
-      // So instead, we will hash the contents of the dependency entry and use that as the integrity hash.
-      // Ex:
-      // github.com/chfritz/node-xmlrpc/948db2fbd0260e5d56ed5ba58df0f5b6599bbe38:
-      //   ...
-      //   resolution:
-      //     tarball: 'https://codeload.github.com/chfritz/node-xmlrpc/tar.gz/948db2fbd0260e5d56ed5ba58df0f5b6599bbe38'
-      const sha256Digest: string = crypto
-        .createHash('sha256')
-        .update(JSON.stringify(shrinkwrapEntry))
-        .digest('hex');
-      integrity = `${name}@${version}:${sha256Digest}:`;
-    }
+    // Hash the full shrinkwrap entry instead of using just resolution.integrity.
+    // This ensures that changes to sub-dependency resolutions are detected.
+    // For example, if package A depends on B@1.0 and B@1.0's resolution of C changes
+    // from C@1.3 to C@1.2, the hash of A's shrinkwrap entry will change because
+    // the dependencies field in the entry reflects the resolved versions.
+    const sha256Digest: string = crypto
+      .createHash('sha256')
+      .update(JSON.stringify(shrinkwrapEntry))
+      .digest('hex');
+    const integrity: string = `${name}@${version}:${sha256Digest}:`;
 
     // Add the current dependency
     projectShrinkwrapMap.set(specifier, integrity);
 
     // Add the dependencies of the dependency
     for (const [dependencyName, dependencyVersion] of Object.entries(shrinkwrapEntry.dependencies || {})) {
-      this._addDependencyRecursive(projectShrinkwrapMap, dependencyName, dependencyVersion, shrinkwrapEntry);
+      this.#addDependencyRecursive(projectShrinkwrapMap, dependencyName, dependencyVersion, shrinkwrapEntry);
     }
 
     // Add the optional dependencies of the dependency, and don't blow up if they don't exist
     for (const [dependencyName, dependencyVersion] of Object.entries(
       shrinkwrapEntry.optionalDependencies || {}
     )) {
-      this._addDependencyRecursive(
+      this.#addDependencyRecursive(
         projectShrinkwrapMap,
         dependencyName,
         dependencyVersion,
@@ -185,11 +180,11 @@ export class PnpmProjectShrinkwrapFile extends BaseProjectShrinkwrapFile<PnpmShr
     // is no need to look for peer dependencies, since it is simply a constraint to be validated by the
     // package manager.
     if (!this.shrinkwrapFile.isWorkspaceCompatible) {
-      this._resolveAndAddPeerDependencies(projectShrinkwrapMap, shrinkwrapEntry, parentShrinkwrapEntry);
+      this.#resolveAndAddPeerDependencies(projectShrinkwrapMap, shrinkwrapEntry, parentShrinkwrapEntry);
     }
   }
 
-  private _resolveAndAddPeerDependencies(
+  #resolveAndAddPeerDependencies(
     projectShrinkwrapMap: Map<string, string>,
     shrinkwrapEntry: IPnpmShrinkwrapDependencyYaml,
     parentShrinkwrapEntry?: IPnpmShrinkwrapDependencyYaml
@@ -220,7 +215,7 @@ export class PnpmProjectShrinkwrapFile extends BaseProjectShrinkwrapFile<PnpmShr
         this.shrinkwrapFile.getTopLevelDependencyVersion(peerDependencyName);
 
       if (topLevelDependencySpecifier) {
-        this._addDependencyRecursive(
+        this.#addDependencyRecursive(
           projectShrinkwrapMap,
           peerDependencyName,
           this.shrinkwrapFile.getTopLevelDependencyKey(peerDependencyName)!,

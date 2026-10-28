@@ -27,6 +27,26 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "@inquirer/checkbox",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@inquirer/confirm",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@inquirer/input",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@inquirer/search",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@inquirer/select",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@jest/core",
       "allowedCategories": [ "libraries" ]
     },
@@ -63,6 +83,10 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "@microsoft/rush",
+      "allowedCategories": [ "libraries", "tests" ]
+    },
+    {
       "name": "@microsoft/rush-lib",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
     },
@@ -91,6 +115,10 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "@playwright/test",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@pnpm/dependency-path",
       "allowedCategories": [ "libraries" ]
     },
@@ -103,7 +131,15 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "@pnpm/lockfile-file",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@pnpm/lockfile-types",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@pnpm/lockfile.fs",
       "allowedCategories": [ "libraries" ]
     },
     {
@@ -208,7 +244,7 @@
     },
     {
       "name": "@rushstack/heft-rspack-plugin",
-      "allowedCategories": [ "tests" ]
+      "allowedCategories": [ "libraries", "tests" ]
     },
     {
       "name": "@rushstack/heft-sass-load-themed-styles-plugin",
@@ -221,6 +257,10 @@
     {
       "name": "@rushstack/heft-serverless-stack-plugin",
       "allowedCategories": [ "tests" ]
+    },
+    {
+      "name": "@rushstack/heft-static-asset-typings-plugin",
+      "allowedCategories": [ "libraries", "tests" ]
     },
     {
       "name": "@rushstack/heft-storybook-plugin",
@@ -291,6 +331,10 @@
       "allowedCategories": [ "libraries", "vscode-extensions" ]
     },
     {
+      "name": "@rushstack/playwright-browser-tunnel",
+      "allowedCategories": [ "vscode-extensions" ]
+    },
+    {
       "name": "@rushstack/real-node-module-path",
       "allowedCategories": [ "libraries" ]
     },
@@ -315,6 +359,18 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "@rushstack/rush-pnpm-kit-v10",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@rushstack/rush-pnpm-kit-v8",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@rushstack/rush-pnpm-kit-v9",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@rushstack/rush-redis-cobuild-plugin",
       "allowedCategories": [ "tests" ]
     },
@@ -325,6 +381,10 @@
     {
       "name": "@rushstack/rush-sdk",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
+    },
+    {
+      "name": "@rushstack/rush-serve-plugin",
+      "allowedCategories": [ "libraries" ]
     },
     {
       "name": "@rushstack/set-webpack-public-path-plugin",
@@ -435,12 +495,20 @@
       "allowedCategories": [ "tests" ]
     },
     {
+      "name": "@storybook/react-webpack5",
+      "allowedCategories": [ "libraries", "tests" ]
+    },
+    {
       "name": "@storybook/theming",
       "allowedCategories": [ "tests" ]
     },
     {
       "name": "@swc/core",
       "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@testing-library/dom",
+      "allowedCategories": [ "tests" ]
     },
     {
       "name": "@tsconfig/node14",
@@ -539,19 +607,11 @@
       "allowedCategories": [ "tests" ]
     },
     {
-      "name": "builtin-modules",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
       "name": "buttono",
       "allowedCategories": [ "tests" ]
     },
     {
       "name": "chokidar",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
-      "name": "cli-table",
       "allowedCategories": [ "libraries" ]
     },
     {
@@ -651,10 +711,6 @@
       "allowedCategories": [ "tests" ]
     },
     {
-      "name": "figures",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
       "name": "file-loader",
       "allowedCategories": [ "tests" ]
     },
@@ -667,16 +723,8 @@
       "allowedCategories": [ "libraries" ]
     },
     {
-      "name": "giturl",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
       "name": "glob",
       "allowedCategories": [ "libraries", "vscode-extensions" ]
-    },
-    {
-      "name": "glob-escape",
-      "allowedCategories": [ "libraries" ]
     },
     {
       "name": "heft-action-plugin",
@@ -703,15 +751,19 @@
       "allowedCategories": [ "tests" ]
     },
     {
-      "name": "heft-storybook-react-tutorial",
+      "name": "heft-storybook-v6-react-tutorial",
       "allowedCategories": [ "tests" ]
     },
     {
-      "name": "heft-storybook-react-tutorial-storybook",
+      "name": "heft-storybook-v6-react-tutorial-storykit",
       "allowedCategories": [ "tests" ]
     },
     {
-      "name": "heft-storybook-react-tutorial-storykit",
+      "name": "heft-storybook-v9-react-tutorial",
+      "allowedCategories": [ "tests" ]
+    },
+    {
+      "name": "heft-storybook-v9-react-tutorial-storykit",
       "allowedCategories": [ "tests" ]
     },
     {
@@ -744,10 +796,6 @@
     },
     {
       "name": "import-lazy",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
-      "name": "inquirer",
       "allowedCategories": [ "libraries" ]
     },
     {
@@ -820,11 +868,7 @@
     },
     {
       "name": "local-web-rig",
-      "allowedCategories": [ "libraries", "vscode-extensions" ]
-    },
-    {
-      "name": "lodash",
-      "allowedCategories": [ "libraries", "tests" ]
+      "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
     },
     {
       "name": "long",
@@ -875,10 +919,6 @@
       "allowedCategories": [ "libraries" ]
     },
     {
-      "name": "open",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
       "name": "package-extractor-test-02",
       "allowedCategories": [ "tests" ]
     },
@@ -889,6 +929,14 @@
     {
       "name": "package-json",
       "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "playwright",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "playwright-core",
+      "allowedCategories": [ "libraries", "vscode-extensions" ]
     },
     {
       "name": "pnpm-sync-lib",
@@ -924,6 +972,10 @@
     },
     {
       "name": "resolve",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "resolve-pkg-maps",
       "allowedCategories": [ "libraries" ]
     },
     {
@@ -963,15 +1015,15 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "storybook",
+      "allowedCategories": [ "tests" ]
+    },
+    {
       "name": "strict-uri-encode",
       "allowedCategories": [ "libraries" ]
     },
     {
       "name": "string-argv",
-      "allowedCategories": [ "libraries" ]
-    },
-    {
-      "name": "strip-json-comments",
       "allowedCategories": [ "libraries" ]
     },
     {
@@ -1033,10 +1085,6 @@
     {
       "name": "typescript",
       "allowedCategories": [ "libraries", "tests", "vscode-extensions" ]
-    },
-    {
-      "name": "update-notifier",
-      "allowedCategories": [ "libraries" ]
     },
     {
       "name": "url-loader",

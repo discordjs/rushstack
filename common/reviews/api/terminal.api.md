@@ -105,6 +105,20 @@ export class DiscardStdoutTransform extends TerminalTransform {
     protected onWriteChunk(chunk: ITerminalChunk): void;
 }
 
+// @beta (undocumented)
+export interface IAllStringBufferOutput {
+    // (undocumented)
+    debug: string;
+    // (undocumented)
+    error: string;
+    // (undocumented)
+    log: string;
+    // (undocumented)
+    verbose: string;
+    // (undocumented)
+    warning: string;
+}
+
 // @public
 export interface IAnsiEscapeConvertForTestsOptions {
     encodeNewlines?: boolean;
@@ -138,11 +152,26 @@ export interface INormalizeNewlinesTextRewriterOptions {
 }
 
 // @beta (undocumented)
+export interface IOutputChunk {
+    // (undocumented)
+    severity: TerminalProviderSeverityName;
+    // (undocumented)
+    text: string;
+}
+
+// @beta (undocumented)
 export type IPrefixProxyTerminalProviderOptions = IStaticPrefixProxyTerminalProviderOptions | IDynamicPrefixProxyTerminalProviderOptions;
 
 // @beta (undocumented)
 export interface IPrefixProxyTerminalProviderOptionsBase {
     terminalProvider: ITerminalProvider;
+}
+
+// @public
+export interface IPrintMessageInBoxOptions {
+    borderColor?: (text: string) => string;
+    boxWidth?: number;
+    messageColor?: (text: string) => string;
 }
 
 // @beta
@@ -179,8 +208,13 @@ export interface IStdioSummarizerOptions extends ITerminalWritableOptions {
 }
 
 // @beta (undocumented)
+export interface IStringBufferOutputChunksOptions extends IStringBufferOutputOptions {
+    asLines?: boolean;
+}
+
+// @beta (undocumented)
 export interface IStringBufferOutputOptions {
-    normalizeSpecialCharacters: boolean;
+    normalizeSpecialCharacters?: boolean;
 }
 
 // @beta (undocumented)
@@ -217,6 +251,35 @@ export interface ITerminalStreamWritableOptions {
     severity: TerminalProviderSeverity;
     terminal: ITerminal;
     writableOptions?: WritableOptions;
+}
+
+// @public
+export interface ITerminalTableChars {
+    bottom: string;
+    bottomCenter: string;
+    bottomLeft: string;
+    bottomRight: string;
+    centerCenter: string;
+    horizontalCenter: string;
+    left: string;
+    leftCenter: string;
+    right: string;
+    rightCenter: string;
+    top: string;
+    topCenter: string;
+    topLeft: string;
+    topRight: string;
+    verticalCenter: string;
+}
+
+// @public
+export interface ITerminalTableOptions {
+    borderCharacters?: Partial<ITerminalTableChars>;
+    borderColor?: (text: string) => string;
+    borderless?: boolean;
+    colWidths?: number[];
+    head?: string[];
+    headingColor?: (text: string) => string;
 }
 
 // @public
@@ -281,11 +344,11 @@ export class NormalizeNewlinesTextRewriter extends TextRewriter {
 // @beta
 export class PrefixProxyTerminalProvider implements ITerminalProvider {
     constructor(options: IPrefixProxyTerminalProviderOptions);
-    // @override (undocumented)
+    // (undocumented)
     get eolCharacter(): string;
-    // @override (undocumented)
+    // (undocumented)
     get supportsColor(): boolean;
-    // @override (undocumented)
+    // (undocumented)
     write(data: string, severity: TerminalProviderSeverity): void;
 }
 
@@ -293,6 +356,10 @@ export class PrefixProxyTerminalProvider implements ITerminalProvider {
 export class PrintUtilities {
     static getConsoleWidth(): number | undefined;
     // Warning: (ae-incompatible-release-tags) The symbol "printMessageInBox" is marked as @public, but its signature references "ITerminal" which is marked as @beta
+    static printMessageInBox(message: string, terminal: ITerminal, options?: IPrintMessageInBoxOptions): void;
+    // Warning: (ae-incompatible-release-tags) The symbol "printMessageInBox" is marked as @public, but its signature references "ITerminal" which is marked as @beta
+    //
+    // @deprecated (undocumented)
     static printMessageInBox(message: string, terminal: ITerminal, boxWidth?: number): void;
     static wrapWords(text: string, maxLineLength?: number, indent?: number): string;
     static wrapWords(text: string, maxLineLength?: number, linePrefix?: string): string;
@@ -364,6 +431,16 @@ export class StdioWritable extends TerminalWritable {
 export class StringBufferTerminalProvider implements ITerminalProvider {
     constructor(supportsColor?: boolean);
     get eolCharacter(): string;
+    getAllOutput(sparse?: false, options?: IStringBufferOutputOptions): IAllStringBufferOutput;
+    // (undocumented)
+    getAllOutput(sparse: true, options?: IStringBufferOutputOptions): Partial<IAllStringBufferOutput>;
+    getAllOutputAsChunks(options?: IStringBufferOutputChunksOptions & {
+        asLines?: false;
+    }): IOutputChunk[];
+    // (undocumented)
+    getAllOutputAsChunks(options: IStringBufferOutputChunksOptions & {
+        asLines: true;
+    }): `[${string}] ${string}`[];
     getDebugOutput(options?: IStringBufferOutputOptions): string;
     getErrorOutput(options?: IStringBufferOutputOptions): string;
     getOutput(options?: IStringBufferOutputOptions): string;
@@ -371,8 +448,8 @@ export class StringBufferTerminalProvider implements ITerminalProvider {
     getVerbose(options?: IStringBufferOutputOptions): string;
     getVerboseOutput(options?: IStringBufferOutputOptions): string;
     getWarningOutput(options?: IStringBufferOutputOptions): string;
-    get supportsColor(): boolean;
-    write(data: string, severity: TerminalProviderSeverity): void;
+    readonly supportsColor: boolean;
+    write(text: string, severity: TerminalProviderSeverity): void;
 }
 
 // @beta
@@ -412,6 +489,9 @@ export enum TerminalProviderSeverity {
     warning = 1
 }
 
+// @beta (undocumented)
+export type TerminalProviderSeverityName = keyof typeof TerminalProviderSeverity;
+
 // @beta
 export class TerminalStreamWritable extends Writable {
     constructor(options: ITerminalStreamWritableOptions);
@@ -420,12 +500,23 @@ export class TerminalStreamWritable extends Writable {
 }
 
 // @public
+export class TerminalTable {
+    constructor(options?: ITerminalTableOptions);
+    // (undocumented)
+    getLines(): string[];
+    // Warning: (ae-incompatible-release-tags) The symbol "printToTerminal" is marked as @public, but its signature references "ITerminal" which is marked as @beta
+    printToTerminal(terminal: ITerminal): void;
+    push(...rows: string[][]): void;
+    toString(): string;
+}
+
+// @public
 export abstract class TerminalTransform extends TerminalWritable {
     constructor(options: ITerminalTransformOptions);
     // @sealed
     protected autocloseDestination(): void;
     readonly destination: TerminalWritable;
-    // @override (undocumented)
+    // (undocumented)
     protected onClose(): void;
     readonly preventDestinationAutoclose: boolean;
 }

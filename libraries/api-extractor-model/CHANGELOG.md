@@ -1,6 +1,114 @@
 # Change Log - @microsoft/api-extractor-model
 
-This log was last generated on Fri, 24 Oct 2025 00:13:38 GMT and should not be manually modified.
+This log was last generated on Tue, 06 Oct 2026 00:04:37 GMT and should not be manually modified.
+
+## 7.33.15
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 7.33.14
+Mon, 28 Sep 2026 20:08:26 GMT
+
+_Version update only_
+
+## 7.33.13
+Tue, 22 Sep 2026 17:35:41 GMT
+
+### Patches
+
+- Update the `@microsoft/tsdoc` dependency to `~0.17.0` and the `@microsoft/tsdoc-config` dependency to `~0.18.2`.
+
+## 7.33.12
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 7.33.11
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 7.33.10
+Fri, 17 Jul 2026 00:15:59 GMT
+
+### Patches
+
+- Replace `@override` with the `override` keyword.
+
+## 7.33.9
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 7.33.8
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 7.33.7
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 7.33.6
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 7.33.5
+Tue, 31 Mar 2026 15:14:14 GMT
+
+_Version update only_
+
+## 7.33.4
+Wed, 25 Feb 2026 21:39:42 GMT
+
+### Patches
+
+- Bump `@microsoft/tsdoc-config` to `~0.18.1` to mitigate CVE-2025-69873.
+
+## 7.33.3
+Wed, 25 Feb 2026 00:34:30 GMT
+
+_Version update only_
+
+## 7.33.2
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 7.33.1
+Fri, 20 Feb 2026 00:15:03 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 7.33.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 7.32.2
+Sat, 06 Dec 2025 01:12:29 GMT
+
+_Version update only_
+
+## 7.32.1
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 7.32.0
+Wed, 12 Nov 2025 01:12:56 GMT
+
+### Minor changes
+
+- Bump the `@microsoft/tsdoc` dependency to `~0.16.0`.
+- Bump the `@microsoft/tsdoc-config` dependency to `~0.18.0`.
 
 ## 7.31.3
 Fri, 24 Oct 2025 00:13:38 GMT

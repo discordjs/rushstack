@@ -1,6 +1,270 @@
 # Change Log - @rushstack/heft-vscode-extension-rig
 
-This log was last generated on Tue, 04 Nov 2025 08:15:14 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 1.1.58
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 1.1.57
+Wed, 14 Oct 2026 00:20:26 GMT
+
+_Version update only_
+
+## 1.1.56
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 1.1.55
+Mon, 28 Sep 2026 20:08:26 GMT
+
+_Version update only_
+
+## 1.1.54
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 1.1.53
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 1.1.52
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 1.1.51
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 1.1.50
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 1.1.49
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 1.1.48
+Tue, 21 Jul 2026 02:53:22 GMT
+
+_Version update only_
+
+## 1.1.47
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 1.1.46
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 1.1.45
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 1.1.44
+Wed, 10 Jun 2026 00:15:42 GMT
+
+_Version update only_
+
+## 1.1.43
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 1.1.42
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 1.1.41
+Mon, 20 Apr 2026 15:15:24 GMT
+
+_Version update only_
+
+## 1.1.40
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 1.1.39
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 1.1.38
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 1.1.37
+Wed, 15 Apr 2026 17:59:12 GMT
+
+### Patches
+
+- Replace the `@types/heft-jest` types package with `@types/jest`. The `@types/jest` package now correctly includes the mocking typings.
+
+## 1.1.36
+Tue, 14 Apr 2026 01:25:46 GMT
+
+_Version update only_
+
+## 1.1.35
+Fri, 10 Apr 2026 22:46:34 GMT
+
+_Version update only_
+
+## 1.1.34
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 1.1.33
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 1.1.32
+Thu, 02 Apr 2026 00:14:38 GMT
+
+_Version update only_
+
+## 1.1.31
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 1.1.30
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 1.1.29
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 1.1.28
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 1.1.27
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 1.1.26
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 1.1.25
+Mon, 23 Feb 2026 00:42:21 GMT
+
+_Version update only_
+
+## 1.1.24
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 1.1.23
+Fri, 20 Feb 2026 00:15:04 GMT
+
+_Version update only_
+
+## 1.1.22
+Thu, 19 Feb 2026 01:30:06 GMT
+
+_Version update only_
+
+## 1.1.21
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Patches
+
+- Add `sideEffects` field to package.json.
+
+## 1.1.20
+Sat, 07 Feb 2026 01:13:26 GMT
+
+_Version update only_
+
+## 1.1.19
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 1.1.18
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 1.1.17
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 1.1.16
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 1.1.15
+Wed, 07 Jan 2026 01:12:24 GMT
+
+_Version update only_
+
+## 1.1.14
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 1.1.13
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 1.1.12
+Wed, 03 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 1.1.11
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 1.1.10
+Wed, 12 Nov 2025 01:57:54 GMT
+
+_Version update only_
+
+## 1.1.9
+Wed, 12 Nov 2025 01:12:56 GMT
+
+_Version update only_
+
+## 1.1.8
+Tue, 11 Nov 2025 16:13:26 GMT
+
+_Version update only_
+
+## 1.1.7
+Mon, 10 Nov 2025 16:12:32 GMT
+
+_Version update only_
 
 ## 1.1.6
 Tue, 04 Nov 2025 08:15:14 GMT

@@ -108,22 +108,30 @@ export class AstSymbol extends AstEntity {
    */
   public symbolMetadata: unknown;
 
-  private readonly _astDeclarations: AstDeclaration[];
+  readonly #astDeclarations: AstDeclaration[];
 
   // This flag is unused if this is not the root symbol.
   // Being "analyzed" is a property of the root symbol.
-  private _analyzed: boolean = false;
+  #analyzed: boolean = false;
 
   public constructor(options: IAstSymbolOptions) {
     super();
 
-    this.followedSymbol = options.followedSymbol;
-    this.localName = options.localName;
-    this.isExternal = options.isExternal;
-    this.nominalAnalysis = options.nominalAnalysis;
-    this.parentAstSymbol = options.parentAstSymbol;
-    this.rootAstSymbol = options.rootAstSymbol || this;
-    this._astDeclarations = [];
+    const {
+      followedSymbol,
+      localName,
+      isExternal,
+      nominalAnalysis,
+      parentAstSymbol,
+      rootAstSymbol = this
+    } = options;
+    this.followedSymbol = followedSymbol;
+    this.localName = localName;
+    this.isExternal = isExternal;
+    this.nominalAnalysis = nominalAnalysis;
+    this.parentAstSymbol = parentAstSymbol;
+    this.rootAstSymbol = rootAstSymbol;
+    this.#astDeclarations = [];
   }
 
   /**
@@ -135,7 +143,7 @@ export class AstSymbol extends AstEntity {
    * declaration merging.
    */
   public get astDeclarations(): ReadonlyArray<AstDeclaration> {
-    return this._astDeclarations;
+    return this.#astDeclarations;
   }
 
   /**
@@ -146,7 +154,7 @@ export class AstSymbol extends AstEntity {
    * returns true if-and-only-if the root symbol was analyzed.
    */
   public get analyzed(): boolean {
-    return this.rootAstSymbol._analyzed;
+    return this.rootAstSymbol.#analyzed;
   }
 
   /**
@@ -158,7 +166,7 @@ export class AstSymbol extends AstEntity {
     if (this.analyzed) {
       throw new InternalError('_notifyDeclarationAttach() called after analysis is already complete');
     }
-    this._astDeclarations.push(astDeclaration);
+    this.#astDeclarations.push(astDeclaration);
   }
 
   /**
@@ -170,7 +178,7 @@ export class AstSymbol extends AstEntity {
     if (this.parentAstSymbol) {
       throw new InternalError('_notifyAnalyzed() called for an AstSymbol which is not the root');
     }
-    this._analyzed = true;
+    this.#analyzed = true;
   }
 
   /**

@@ -6,13 +6,16 @@
   "compilerOptions": {
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "target": "es2018",
+    "noImplicitOverride": true,
+    "target": "es2022",
+    "lib": ["es2022"],
 
-    "outDir": "../../../../lib",
-    "rootDir": "../../../../src",
+    "outDir": "${configDir}/lib-commonjs",
+    "declarationDir": "${configDir}/lib-dts",
+    "rootDir": "${configDir}/src",
 
-    "types": ["heft-jest", "node"],
-    "typeRoots": ["../../../../node_modules/@types", "../../node_modules/@types"]
+    "types": ["jest", "node"],
+    "typeRoots": ["${configDir}/node_modules/@types", "../../node_modules/@types"]
   },
-  "include": ["../../../../src/**/*.ts", "../../../../src/**/*.tsx"]
+  "include": ["${configDir}/src/**/*.ts", "${configDir}/src/**/*.tsx"]
 }

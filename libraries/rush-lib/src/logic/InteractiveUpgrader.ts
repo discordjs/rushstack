@@ -1,15 +1,12 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import Prompt from 'inquirer/lib/ui/prompt';
-
 import { NpmCheck, type INpmCheckState, type INpmCheckPackageSummary } from '@rushstack/npm-check-fork';
 import { Colorize } from '@rushstack/terminal';
 
 import type { RushConfiguration } from '../api/RushConfiguration';
 import { upgradeInteractive, type IDepsToUpgradeAnswers } from '../utilities/InteractiveUpgradeUI';
 import type { RushConfigurationProject } from '../api/RushConfigurationProject';
-import { SearchListPrompt } from '../utilities/prompts/SearchListPrompt';
 
 interface IUpgradeInteractiveDeps {
   projects: RushConfigurationProject[];
@@ -17,54 +14,55 @@ interface IUpgradeInteractiveDeps {
 }
 
 export class InteractiveUpgrader {
-  private readonly _rushConfiguration: RushConfiguration;
+  readonly #rushConfiguration: RushConfiguration;
 
   public constructor(rushConfiguration: RushConfiguration) {
-    this._rushConfiguration = rushConfiguration;
+    this.#rushConfiguration = rushConfiguration;
   }
 
   public async upgradeAsync(): Promise<IUpgradeInteractiveDeps> {
-    const rushProject: RushConfigurationProject = await this._getUserSelectedProjectForUpgradeAsync();
+    const rushProject: RushConfigurationProject = await this.#getUserSelectedProjectForUpgradeAsync();
 
     const dependenciesState: INpmCheckPackageSummary[] =
-      await this._getPackageDependenciesStatusAsync(rushProject);
+      await this.#getPackageDependenciesStatusAsync(rushProject);
 
     const depsToUpgrade: IDepsToUpgradeAnswers =
-      await this._getUserSelectedDependenciesToUpgradeAsync(dependenciesState);
+      await this.#getUserSelectedDependenciesToUpgradeAsync(dependenciesState);
     return { projects: [rushProject], depsToUpgrade };
   }
 
-  private async _getUserSelectedDependenciesToUpgradeAsync(
+  async #getUserSelectedDependenciesToUpgradeAsync(
     packages: INpmCheckPackageSummary[]
   ): Promise<IDepsToUpgradeAnswers> {
     return upgradeInteractive(packages);
   }
 
-  private async _getUserSelectedProjectForUpgradeAsync(): Promise<RushConfigurationProject> {
-    const projects: RushConfigurationProject[] | undefined = this._rushConfiguration.projects;
-    const ui: Prompt = new Prompt({
-      list: SearchListPrompt
-    });
+  async #getUserSelectedProjectForUpgradeAsync(): Promise<RushConfigurationProject> {
+    const projects: RushConfigurationProject[] | undefined = this.#rushConfiguration.projects;
 
-    const { selectProject } = await ui.run([
-      {
-        name: 'selectProject',
-        message: 'Select a project you would like to upgrade',
-        type: 'list',
-        choices: projects.map((project) => {
-          return {
+    const { default: search } = await import('@inquirer/search');
+
+    return await search<RushConfigurationProject>({
+      message: 'Select a project you would like to upgrade',
+      source: (term) => {
+        const choices: { name: string; short: string; value: RushConfigurationProject }[] = projects.map(
+          (project) => ({
             name: Colorize.green(project.packageName),
+            short: project.packageName,
             value: project
-          };
-        }),
-        pageSize: 12
-      }
-    ]);
-
-    return selectProject;
+          })
+        );
+        if (!term) {
+          return choices;
+        }
+        const filter: string = term.toUpperCase();
+        return choices.filter((choice) => choice.short.toUpperCase().includes(filter));
+      },
+      pageSize: 12
+    });
   }
 
-  private async _getPackageDependenciesStatusAsync(
+  async #getPackageDependenciesStatusAsync(
     rushProject: RushConfigurationProject
   ): Promise<INpmCheckPackageSummary[]> {
     const { projectFolder } = rushProject;

@@ -128,6 +128,61 @@ export interface IExperimentsJson {
    * each other's packages via the NPM registry.
    */
   exemptDecoupledDependenciesBetweenSubspaces?: boolean;
+
+  /**
+   * If true, when running on macOS, Rush will omit AppleDouble files (`._*`) from build cache archives
+   * when a companion file exists in the same directory. AppleDouble files are automatically created by
+   * macOS to store extended attributes on filesystems that don't support them, and should generally not
+   * be included in the shared build cache.
+   */
+  omitAppleDoubleFilesFromBuildCache?: boolean;
+
+  /**
+   * If true, `rush change --verify` will perform additional validation of change files. Specifically,
+   * it will report errors if change files reference projects that do not exist in the Rush configuration,
+   * or if change files target a project that belongs to a lockstepped version policy but is not the
+   * policy's main project.
+   */
+  strictChangefileValidation?: boolean;
+
+  /**
+   * If true, the build cache will use file-based APIs to transfer cache entries to and from cloud
+   * storage. This avoids loading the entire cache entry into memory, which can prevent out-of-memory
+   * errors for large build outputs and allow cache entries to exceed the limit of a single Buffer.
+   * The cloud cache provider plugin must implement the optional file-based methods for this to take
+   * effect; otherwise it falls back to the buffer-based approach.
+   */
+  useDirectFileTransfersForBuildCache?: boolean;
+
+  /**
+   * By default, Rush forwards its entire process environment (minus a small denylist) to the shell
+   * commands it invokes for operations (e.g. "build", "test"). If true, environment variables whose
+   * names begin with `RUSH_` will additionally be omitted from that forwarded environment. This can
+   * help prevent operation scripts from accidentally depending on Rush's own internal environment
+   * variables.
+   */
+  trimRushEnvironmentVariablesForOperations?: boolean;
+
+  /**
+   * If true, when using PNPM, Rush resolves the `${VAR}` tokens that appear in credentials and
+   * registry URLs in the `.npmrc` file, instead of relying on PNPM to expand them. Credentials are
+   * passed to PNPM using `npm_config_*` environment variables and are not written to the generated
+   * `.npmrc` file.
+   *
+   * @remarks
+   * This compatibility workaround applies to PNPM 10.34.2 through 10.x and PNPM 11.5.3 through
+   * versions earlier than 11.6.0. PNPM 11.6.0 and newer support URL-scoped `pnpm_config_//...`
+   * environment variables, which should be supplied directly by CI so the trusted environment binds
+   * each credential to its registry. Dynamic registry and proxy settings must likewise be supplied
+   * through trusted user, global, CLI, or environment configuration rather than a project `.npmrc`.
+   */
+  provideNpmrcCredentialsViaEnvironment?: boolean;
+
+  /**
+   * If true, Rush may use the experimental Rush reporter system. If omitted or false,
+   * Rush preserves the legacy reporting behavior.
+   */
+  useRushReporter?: boolean;
 }
 
 const _EXPERIMENTS_JSON_SCHEMA: JsonSchema = JsonSchema.fromLoadedObject(schemaJson);

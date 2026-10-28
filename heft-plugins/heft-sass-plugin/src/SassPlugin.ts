@@ -29,6 +29,11 @@ export interface ISassConfigurationJson {
   nonModuleFileExtensions?: string[];
   silenceDeprecations?: string[];
   excludeFiles?: string[];
+  loadPaths?: string[];
+  resolveBareSpecifiersAsPackages?: boolean;
+  doNotTrimOriginalFileExtension?: boolean;
+  preserveIcssExports?: boolean;
+  sourceMap?: boolean;
 }
 
 const SASS_CONFIGURATION_LOCATION: string = 'config/sass.json';
@@ -96,7 +101,12 @@ export default class SassPlugin implements IHeftPlugin {
           fileExtensions,
           nonModuleFileExtensions,
           silenceDeprecations,
-          excludeFiles
+          excludeFiles,
+          loadPaths,
+          resolveBareSpecifiersAsPackages,
+          doNotTrimOriginalFileExtension,
+          preserveIcssExports,
+          sourceMap
         } = sassConfigurationJson || {};
 
         function resolveFolder(folder: string): string {
@@ -111,6 +121,8 @@ export default class SassPlugin implements IHeftPlugin {
           exportAsDefault,
           srcFolder: resolveFolder(srcFolder),
           excludeFiles,
+          loadPaths: loadPaths?.map(resolveFolder),
+          resolveBareSpecifiersAsPackages,
           fileExtensions,
           nonModuleFileExtensions,
           cssOutputFolders: cssOutputFolders?.map((folder: string | ICssOutputFolder) => {
@@ -123,6 +135,9 @@ export default class SassPlugin implements IHeftPlugin {
             };
           }),
           silenceDeprecations,
+          doNotTrimOriginalFileExtension,
+          preserveIcssExports,
+          sourceMap,
           postProcessCssAsync: hooks.postProcessCss.isUsed()
             ? async (cssText: string) => hooks.postProcessCss.promise(cssText)
             : undefined
@@ -192,7 +207,21 @@ export default class SassPlugin implements IHeftPlugin {
           }
         }
 
+        const watchedManifests: Set<string> = new Set(sassProcessor.packageManifestPaths);
+        for (const manifest of watchedManifests) {
+          const state: IWatchedFileState = await runOptions.watchFs.getStateAndTrackAsync(manifest);
+          if (state.changed) {
+            modifiedFiles.add(manifest);
+          }
+        }
+
         await compileFilesAsync(sassProcessor, modifiedFiles, true);
+
+        for (const manifest of sassProcessor.packageManifestPaths) {
+          if (!watchedManifests.has(manifest)) {
+            await runOptions.watchFs.getStateAndTrackAsync(manifest);
+          }
+        }
       }
     );
   }

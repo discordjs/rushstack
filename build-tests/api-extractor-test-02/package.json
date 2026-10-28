@@ -3,17 +3,38 @@
   "description": "Building this project is a regression test for api-extractor",
   "version": "1.0.0",
   "private": true,
-  "main": "lib/index.js",
-  "typings": "dist/api-extractor-test-02.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/api-extractor-test-02.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api-extractor-test-02.d.ts",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft run --only build -- --clean"
   },
   "dependencies": {
     "@types/long": "4.0.0",
-    "@types/semver": "7.5.0",
+    "@types/semver": "7.7.1",
     "api-extractor-test-01": "workspace:*",
-    "semver": "~7.5.4"
+    "semver": "~7.7.4"
   },
   "devDependencies": {
     "@rushstack/heft": "workspace:*",

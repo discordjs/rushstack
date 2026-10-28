@@ -12,6 +12,7 @@ import {
   type ICertificate
 } from '@rushstack/debug-certificate-manager';
 
+import { runWorkspaceCommandAsync } from '@rushstack/vscode-shared/lib/runWorkspaceCommandAsync';
 import { VScodeOutputChannelTerminalProvider } from '@rushstack/vscode-shared/lib/VScodeOutputChannelTerminalProvider';
 import { getCertificateManager } from './certificates';
 import { getConfig } from './config';
@@ -22,10 +23,9 @@ import {
   COMMAND_SYNC,
   COMMAND_UNTRUST_CERTIFICATE,
   EXTENSION_DISPLAY_NAME,
-  EXTENSION_ID,
+  VSCODE_SETTINGS_EXTENSION_ID_FILTER,
   VSCODE_COMMAND_WORKSPACE_OPEN_SETTINGS
 } from './constants';
-import { runWorkspaceCommandAsync } from './terminal';
 
 export function activate(context: vscode.ExtensionContext): void {
   const outputChannel: vscode.OutputChannel = vscode.window.createOutputChannel(EXTENSION_DISPLAY_NAME);
@@ -139,7 +139,10 @@ export function activate(context: vscode.ExtensionContext): void {
   }
 
   async function handleShowSettings(): Promise<void> {
-    await vscode.commands.executeCommand(VSCODE_COMMAND_WORKSPACE_OPEN_SETTINGS, `@ext:${EXTENSION_ID}`);
+    await vscode.commands.executeCommand(
+      VSCODE_COMMAND_WORKSPACE_OPEN_SETTINGS,
+      VSCODE_SETTINGS_EXTENSION_ID_FILTER
+    );
   }
 
   async function handleSync(): Promise<void> {
@@ -202,15 +205,33 @@ export function activate(context: vscode.ExtensionContext): void {
         resolvedWorkspaceStorePath = storePath;
       } else if (storePath.startsWith('~')) {
         let homeDir: string;
-        if (vscode.env.remoteName) {
-          homeDir = await runWorkspaceCommandAsync({
+
+        const { homeDirectory } = getConfig(terminal);
+        if (homeDirectory) {
+          homeDir = homeDirectory;
+          terminal.writeLine(`Using configured home directory: ${homeDir}`);
+        } else if (vscode.env.remoteName) {
+          const markerPrefix: string = '<<<HOMEDIR_START>>>';
+          const markerSuffix: string = '<<<HOMEDIR_END>>>';
+          const output: string = await runWorkspaceCommandAsync({
             terminalOptions: { name: 'debug-certificate-manager', hideFromUser: true },
-            commandLine: `node -p "require('os').homedir()"`,
+            // Wrapping the desired node output in markers to trim uninteresting shell output.
+            commandLine: `node -p "'${markerPrefix}' + require('os').homedir() + '${markerSuffix}'"`,
             terminal
           });
+          terminal.writeLine(`Running command to resolve home directory: ${output}`);
+
+          const startIndex: number = output.lastIndexOf(markerPrefix);
+          const endIndex: number = output.lastIndexOf(markerSuffix);
+          if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+            homeDir = output.substring(startIndex + markerPrefix.length, endIndex).trim();
+          } else {
+            throw new Error('Failed to parse home directory from command output');
+          }
         } else {
           homeDir = require('os').homedir();
         }
+
         terminal.writeLine(`Resolved home directory: ${homeDir}`);
         const homeDirUri: vscode.Uri = vscode.Uri.from({
           scheme: workspaceUri.scheme,

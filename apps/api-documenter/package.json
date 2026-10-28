@@ -1,31 +1,59 @@
 {
   "name": "@microsoft/api-documenter",
-  "version": "7.27.4",
+  "version": "7.30.19",
   "description": "Read JSON files from api-extractor, generate documentation pages",
   "repository": {
     "type": "git",
     "url": "https://github.com/microsoft/rushstack.git",
     "directory": "apps/api-documenter"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "homepage": "https://api-extractor.com/",
   "license": "MIT",
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "bin": {
     "api-documenter": "./bin/api-documenter"
   },
-  "main": "lib/index.js",
-  "typings": "dist/rollup.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/rollup.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/rollup.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*.schema.json": "./lib-commonjs/*.schema.json",
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "dependencies": {
     "@microsoft/api-extractor-model": "workspace:*",
-    "@microsoft/tsdoc": "~0.15.1",
+    "@microsoft/tsdoc": "~0.17.0",
     "@rushstack/node-core-library": "workspace:*",
     "@rushstack/terminal": "workspace:*",
     "@rushstack/ts-command-line": "workspace:*",
-    "js-yaml": "~4.1.0",
+    "js-yaml": "~4.3.2",
     "resolve": "~1.22.1"
   },
   "devDependencies": {
@@ -34,5 +62,9 @@
     "@types/resolve": "1.20.2",
     "eslint": "~9.37.0",
     "local-node-rig": "workspace:*"
-  }
+  },
+  "sideEffects": [
+    "lib-commonjs/start.js",
+    "lib-esm/start.js"
+  ]
 }

@@ -15,8 +15,8 @@ import { Git } from '../logic/Git';
  * This class represents a single change file.
  */
 export class ChangeFile {
-  private _changeFileData: IChangeFile;
-  private _rushConfiguration: RushConfiguration;
+  #changeFileData: IChangeFile;
+  #rushConfiguration: RushConfiguration;
 
   /**
    * @internal
@@ -30,8 +30,8 @@ export class ChangeFile {
       throw new Error(`rushConfiguration does not have a value`);
     }
 
-    this._changeFileData = changeFileData;
-    this._rushConfiguration = rushConfiguration;
+    this.#changeFileData = changeFileData;
+    this.#rushConfiguration = rushConfiguration;
   }
 
   /**
@@ -39,7 +39,7 @@ export class ChangeFile {
    * @param data - change information
    */
   public addChange(data: IChangeInfo): void {
-    this._changeFileData.changes.push(data);
+    this.#changeFileData.changes.push(data);
   }
 
   /**
@@ -48,7 +48,7 @@ export class ChangeFile {
    */
   public getChanges(packageName: string): IChangeInfo[] {
     const changes: IChangeInfo[] = [];
-    for (const info of this._changeFileData.changes) {
+    for (const info of this.#changeFileData.changes) {
       if (info.packageName === packageName) {
         changes.push(info);
       }
@@ -63,7 +63,7 @@ export class ChangeFile {
    */
   public writeSync(): string {
     const filePath: string = this.generatePath();
-    JsonFile.save(this._changeFileData, filePath, {
+    JsonFile.save(this.#changeFileData, filePath, {
       ensureFolderExists: true
     });
     return filePath;
@@ -76,7 +76,7 @@ export class ChangeFile {
    */
   public generatePath(): string {
     let branch: string | undefined = undefined;
-    const git: Git = new Git(this._rushConfiguration);
+    const git: Git = new Git(this.#rushConfiguration);
     const repoInfo: gitInfo.GitRepoInfo | undefined = git.getGitInfo();
     branch = repoInfo && repoInfo.branch;
     if (!branch) {
@@ -84,13 +84,18 @@ export class ChangeFile {
       console.log('Could not automatically detect git branch name, using timestamp instead.');
     }
 
-    // example filename: yourbranchname_2017-05-01-20-20.json
+    // The timestamp includes seconds so that running "rush change" more than once
+    // in the same minute produces distinct filenames. Without this, the "--overwrite"
+    // flag rarely had any effect, and a second invocation would silently clobber the
+    // change file written by the first one. See GitHub issue #2195.
+    // example filename: yourbranchname_2017-05-01-20-20-30.json
+    const timestamp: string | undefined = this.#getTimestamp(true);
     const filename: string = branch
-      ? this._escapeFilename(`${branch}_${this._getTimestamp()}.json`)
-      : `${this._getTimestamp()}.json`;
+      ? this.#escapeFilename(`${branch}_${timestamp}.json`)
+      : `${timestamp}.json`;
     const filePath: string = path.join(
-      this._rushConfiguration.changesFolder,
-      ...this._changeFileData.packageName.split('/'),
+      this.#rushConfiguration.changesFolder,
+      ...this.#changeFileData.packageName.split('/'),
       filename
     );
     return filePath;
@@ -98,9 +103,9 @@ export class ChangeFile {
 
   /**
    * Gets the current time, formatted as YYYY-MM-DD-HH-MM
-   * Optionally will include seconds
+   * When useSeconds is true, the seconds are appended as well: YYYY-MM-DD-HH-MM-SS
    */
-  private _getTimestamp(useSeconds: boolean = false): string | undefined {
+  #getTimestamp(useSeconds: boolean = false): string | undefined {
     // Create a date string with the current time
 
     // dateString === "2016-10-19T22:47:49.606Z"
@@ -120,7 +125,7 @@ export class ChangeFile {
       let formattedTime: string;
       if (useSeconds) {
         // formattedTime === "22-47-49"
-        formattedTime = matches[2].replace(':', '-');
+        formattedTime = matches[2].replace(/:/g, '-');
       } else {
         // formattedTime === "22-47"
         const timeParts: string[] = matches[2].split(':');
@@ -132,7 +137,7 @@ export class ChangeFile {
     return undefined;
   }
 
-  private _escapeFilename(filename: string, replacer: string = '-'): string {
+  #escapeFilename(filename: string, replacer: string = '-'): string {
     // Removes / ? < > \ : * | ", really anything that isn't a letter, number, '.' '_' or '-'
     const badCharacters: RegExp = /[^a-zA-Z0-9._-]/g;
     return filename.replace(badCharacters, replacer);

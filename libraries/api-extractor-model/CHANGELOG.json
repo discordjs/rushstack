@@ -2,6 +2,262 @@
   "name": "@microsoft/api-extractor-model",
   "entries": [
     {
+      "version": "7.33.15",
+      "tag": "@microsoft/api-extractor-model_v7.33.15",
+      "date": "Tue, 06 Oct 2026 00:04:37 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.25.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.14",
+      "tag": "@microsoft/api-extractor-model_v7.33.14",
+      "date": "Mon, 28 Sep 2026 20:08:26 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.25.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.13",
+      "tag": "@microsoft/api-extractor-model_v7.33.13",
+      "date": "Tue, 22 Sep 2026 17:35:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Update the `@microsoft/tsdoc` dependency to `~0.17.0` and the `@microsoft/tsdoc-config` dependency to `~0.18.2`."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.12",
+      "tag": "@microsoft/api-extractor-model_v7.33.12",
+      "date": "Sat, 05 Sep 2026 00:15:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.11",
+      "tag": "@microsoft/api-extractor-model_v7.33.11",
+      "date": "Thu, 20 Aug 2026 00:16:38 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Require Node.js 20.9 or newer for package consumers."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.10",
+      "tag": "@microsoft/api-extractor-model_v7.33.10",
+      "date": "Fri, 17 Jul 2026 00:15:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Replace `@override` with the `override` keyword."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.9",
+      "tag": "@microsoft/api-extractor-model_v7.33.9",
+      "date": "Thu, 16 Jul 2026 00:16:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.8",
+      "tag": "@microsoft/api-extractor-model_v7.33.8",
+      "date": "Sat, 18 Apr 2026 00:15:17 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.7",
+      "tag": "@microsoft/api-extractor-model_v7.33.7",
+      "date": "Fri, 17 Apr 2026 15:14:57 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.6",
+      "tag": "@microsoft/api-extractor-model_v7.33.6",
+      "date": "Thu, 09 Apr 2026 00:15:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.22.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.5",
+      "tag": "@microsoft/api-extractor-model_v7.33.5",
+      "date": "Tue, 31 Mar 2026 15:14:14 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.21.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.4",
+      "tag": "@microsoft/api-extractor-model_v7.33.4",
+      "date": "Wed, 25 Feb 2026 21:39:42 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump `@microsoft/tsdoc-config` to `~0.18.1` to mitigate CVE-2025-69873."
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.3",
+      "tag": "@microsoft/api-extractor-model_v7.33.3",
+      "date": "Wed, 25 Feb 2026 00:34:30 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.2",
+      "tag": "@microsoft/api-extractor-model_v7.33.2",
+      "date": "Tue, 24 Feb 2026 01:13:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.1",
+      "tag": "@microsoft/api-extractor-model_v7.33.1",
+      "date": "Fri, 20 Feb 2026 00:15:03 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add `\"node\"` condition before `\"import\"` in the `\"exports\"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `\"import\"`. Fixes https://github.com/microsoft/rushstack/issues/5644."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.33.0",
+      "tag": "@microsoft/api-extractor-model_v7.33.0",
+      "date": "Thu, 19 Feb 2026 00:04:52 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `\"exports\"` field in `package.json`."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.32.2",
+      "tag": "@microsoft/api-extractor-model_v7.32.2",
+      "date": "Sat, 06 Dec 2025 01:12:29 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.19.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.32.1",
+      "tag": "@microsoft/api-extractor-model_v7.32.1",
+      "date": "Fri, 21 Nov 2025 16:13:56 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.19.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "7.32.0",
+      "tag": "@microsoft/api-extractor-model_v7.32.0",
+      "date": "Wed, 12 Nov 2025 01:12:56 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Bump the `@microsoft/tsdoc` dependency to `~0.16.0`."
+          },
+          {
+            "comment": "Bump the `@microsoft/tsdoc-config` dependency to `~0.18.0`."
+          }
+        ]
+      }
+    },
+    {
       "version": "7.31.3",
       "tag": "@microsoft/api-extractor-model_v7.31.3",
       "date": "Fri, 24 Oct 2025 00:13:38 GMT",

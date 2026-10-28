@@ -1,6 +1,128 @@
 # Change Log - @rushstack/operation-graph
 
-This log was last generated on Fri, 24 Oct 2025 00:13:38 GMT and should not be manually modified.
+This log was last generated on Tue, 06 Oct 2026 00:04:37 GMT and should not be manually modified.
+
+## 0.7.5
+Tue, 06 Oct 2026 00:04:37 GMT
+
+### Patches
+
+- On Linux, report the resident memory of `WatchLoop` from `VmRSS` in `/proc/self/status`, which stays accurate on machines with many CPUs.
+
+## 0.7.4
+Mon, 28 Sep 2026 20:08:26 GMT
+
+### Patches
+
+- Include an optional measured process RSS sample in WatchLoop IPC completion messages for compatible hosts' best-effort warm resource accounting.
+
+## 0.7.3
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 0.7.2
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 0.7.1
+Thu, 20 Aug 2026 00:16:38 GMT
+
+### Patches
+
+- Compile package output for ES2022.
+
+## 0.7.0
+Fri, 14 Aug 2026 00:18:07 GMT
+
+### Minor changes
+
+- Add Rush-compatible operation statuses in preparation for graph convergence.
+
+## 0.6.11
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 0.6.10
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 0.6.9
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 0.6.8
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 0.6.7
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 0.6.6
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 0.6.5
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 0.6.4
+Tue, 31 Mar 2026 15:14:14 GMT
+
+_Version update only_
+
+## 0.6.3
+Wed, 25 Feb 2026 00:34:30 GMT
+
+_Version update only_
+
+## 0.6.2
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 0.6.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 0.6.0
+Thu, 19 Feb 2026 00:04:53 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 0.5.7
+Wed, 07 Jan 2026 01:12:24 GMT
+
+_Version update only_
+
+## 0.5.6
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 0.5.5
+Sat, 06 Dec 2025 01:12:29 GMT
+
+_Version update only_
+
+## 0.5.4
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
 
 ## 0.5.3
 Fri, 24 Oct 2025 00:13:38 GMT

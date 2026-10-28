@@ -7,10 +7,12 @@ import * as childProcess from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { StringDecoder } from 'node:string_decoder';
 
 import type { IPackageJson } from '@rushstack/node-core-library';
 
 import { syncNpmrc, type ILogger } from '../utilities/npmrcUtilities';
+import { escapeArgumentIfNeeded, IS_WINDOWS } from '../utilities/executionUtilities';
 import type { RushConstants } from '../logic/RushConstants';
 
 export const RUSH_JSON_FILENAME: typeof RushConstants.rushJsonFilename = 'rush.json';
@@ -19,6 +21,77 @@ const INSTALL_RUN_LOCKFILE_PATH_VARIABLE: 'INSTALL_RUN_LOCKFILE_PATH' = 'INSTALL
 const INSTALLED_FLAG_FILENAME: string = 'installed.flag';
 const NODE_MODULES_FOLDER_NAME: string = 'node_modules';
 const PACKAGE_JSON_FILENAME: string = 'package.json';
+let _externalOutputCaptureId: number = 0;
+export const NPM_OUTPUT_CAPTURE_SCRIPT: string = `
+const childProcess = require('node:child_process');
+const fs = require('node:fs');
+const { StringDecoder } = require('node:string_decoder');
+const [
+  command,
+  argsJson,
+  capturePath,
+  useShell,
+  maxBytesText,
+  renderStdoutText,
+  renderStderrText
+] = process.argv.slice(1);
+const child = childProcess.spawn(command, JSON.parse(argsJson), {
+  cwd: process.cwd(),
+  env: process.env,
+  shell: useShell === '1',
+  windowsVerbatimArguments: false,
+  stdio: ['inherit', 'pipe', 'pipe']
+});
+const decoders = { stdout: new StringDecoder('utf8'), stderr: new StringDecoder('utf8') };
+const maxBytes = Number(maxBytesText);
+let capturedBytes = 0;
+let overflowed = false;
+const renderedStreams = { stdout: renderStdoutText === '1', stderr: renderStderrText === '1' };
+function capture(stream, text) {
+  if (!text || overflowed) {
+    return;
+  }
+  const record = JSON.stringify({ stream, text, wasRendered: renderedStreams[stream] }) + '\\n';
+  const recordBytes = Buffer.byteLength(record);
+  if (capturedBytes + recordBytes <= maxBytes) {
+    fs.appendFileSync(capturePath, record);
+    capturedBytes += recordBytes;
+  } else {
+    overflowed = true;
+    fs.appendFileSync(capturePath, JSON.stringify({ overflow: true }) + '\\n');
+  }
+}
+function forwardAndCapture(stream, chunk) {
+  if (renderedStreams[stream]) {
+    (stream === 'stdout' ? process.stdout : process.stderr).write(chunk);
+  }
+  capture(stream, decoders[stream].write(chunk));
+}
+child.stdout.on('data', (chunk) => forwardAndCapture('stdout', chunk));
+child.stderr.on('data', (chunk) => forwardAndCapture('stderr', chunk));
+child.on('error', (error) => {
+  process.stderr.write(String(error) + '\\n');
+  process.exitCode = 1;
+});
+child.on('close', (code, signal) => {
+  capture('stdout', decoders.stdout.end());
+  capture('stderr', decoders.stderr.end());
+  if (signal) {
+    process.stderr.write('npm was terminated by signal: ' + signal + '\\n');
+    process.exitCode = 1;
+  } else {
+    process.exitCode = code === null ? 1 : code;
+  }
+});
+`;
+
+export interface IInstallAndRunOptions {
+  readonly onExternalOutput?: (stream: 'stdout' | 'stderr', text: string, wasRendered: boolean) => void;
+  readonly onExternalOutputOverflow?: () => void;
+  readonly externalOutputCaptureMaxBytes?: number;
+  readonly externalOutputLiveStreams?: Readonly<{ stdout: boolean; stderr: boolean }>;
+  readonly prepareToRun?: () => void;
+}
 
 /**
  * Parse a package specifier (in the form of name\@version) into name and version parts.
@@ -55,7 +128,7 @@ let _npmPath: string | undefined = undefined;
 export function getNpmPath(): string {
   if (!_npmPath) {
     try {
-      if (_isWindows()) {
+      if (IS_WINDOWS) {
         // We're on Windows
         const whereOutput: string = childProcess.execSync('where npm', { stdio: [] }).toString();
         const lines: string[] = whereOutput.split(os.EOL).filter((line) => !!line);
@@ -172,10 +245,11 @@ function _resolvePackageVersion(
         sourceNpmrcFolder,
         targetNpmrcFolder: rushTempFolder,
         logger,
-        supportEnvVarFallbackSyntax: false
+        supportEnvVarFallbackSyntax: false,
+        // Always filter npm-incompatible properties in install-run scripts.
+        // Any warnings will be shown when running Rush commands directly.
+        filterNpmIncompatibleProperties: true
       });
-
-      const npmPath: string = getNpmPath();
 
       // This returns something that looks like:
       // ```
@@ -195,21 +269,15 @@ function _resolvePackageVersion(
       //
       // if only a single version matches.
 
-      const spawnSyncOptions: childProcess.SpawnSyncOptions = {
-        cwd: rushTempFolder,
-        stdio: [],
-        shell: _isWindows()
-      };
-      const platformNpmPath: string = _getPlatformPath(npmPath);
-      const npmVersionSpawnResult: childProcess.SpawnSyncReturns<Buffer | string> = childProcess.spawnSync(
-        platformNpmPath,
+      const npmVersionSpawnResult: childProcess.SpawnSyncReturns<Buffer | string> = _runNpmConfirmSuccess(
         ['view', `${name}@${version}`, 'version', '--no-update-notifier', '--json'],
-        spawnSyncOptions
+        {
+          cwd: rushTempFolder,
+          stdio: [],
+          env: process.env
+        },
+        'npm view'
       );
-
-      if (npmVersionSpawnResult.status !== 0) {
-        throw new Error(`"npm view" returned error code ${npmVersionSpawnResult.status}`);
-      }
 
       const npmViewVersionOutput: string = npmVersionSpawnResult.stdout.toString();
       const parsedVersionOutput: string | string[] = JSON.parse(npmViewVersionOutput);
@@ -356,26 +424,156 @@ function _installPackage(
   packageInstallFolder: string,
   name: string,
   version: string,
-  command: 'install' | 'ci'
+  npmCommand: 'install' | 'ci',
+  onExternalOutput: ((stream: 'stdout' | 'stderr', text: string, wasRendered: boolean) => void) | undefined,
+  onExternalOutputOverflow: (() => void) | undefined,
+  externalOutputCaptureMaxBytes: number | undefined,
+  externalOutputLiveStreams: Readonly<{ stdout: boolean; stderr: boolean }> | undefined
 ): void {
+  let capturePath: string | undefined;
   try {
     logger.info(`Installing ${name}...`);
-    const npmPath: string = getNpmPath();
-    const platformNpmPath: string = _getPlatformPath(npmPath);
-    const result: childProcess.SpawnSyncReturns<Buffer> = childProcess.spawnSync(platformNpmPath, [command], {
-      stdio: 'inherit',
-      cwd: packageInstallFolder,
-      env: process.env,
-      shell: _isWindows()
-    });
-
-    if (result.status !== 0) {
-      throw new Error(`"npm ${command}" encountered an error`);
+    if (onExternalOutput) {
+      capturePath = path.join(
+        packageInstallFolder,
+        `.install-run-output-${process.pid}-${_externalOutputCaptureId++}.log`
+      );
+      fs.closeSync(fs.openSync(capturePath, 'wx', 0o600));
     }
-
-    logger.info(`Successfully installed ${name}@${version}`);
+    if (capturePath) {
+      _runNpmWithCaptureConfirmSuccess(
+        [npmCommand],
+        {
+          stdio: 'inherit',
+          cwd: packageInstallFolder,
+          env: process.env
+        },
+        capturePath,
+        externalOutputCaptureMaxBytes ?? 1024 * 1024,
+        externalOutputLiveStreams ?? { stdout: true, stderr: true },
+        `npm ${npmCommand}`
+      );
+    } else {
+      _runNpmConfirmSuccess(
+        [npmCommand],
+        {
+          stdio: 'inherit',
+          cwd: packageInstallFolder,
+          env: process.env
+        },
+        `npm ${npmCommand}`
+      );
+    }
   } catch (e) {
     throw new Error(`Unable to install package: ${e}`);
+  } finally {
+    if (capturePath !== undefined) {
+      finalizeCapturedNpmOutput(capturePath, logger, onExternalOutput!, onExternalOutputOverflow);
+    }
+  }
+  logger.info(`Successfully installed ${name}@${version}`);
+}
+
+function _reportCaptureDamage(logger: ILogger, capturePath: string, detail: string): void {
+  const message: string = `Warning: npm output capture ${JSON.stringify(capturePath)} ${detail}`;
+  try {
+    if (logger.warning) {
+      logger.warning(message, 'local-sensitive');
+    } else {
+      logger.error(message, 'local-sensitive');
+    }
+  } catch {
+    try {
+      process.stderr.write(`${message}\n`);
+    } catch {
+      // Capture diagnostics are best-effort and must not change the install result.
+    }
+  }
+}
+
+export function finalizeCapturedNpmOutput(
+  capturePath: string,
+  logger: ILogger,
+  onExternalOutput: (stream: 'stdout' | 'stderr', text: string, wasRendered: boolean) => void,
+  onExternalOutputOverflow: (() => void) | undefined
+): void {
+  let firstDamageDetail: string | undefined;
+  let damageCount: number = 0;
+  try {
+    _readCapturedNpmOutput(capturePath, onExternalOutput, onExternalOutputOverflow, (detail: string) => {
+      firstDamageDetail ??= detail;
+      damageCount++;
+    });
+  } catch (error) {
+    firstDamageDetail ??= `could not be read: ${String(error)}.`;
+    damageCount++;
+  }
+  if (firstDamageDetail) {
+    const additionalDamage: string =
+      damageCount > 1 ? ` ${damageCount - 1} additional capture issue(s) were discarded.` : '';
+    _reportCaptureDamage(logger, capturePath, `${firstDamageDetail}${additionalDamage}`);
+  }
+
+  try {
+    _deleteFile(capturePath);
+  } catch (error) {
+    _reportCaptureDamage(logger, capturePath, `could not be deleted: ${String(error)}.`);
+  }
+}
+
+function _readCapturedNpmOutput(
+  capturePath: string,
+  onExternalOutput: (stream: 'stdout' | 'stderr', text: string, wasRendered: boolean) => void,
+  onExternalOutputOverflow: (() => void) | undefined,
+  onCaptureDamage: (detail: string) => void
+): void {
+  const fileDescriptor: number = fs.openSync(capturePath, 'r');
+  const buffer: Buffer = Buffer.allocUnsafe(64 * 1024);
+  const decoder: StringDecoder = new StringDecoder('utf8');
+  let pending: string = '';
+  try {
+    for (;;) {
+      const bytesRead: number = fs.readSync(fileDescriptor, buffer, 0, buffer.length, null);
+      if (bytesRead === 0) {
+        break;
+      }
+      pending += decoder.write(buffer.subarray(0, bytesRead));
+      let newlineIndex: number;
+      while ((newlineIndex = pending.indexOf('\n')) >= 0) {
+        const line: string = pending.slice(0, newlineIndex);
+        pending = pending.slice(newlineIndex + 1);
+        if (line) {
+          let record: {
+            stream?: unknown;
+            text?: unknown;
+            wasRendered?: unknown;
+            overflow?: unknown;
+          };
+          try {
+            record = JSON.parse(line);
+          } catch (error) {
+            onCaptureDamage(`contains a corrupt record that was discarded: ${String(error)}.`);
+            continue;
+          }
+          if (record.overflow === true) {
+            onExternalOutputOverflow?.();
+          } else if (
+            (record.stream === 'stdout' || record.stream === 'stderr') &&
+            typeof record.text === 'string'
+          ) {
+            onExternalOutput(record.stream, record.text, record.wasRendered === true);
+          } else {
+            onCaptureDamage('contains an invalid record that was discarded.');
+          }
+        }
+      }
+    }
+    pending += decoder.end();
+    if (pending.trim()) {
+      onCaptureDamage('ended with a partial record that was discarded.');
+    }
+  } finally {
+    fs.closeSync(fileDescriptor);
   }
 }
 
@@ -384,19 +582,14 @@ function _installPackage(
  */
 function _getBinPath(packageInstallFolder: string, binName: string): string {
   const binFolderPath: string = path.resolve(packageInstallFolder, NODE_MODULES_FOLDER_NAME, '.bin');
-  const resolvedBinName: string = _isWindows() ? `${binName}.cmd` : binName;
+  const resolvedBinName: string = IS_WINDOWS ? `${binName}.cmd` : binName;
   return path.resolve(binFolderPath, resolvedBinName);
 }
 
-/**
- * Returns a cross-platform path - windows must enclose any path containing spaces within double quotes.
- */
-function _getPlatformPath(platformPath: string): string {
-  return _isWindows() && platformPath.includes(' ') ? `"${platformPath}"` : platformPath;
-}
-
-function _isWindows(): boolean {
-  return os.platform() === 'win32';
+function _buildShellCommand(command: string, args: string[]): string {
+  const escapedCommand: string = escapeArgumentIfNeeded(command);
+  const escapedArgs: string[] = args.map((arg) => escapeArgumentIfNeeded(arg));
+  return [escapedCommand, ...escapedArgs].join(' ');
 }
 
 /**
@@ -411,13 +604,87 @@ function _writeFlagFile(packageInstallFolder: string): void {
   }
 }
 
+/**
+ * Run npm under the platform's shell and throw if it didn't succeed.
+ */
+function _runNpmConfirmSuccess(
+  args: string[],
+  options: childProcess.SpawnSyncOptions,
+  commandNameForLogging: string
+): childProcess.SpawnSyncReturns<string | Buffer> {
+  const command: string = getNpmPath();
+  let result: childProcess.SpawnSyncReturns<string | Buffer>;
+  if (IS_WINDOWS) {
+    result = childProcess.spawnSync(_buildShellCommand(command, args), {
+      ...options,
+      shell: true,
+      windowsVerbatimArguments: false
+    });
+  } else {
+    result = childProcess.spawnSync(command, args, options);
+  }
+  _throwIfSpawnFailed(result, commandNameForLogging);
+  return result;
+}
+
+function _runNpmWithCaptureConfirmSuccess(
+  args: string[],
+  options: childProcess.SpawnSyncOptions,
+  capturePath: string,
+  captureMaxBytes: number,
+  liveStreams: Readonly<{ stdout: boolean; stderr: boolean }>,
+  commandNameForLogging: string
+): childProcess.SpawnSyncReturns<string | Buffer> {
+  const npmPath: string = getNpmPath();
+  const command: string = IS_WINDOWS ? _buildShellCommand(npmPath, args) : npmPath;
+  const commandArgs: string[] = IS_WINDOWS ? [] : args;
+  const result: childProcess.SpawnSyncReturns<string | Buffer> = childProcess.spawnSync(
+    process.execPath,
+    [
+      '-e',
+      NPM_OUTPUT_CAPTURE_SCRIPT,
+      command,
+      JSON.stringify(commandArgs),
+      capturePath,
+      IS_WINDOWS ? '1' : '0',
+      String(captureMaxBytes),
+      liveStreams.stdout ? '1' : '0',
+      liveStreams.stderr ? '1' : '0'
+    ],
+    options
+  );
+  _throwIfSpawnFailed(result, commandNameForLogging);
+  return result;
+}
+
+function _throwIfSpawnFailed(
+  result: childProcess.SpawnSyncReturns<string | Buffer>,
+  commandNameForLogging: string
+): void {
+  if (result.status !== 0) {
+    if (!result.status) {
+      // Is status null or undefined?
+      if (result.error) {
+        throw new Error(`"${commandNameForLogging}" failed: ${result.error.message.toString()}`);
+      } else if (result.signal) {
+        throw new Error(`"${commandNameForLogging}" was terminated by signal: ${result.signal}`);
+      } else {
+        throw new Error(`"${commandNameForLogging}" failed for an unknown reason`);
+      }
+    } else {
+      throw new Error(`"${commandNameForLogging}" returned error code ${result.status}`);
+    }
+  }
+}
+
 export function installAndRun(
   logger: ILogger,
   packageName: string,
   packageVersion: string,
   packageBinName: string,
   packageBinArgs: string[],
-  lockFilePath: string | undefined = process.env[INSTALL_RUN_LOCKFILE_PATH_VARIABLE]
+  lockFilePath: string | undefined = process.env[INSTALL_RUN_LOCKFILE_PATH_VARIABLE],
+  options: IInstallAndRunOptions = {}
 ): number {
   const rushJsonFolder: string = findRushJsonFolder();
   const rushCommonFolder: string = path.join(rushJsonFolder, 'common');
@@ -437,18 +704,35 @@ export function installAndRun(
       sourceNpmrcFolder,
       targetNpmrcFolder: packageInstallFolder,
       logger,
-      supportEnvVarFallbackSyntax: false
+      supportEnvVarFallbackSyntax: false,
+      // Always filter npm-incompatible properties in install-run scripts.
+      // Any warnings will be shown when running Rush commands directly.
+      filterNpmIncompatibleProperties: true
     });
 
     _createPackageJson(packageInstallFolder, packageName, packageVersion);
-    const command: 'install' | 'ci' = lockFilePath ? 'ci' : 'install';
-    _installPackage(logger, packageInstallFolder, packageName, packageVersion, command);
+    const installCommand: 'install' | 'ci' = lockFilePath ? 'ci' : 'install';
+    _installPackage(
+      logger,
+      packageInstallFolder,
+      packageName,
+      packageVersion,
+      installCommand,
+      options.onExternalOutput,
+      options.onExternalOutputOverflow,
+      options.externalOutputCaptureMaxBytes,
+      options.externalOutputLiveStreams
+    );
     _writeFlagFile(packageInstallFolder);
   }
 
-  const statusMessage: string = `Invoking "${packageBinName} ${packageBinArgs.join(' ')}"`;
+  const invocation: string = options.onExternalOutput
+    ? packageBinName
+    : `${packageBinName} ${packageBinArgs.join(' ')}`;
+  const statusMessage: string = `Invoking "${invocation}"`;
   const statusMessageLine: string = new Array(statusMessage.length + 1).join('-');
   logger.info('\n' + statusMessage + '\n' + statusMessageLine + '\n');
+  options.prepareToRun?.();
 
   const binPath: string = _getBinPath(packageInstallFolder, packageBinName);
   const binFolderPath: string = path.resolve(packageInstallFolder, NODE_MODULES_FOLDER_NAME, '.bin');
@@ -456,23 +740,30 @@ export function installAndRun(
   // Windows environment variables are case-insensitive.  Instead of using SpawnSyncOptions.env, we need to
   // assign via the process.env proxy to ensure that we append to the right PATH key.
   const originalEnvPath: string = process.env.PATH || '';
-  let result: childProcess.SpawnSyncReturns<Buffer>;
+  let result: childProcess.SpawnSyncReturns<string | Buffer>;
   try {
-    // `npm` bin stubs on Windows are `.cmd` files
-    // Node.js will not directly invoke a `.cmd` file unless `shell` is set to `true`
-    const platformBinPath: string = _getPlatformPath(binPath);
-
     process.env.PATH = [binFolderPath, originalEnvPath].join(path.delimiter);
-    result = childProcess.spawnSync(platformBinPath, packageBinArgs, {
+
+    const spawnOptions: childProcess.SpawnSyncOptions = {
       stdio: 'inherit',
-      windowsVerbatimArguments: false,
-      shell: _isWindows(),
       cwd: process.cwd(),
       env: process.env
-    });
+    };
+    if (IS_WINDOWS) {
+      result = childProcess.spawnSync(_buildShellCommand(binPath, packageBinArgs), {
+        ...spawnOptions,
+        windowsVerbatimArguments: false,
+        // `npm` bin stubs on Windows are `.cmd` files
+        // Node.js will not directly invoke a `.cmd` file unless `shell` is set to `true`
+        shell: true
+      });
+    } else {
+      result = childProcess.spawnSync(binPath, packageBinArgs, spawnOptions);
+    }
   } finally {
     process.env.PATH = originalEnvPath;
   }
+
   if (result.status !== null) {
     return result.status;
   } else {
@@ -501,10 +792,11 @@ function _run(): void {
   ]: string[] = process.argv;
 
   if (!nodePath) {
-    throw new Error('Unexpected exception: could not detect node path');
+    throw new Error('Could not detect node path');
   }
 
-  if (path.basename(scriptPath).toLowerCase() !== 'install-run.js') {
+  const scriptFileName: string = path.basename(scriptPath).toLowerCase();
+  if (scriptFileName !== 'install-run.js' && scriptFileName !== 'install-run') {
     // If install-run.js wasn't directly invoked, don't execute the rest of this function. Return control
     // to the script that (presumably) imported this file
 
@@ -517,7 +809,10 @@ function _run(): void {
     process.exit(1);
   }
 
-  const logger: ILogger = { info: console.log, error: console.error };
+  const logger: ILogger = {
+    info: (text: string) => console.log(text),
+    error: (text: string) => console.error(text)
+  };
 
   runWithErrorAndStatusCode(logger, () => {
     const rushJsonFolder: string = findRushJsonFolder();

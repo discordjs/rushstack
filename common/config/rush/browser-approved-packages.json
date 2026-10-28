@@ -11,6 +11,10 @@
       "allowedCategories": [ "vscode-extensions" ]
     },
     {
+      "name": "@jridgewell/sourcemap-codec",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
       "name": "@lifaon/path",
       "allowedCategories": [ "libraries" ]
     },
@@ -43,16 +47,40 @@
       "allowedCategories": [ "libraries" ]
     },
     {
+      "name": "@rushstack/rush-client-core",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@rushstack/rush-daemon",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@rushstack/rush-daemon-protocol",
+      "allowedCategories": [ "libraries", "tests" ]
+    },
+    {
+      "name": "@rushstack/rush-daemon-transport",
+      "allowedCategories": [ "libraries", "tests" ]
+    },
+    {
+      "name": "@rushstack/rush-reporter",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@rushstack/rush-serve-dashboard",
+      "allowedCategories": [ "libraries" ]
+    },
+    {
+      "name": "@rushstack/rush-terminal-renderer",
+      "allowedCategories": [ "libraries", "tests" ]
+    },
+    {
       "name": "@rushstack/rush-themed-ui",
       "allowedCategories": [ "libraries" ]
     },
     {
       "name": "@rushstack/rush-vscode-command-webview",
       "allowedCategories": [ "vscode-extensions" ]
-    },
-    {
-      "name": "@ungap/structured-clone",
-      "allowedCategories": [ "libraries" ]
     },
     {
       "name": "axios",

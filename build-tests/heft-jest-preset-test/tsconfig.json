@@ -13,13 +13,12 @@
     "experimentalDecorators": true,
     "strictNullChecks": true,
     "noUnusedLocals": true,
-    "types": ["heft-jest"],
+    "types": ["jest"],
 
     "module": "esnext",
     "moduleResolution": "node",
     "target": "ES2015",
     "lib": ["ES2015"]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "lib"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

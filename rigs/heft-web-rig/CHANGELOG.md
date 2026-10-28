@@ -1,6 +1,338 @@
 # Change Log - @rushstack/heft-web-rig
 
-This log was last generated on Tue, 04 Nov 2025 08:15:15 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 15:19:39 GMT and should not be manually modified.
+
+## 1.4.40
+Tue, 27 Oct 2026 15:19:39 GMT
+
+_Version update only_
+
+## 1.4.39
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 1.4.38
+Wed, 14 Oct 2026 00:20:26 GMT
+
+_Version update only_
+
+## 1.4.37
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 1.4.36
+Mon, 28 Sep 2026 20:08:27 GMT
+
+_Version update only_
+
+## 1.4.35
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 1.4.34
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 1.4.33
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 1.4.32
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 1.4.31
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 1.4.30
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 1.4.29
+Tue, 04 Aug 2026 00:17:24 GMT
+
+_Version update only_
+
+## 1.4.28
+Tue, 21 Jul 2026 02:53:23 GMT
+
+_Version update only_
+
+## 1.4.27
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 1.4.26
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 1.4.25
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 1.4.24
+Wed, 10 Jun 2026 00:15:42 GMT
+
+_Version update only_
+
+## 1.4.23
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 1.4.22
+Tue, 02 Jun 2026 07:30:20 GMT
+
+_Version update only_
+
+## 1.4.21
+Fri, 29 May 2026 18:25:51 GMT
+
+_Version update only_
+
+## 1.4.20
+Thu, 30 Apr 2026 00:15:22 GMT
+
+### Patches
+
+- Bump postcss@~8.5.10 to address CVE GHSA-qx2v-qp2m-jg93
+
+## 1.4.19
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 1.4.18
+Mon, 20 Apr 2026 15:15:24 GMT
+
+_Version update only_
+
+## 1.4.17
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 1.4.16
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 1.4.15
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 1.4.14
+Wed, 15 Apr 2026 17:59:12 GMT
+
+### Patches
+
+- Include `es2015.symbol.wellknown` in the default included `lib`s in `tsconfig-base.json`.
+- Replace the `@types/heft-jest` types package with `@types/jest`. The `@types/jest` package now correctly includes the mocking typings.
+
+## 1.4.13
+Wed, 15 Apr 2026 15:14:48 GMT
+
+### Patches
+
+- Include `temp/image-typings` in the build clean folders.
+
+## 1.4.12
+Tue, 14 Apr 2026 01:25:46 GMT
+
+_Version update only_
+
+## 1.4.11
+Sat, 11 Apr 2026 00:31:13 GMT
+
+_Version update only_
+
+## 1.4.10
+Fri, 10 Apr 2026 22:46:34 GMT
+
+_Version update only_
+
+## 1.4.9
+Thu, 09 Apr 2026 23:00:20 GMT
+
+_Version update only_
+
+## 1.4.8
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 1.4.7
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 1.4.6
+Thu, 02 Apr 2026 00:14:38 GMT
+
+_Version update only_
+
+## 1.4.5
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 1.4.4
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 1.4.3
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 1.4.2
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 1.4.1
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 1.4.0
+Tue, 24 Feb 2026 02:08:44 GMT
+
+### Minor changes
+
+- Add `@rushstack/heft-static-asset-typings-plugin` to the `app` and `library` profiles, generating `.d.ts` typings for static asset files (images and text). This enables type-safe asset imports in TypeScript without needing `allowArbitraryExtensions` or `require()` calls. Also add `.webp` and `.avif` to the webpack asset resource rule.
+
+## 1.3.5
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 1.3.4
+Mon, 23 Feb 2026 00:42:21 GMT
+
+_Version update only_
+
+## 1.3.3
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 1.3.2
+Fri, 20 Feb 2026 00:15:04 GMT
+
+_Version update only_
+
+## 1.3.1
+Thu, 19 Feb 2026 00:04:52 GMT
+
+_Version update only_
+
+## 1.3.0
+Thu, 12 Feb 2026 23:00:53 GMT
+
+### Minor changes
+
+- Bump the `webpack` dependency to `~5.105.2`.
+
+## 1.2.9
+Sat, 07 Feb 2026 01:13:26 GMT
+
+_Version update only_
+
+## 1.2.8
+Thu, 05 Feb 2026 01:54:04 GMT
+
+### Patches
+
+- Bump `webpack` dependency version to `~5.105.0`
+
+## 1.2.7
+Thu, 05 Feb 2026 00:23:59 GMT
+
+### Patches
+
+- Bump `webpack` dependency version to `~5.104.1`
+
+## 1.2.6
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 1.2.5
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 1.2.4
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 1.2.3
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 1.2.2
+Wed, 07 Jan 2026 01:12:25 GMT
+
+_Version update only_
+
+## 1.2.1
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 1.2.0
+Thu, 18 Dec 2025 01:13:04 GMT
+
+### Minor changes
+
+- Update Webpack dependency to `~5.103.0`
+
+## 1.1.12
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 1.1.11
+Wed, 03 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 1.1.10
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 1.1.9
+Wed, 12 Nov 2025 01:57:54 GMT
+
+_Version update only_
+
+## 1.1.8
+Wed, 12 Nov 2025 01:12:56 GMT
+
+_Version update only_
+
+## 1.1.7
+Tue, 11 Nov 2025 16:13:26 GMT
+
+_Version update only_
 
 ## 1.1.6
 Tue, 04 Nov 2025 08:15:14 GMT

@@ -33,6 +33,7 @@ export interface IDetailedRepoState {
     files: Map<string, string>;
     hasSubmodules: boolean;
     hasUncommittedChanges: boolean;
+    symlinks: Map<string, string>;
 }
 
 // @beta
@@ -45,6 +46,20 @@ export interface IFileDiffStatus {
     oldhash: string;
     // (undocumented)
     status: 'A' | 'D' | 'M';
+}
+
+// @beta
+export interface IRepoStateCacheOptions {
+    gitPath?: string;
+    rootDirectory: string;
+    temporaryFolderPath?: string;
+}
+
+// @beta
+export class RepoStateCache {
+    constructor(options: IRepoStateCacheOptions);
+    dispose(): void;
+    getDetailedRepoStateAsync(additionalRelativePathsToHash?: ReadonlyArray<string>, filterPath?: ReadonlyArray<string>): Promise<IDetailedRepoState>;
 }
 
 ```

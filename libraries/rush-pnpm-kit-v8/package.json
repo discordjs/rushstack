@@ -1,0 +1,51 @@
+{
+  "name": "@rushstack/rush-pnpm-kit-v8",
+  "version": "0.2.32",
+  "description": "rush pnpm kit v8",
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "license": "MIT",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/rush-pnpm-kit-v8.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/rush-pnpm-kit-v8.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
+  "scripts": {
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
+    "_phase:test": "heft run --only test -- --clean",
+    "build": "heft build --clean",
+    "test": "heft test --clean"
+  },
+  "dependencies": {
+    "@pnpm/dependency-path-pnpm-v8": "npm:@pnpm/dependency-path@~2.1.8",
+    "@pnpm/lockfile-file-pnpm-lock-v6": "npm:@pnpm/lockfile-file@~8.1.8",
+    "@pnpm/logger": "~5.0.0"
+  },
+  "devDependencies": {
+    "@rushstack/heft": "workspace:*",
+    "local-node-rig": "workspace:*"
+  },
+  "sideEffects": false
+}

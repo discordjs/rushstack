@@ -24,7 +24,7 @@ import { cloneDeep } from '../utilities/objectUtilities';
  * @internalRemarks
  * This is a copy of the semver ReleaseType enum, but with the `none` value added and
  * the `premajor` and `prepatch` omitted.
- * See {@link LockStepVersionPolicy._getReleaseType}.
+ * See `LockStepVersionPolicy.#getReleaseType`.
  *
  * TODO: Consider supporting `premajor` and `prepatch` in the future.
  */
@@ -53,6 +53,66 @@ export enum VersionPolicyDefinitionName {
 }
 
 /**
+ * Updates the dependencies in the package json editor to values used for publishing, if needed.
+ *
+ * @returns the updated package json editor if the version format for publish is 'exact', otherwise undefined.
+ */
+function updateDependenciesBeforePublish(
+  packageName: string,
+  configuration: RushConfiguration,
+  versionFormatForPublish: VersionFormatForPublish
+): PackageJsonEditor | undefined {
+  if (versionFormatForPublish === 'exact') {
+    const project: RushConfigurationProject = configuration.getProjectByName(packageName)!;
+
+    const packageJsonEditor: PackageJsonEditor = project.packageJsonEditor;
+
+    for (const dependency of packageJsonEditor.dependencyList) {
+      const rushDependencyProject: RushConfigurationProject | undefined = configuration.getProjectByName(
+        dependency.name
+      );
+
+      if (rushDependencyProject) {
+        const dependencyVersion: string = rushDependencyProject.packageJson.version;
+
+        dependency.setVersion(dependencyVersion);
+      }
+    }
+
+    return packageJsonEditor;
+  }
+}
+
+/**
+ * Updates the dependencies in the package json editor to values used for checked-in source, if needed.
+ *
+ * @returns the updated package json editor if the version format for commit is 'wildcard', otherwise undefined.
+ */
+function updateDependenciesBeforeCommit(
+  packageName: string,
+  configuration: RushConfiguration,
+  versionFormatForCommit: VersionFormatForCommit
+): PackageJsonEditor | undefined {
+  if (versionFormatForCommit === 'wildcard') {
+    const project: RushConfigurationProject = configuration.getProjectByName(packageName)!;
+
+    const packageJsonEditor: PackageJsonEditor = project.packageJsonEditor;
+
+    for (const dependency of packageJsonEditor.dependencyList) {
+      const rushDependencyProject: RushConfigurationProject | undefined = configuration.getProjectByName(
+        dependency.name
+      );
+
+      if (rushDependencyProject) {
+        dependency.setVersion('*');
+      }
+    }
+
+    return packageJsonEditor;
+  }
+}
+
+/**
  * This is the base class for version policy which controls how versions get bumped.
  * @public
  */
@@ -64,11 +124,11 @@ export abstract class VersionPolicy {
    */
   public readonly _json: IVersionPolicyJson;
 
-  private get _versionFormatForCommit(): VersionFormatForCommit {
+  get #versionFormatForCommit(): VersionFormatForCommit {
     return this._json.dependencies?.versionFormatForCommit ?? 'original';
   }
 
-  private get _versionFormatForPublish(): VersionFormatForPublish {
+  get #versionFormatForPublish(): VersionFormatForPublish {
     return this._json.dependencies?.versionFormatForPublish ?? 'original';
   }
 
@@ -161,53 +221,63 @@ export abstract class VersionPolicy {
   public abstract validate(versionString: string, packageName: string): void;
 
   /**
+   * @deprecated Use {@link VersionPolicy.setDependenciesBeforePublishAsync} method instead.
+   */
+  public setDependenciesBeforePublish(packageName: string, configuration: RushConfiguration): void {
+    const packageJsonEditor: PackageJsonEditor | undefined = updateDependenciesBeforePublish(
+      packageName,
+      configuration,
+      this.#versionFormatForPublish
+    );
+
+    packageJsonEditor?.saveIfModified();
+  }
+
+  /**
    * Tells the version policy to modify any dependencies in the target package
    * to values used for publishing.
    */
-  public setDependenciesBeforePublish(packageName: string, configuration: RushConfiguration): void {
-    if (this._versionFormatForPublish === 'exact') {
-      const project: RushConfigurationProject = configuration.getProjectByName(packageName)!;
+  public async setDependenciesBeforePublishAsync(
+    packageName: string,
+    configuration: RushConfiguration
+  ): Promise<void> {
+    const packageJsonEditor: PackageJsonEditor | undefined = updateDependenciesBeforePublish(
+      packageName,
+      configuration,
+      this.#versionFormatForPublish
+    );
 
-      const packageJsonEditor: PackageJsonEditor = project.packageJsonEditor;
+    await packageJsonEditor?.saveIfModifiedAsync();
+  }
 
-      for (const dependency of packageJsonEditor.dependencyList) {
-        const rushDependencyProject: RushConfigurationProject | undefined = configuration.getProjectByName(
-          dependency.name
-        );
+  /**
+   * @deprecated Use {@link VersionPolicy.setDependenciesBeforeCommitAsync} method instead.
+   */
+  public setDependenciesBeforeCommit(packageName: string, configuration: RushConfiguration): void {
+    const packageJsonEditor: PackageJsonEditor | undefined = updateDependenciesBeforeCommit(
+      packageName,
+      configuration,
+      this.#versionFormatForCommit
+    );
 
-        if (rushDependencyProject) {
-          const dependencyVersion: string = rushDependencyProject.packageJson.version;
-
-          dependency.setVersion(dependencyVersion);
-        }
-      }
-
-      packageJsonEditor.saveIfModified();
-    }
+    packageJsonEditor?.saveIfModified();
   }
 
   /**
    * Tells the version policy to modify any dependencies in the target package
    * to values used for checked-in source.
    */
-  public setDependenciesBeforeCommit(packageName: string, configuration: RushConfiguration): void {
-    if (this._versionFormatForCommit === 'wildcard') {
-      const project: RushConfigurationProject = configuration.getProjectByName(packageName)!;
+  public async setDependenciesBeforeCommitAsync(
+    packageName: string,
+    configuration: RushConfiguration
+  ): Promise<void> {
+    const packageJsonEditor: PackageJsonEditor | undefined = updateDependenciesBeforeCommit(
+      packageName,
+      configuration,
+      this.#versionFormatForCommit
+    );
 
-      const packageJsonEditor: PackageJsonEditor = project.packageJsonEditor;
-
-      for (const dependency of packageJsonEditor.dependencyList) {
-        const rushDependencyProject: RushConfigurationProject | undefined = configuration.getProjectByName(
-          dependency.name
-        );
-
-        if (rushDependencyProject) {
-          dependency.setVersion('*');
-        }
-      }
-
-      packageJsonEditor.saveIfModified();
-    }
+    await packageJsonEditor?.saveIfModifiedAsync();
   }
 }
 
@@ -220,7 +290,7 @@ export class LockStepVersionPolicy extends VersionPolicy {
    * @internal
    */
   declare public readonly _json: ILockStepVersionJson;
-  private _version: semver.SemVer;
+  #version: semver.SemVer;
 
   /**
    * The type of bump for next bump.
@@ -246,14 +316,14 @@ export class LockStepVersionPolicy extends VersionPolicy {
    */
   public constructor(versionPolicyJson: ILockStepVersionJson) {
     super(versionPolicyJson);
-    this._version = new semver.SemVer(versionPolicyJson.version);
+    this.#version = new semver.SemVer(versionPolicyJson.version);
   }
 
   /**
    * The value of the lockstep version
    */
   public get version(): string {
-    return this._version.format();
+    return this.#version.format();
   }
 
   /**
@@ -264,16 +334,16 @@ export class LockStepVersionPolicy extends VersionPolicy {
    */
   public ensure(project: IPackageJson, force?: boolean): IPackageJson | undefined {
     const packageVersion: semver.SemVer = new semver.SemVer(project.version);
-    const compareResult: number = packageVersion.compare(this._version);
+    const compareResult: number = packageVersion.compare(this.#version);
     if (compareResult === 0) {
       return undefined;
     } else if (compareResult > 0 && !force) {
       const errorMessage: string =
         `Version ${project.version} in package ${project.name}` +
-        ` is higher than locked version ${this._version.format()}.`;
+        ` is higher than locked version ${this.#version.format()}.`;
       throw new Error(errorMessage);
     }
-    return this._updatePackageVersion(project, this._version);
+    return this.#updatePackageVersion(project, this.#version);
   }
 
   /**
@@ -290,7 +360,7 @@ export class LockStepVersionPolicy extends VersionPolicy {
       return;
     }
 
-    this._version.inc(this._getReleaseType(nextBump), identifier);
+    this.#version.inc(this.#getReleaseType(nextBump), identifier);
     this._json.version = this.version;
   }
 
@@ -300,10 +370,10 @@ export class LockStepVersionPolicy extends VersionPolicy {
    */
   public update(newVersionString: string): boolean {
     const newVersion: semver.SemVer = new semver.SemVer(newVersionString);
-    if (!newVersion || this._version === newVersion) {
+    if (!newVersion || this.#version === newVersion) {
       return false;
     }
-    this._version = newVersion;
+    this.#version = newVersion;
     this._json.version = this.version;
     return true;
   }
@@ -316,18 +386,18 @@ export class LockStepVersionPolicy extends VersionPolicy {
    */
   public validate(versionString: string, packageName: string): void {
     const versionToTest: semver.SemVer = new semver.SemVer(versionString, false);
-    if (this._version.compare(versionToTest) !== 0) {
+    if (this.#version.compare(versionToTest) !== 0) {
       throw new Error(`Invalid version ${versionString} in ${packageName}`);
     }
   }
 
-  private _updatePackageVersion(project: IPackageJson, newVersion: semver.SemVer): IPackageJson {
+  #updatePackageVersion(project: IPackageJson, newVersion: semver.SemVer): IPackageJson {
     const updatedProject: IPackageJson = cloneDeep(project);
     updatedProject.version = newVersion.format();
     return updatedProject;
   }
 
-  private _getReleaseType(bumpType: BumpType): semver.ReleaseType {
+  #getReleaseType(bumpType: BumpType): semver.ReleaseType {
     // Eventually we should just use ReleaseType and get rid of bump type.
     return BumpType[bumpType] as semver.ReleaseType;
   }

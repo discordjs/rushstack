@@ -1,21 +1,50 @@
 {
   "name": "@rushstack/rush-http-build-cache-plugin",
-  "version": "5.162.0",
+  "version": "5.181.0",
   "description": "Rush plugin for generic HTTP cloud build cache",
   "repository": {
     "type": "git",
     "url": "https://github.com/microsoft/rushstack",
     "directory": "rush-plugins/rush-http-build-cache-plugin"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "homepage": "https://rushjs.io",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./lib-dts/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib-dts/index.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*.schema.json": "./lib-commonjs/*.schema.json",
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./rush-plugin-manifest.json": "./rush-plugin-manifest.json",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "scripts": {
     "build": "heft build --clean",
     "start": "heft test-watch",
     "test": "heft test",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "dependencies": {
@@ -30,5 +59,6 @@
     "@rushstack/terminal": "workspace:*",
     "eslint": "~9.37.0",
     "local-node-rig": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

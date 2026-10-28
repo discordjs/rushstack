@@ -1,6 +1,62 @@
 # Change Log - @rushstack/eslint-plugin
 
-This log was last generated on Wed, 22 Oct 2025 00:57:54 GMT and should not be manually modified.
+This log was last generated on Wed, 14 Oct 2026 00:20:26 GMT and should not be manually modified.
+
+## 0.24.0
+Wed, 14 Oct 2026 00:20:26 GMT
+
+### Minor changes
+
+- Add a rule that requires ECMAScript private syntax for class fields, methods, and accessors.
+
+## 0.23.5
+Mon, 14 Sep 2026 22:42:32 GMT
+
+### Patches
+
+- Type the plugin's default export as `ESLint.Plugin` so that it can be referenced in ESLint flat-config `plugins` maps without a cast. This is a type-only change; the runtime export is unchanged.
+
+## 0.23.4
+Sat, 05 Sep 2026 00:15:08 GMT
+
+### Patches
+
+- Fix no-new-null false positives for ECMAScript private class members.
+
+## 0.23.3
+Thu, 20 Aug 2026 00:16:38 GMT
+
+### Patches
+
+- Compile package output for ES2022.
+
+## 0.23.2
+Wed, 25 Feb 2026 21:39:42 GMT
+
+### Patches
+
+- Bump `@typescript-eslint/*` dependencies to `~8.56.1`.
+
+## 0.23.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 0.23.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 0.22.1
+Tue, 11 Nov 2025 16:13:26 GMT
+
+### Patches
+
+- Fix calculation of project root folder when using the ESLint extension in VS Code. Report the paths being compared in 'no-external-local-imports' rule violations.
 
 ## 0.22.0
 Wed, 22 Oct 2025 00:57:54 GMT

@@ -5,6 +5,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import type * as child_process from 'node:child_process';
 import { once } from 'node:events';
+import { Readable } from 'node:stream';
 
 import {
   Executable,
@@ -16,9 +17,8 @@ import {
   type IWaitForExitResultWithoutOutput
 } from '../Executable';
 import { FileSystem } from '../FileSystem';
+import { Path } from '../Path';
 import { PosixModeBits } from '../PosixModeBits';
-import { Text } from '../Text';
-import { Readable } from 'node:stream';
 
 describe('Executable process tests', () => {
   // The PosixModeBits are intended to be used with bitwise operations.
@@ -101,7 +101,7 @@ describe('Executable process tests', () => {
   test('Executable.tryResolve() pathless', () => {
     const resolved: string | undefined = Executable.tryResolve('npm-binary-wrapper', options);
     expect(resolved).toBeDefined();
-    const resolvedRelative: string = Text.replaceAll(path.relative(executableFolder, resolved!), '\\', '/');
+    const resolvedRelative: string = Path.convertToSlashes(path.relative(executableFolder, resolved!));
 
     if (os.platform() === 'win32') {
       // On Windows, we should find npm-binary-wrapper.cmd instead of npm-binary-wrapper
@@ -196,13 +196,13 @@ describe('Executable process tests', () => {
     if (os.platform() === 'win32') {
       expect(() => {
         executeNpmBinaryWrapper(['abc%123']);
-      }).toThrowError(
+      }).toThrow(
         'The command line argument "abc%123" contains a special character "%"' +
           ' that cannot be escaped for the Windows shell'
       );
       expect(() => {
         executeNpmBinaryWrapper(['abc<>123']);
-      }).toThrowError(
+      }).toThrow(
         'The command line argument "abc<>123" contains a special character "<"' +
           ' that cannot be escaped for the Windows shell'
       );
@@ -332,7 +332,7 @@ describe('Executable process tests', () => {
     });
     await expect(
       Executable.waitForExitAsync(childProcess, { encoding: 'utf8', throwOnNonZeroExitCode: true })
-    ).rejects.toThrowError(/exited with code 1/);
+    ).rejects.toThrow(/exited with code 1/);
   });
 
   test('Executable.runToCompletion(Executable.spawn("no-terminate")) failure with throw on signal', async () => {
@@ -348,28 +348,50 @@ describe('Executable process tests', () => {
     childProcess.kill('SIGTERM');
     await expect(
       Executable.waitForExitAsync(childProcess, { encoding: 'utf8', throwOnSignal: true })
-    ).rejects.toThrowError(/Process terminated by SIGTERM/);
+    ).rejects.toThrow(/Process terminated by SIGTERM/);
+  });
+
+  test('Executable.waitForExitAsync() handles multi-byte UTF-8 characters correctly', async () => {
+    // Test that multi-byte characters are properly decoded even when split across chunks
+    const executablePath: string = path.join(executableFolder, 'multibyte', 'output-multibyte.js');
+    const childProcess: child_process.ChildProcess = Executable.spawn(process.argv0, [executablePath], {
+      environment,
+      currentWorkingDirectory: executableFolder,
+      stdio: ['ignore', 'pipe', 'pipe']
+    });
+
+    const result: IWaitForExitResult<string> = await Executable.waitForExitAsync(childProcess, {
+      encoding: 'utf8'
+    });
+
+    expect(result.exitCode).toEqual(0);
+    expect(result.signal).toBeNull();
+    expect(typeof result.stdout).toEqual('string');
+
+    // The output should contain properly decoded multi-byte characters
+    // Chinese characters (世界) and emoji (🎉)
+    expect(result.stdout).toContain('Hello, 世界! 🎉');
+    // Ensure no replacement characters (�) which would indicate improper decoding
+    expect(result.stdout).not.toContain('�');
   });
 });
 
 describe('Executable process list', () => {
   const WIN32_PROCESS_LIST_OUTPUT: (string | null)[] = [
-    'Name                                                         ParentProcessId  ProcessId\r\r\n',
+    'PPID PID NAME\r\n',
     // Test that the parser can handle referencing a parent that is the same as the current process
     // Test that the parser can handle multiple return characters
-    'System Idle Process                                          0                0\r\r\n',
-    'System                                                       0                1\r\r\n',
-    'executable2.exe                                       ',
-    // Test that the parser can handle a line that is truncated in the middle of a field
+    '0 0 System Idle Process\r\n',
+    '0 1 System\r\n',
     // Test that the parser can handle an entry referencing a parent that hasn't been seen yet
-    '       2                4\r\r\n',
-    'executable0.exe                                              1                2\r\r\n',
+    '2 4 executable2.exe\r\n',
+    '1 2 executable0.exe\r\n',
     // Test children handling when multiple entries reference the same parent
-    'executable1.exe                                              1                3\r\r\n',
+    '1 3 executable1.exe\r\n',
     // Test that the parser can handle empty strings
     '',
     // Test that the parser can handle referencing a parent that doesn't exist
-    'executable3.exe                                              6                5\r\r\n'
+    '6 5 executable3.exe\r\n'
   ];
 
   const UNIX_PROCESS_LIST_OUTPUT: (string | null)[] = [
@@ -387,6 +409,24 @@ describe('Executable process list', () => {
     // Test children handling when multiple entries reference the same parent
     '   1     3   process1\n'
   ];
+
+  test('contains the current pid (sync)', () => {
+    const results: ReadonlyMap<number, IProcessInfo> = Executable.getProcessInfoById();
+    const currentProcessInfo: IProcessInfo | undefined = results.get(process.pid);
+    expect(currentProcessInfo).toBeDefined();
+    expect(currentProcessInfo?.parentProcessInfo?.processId).toEqual(process.ppid);
+    // TODO: Fix parsing of process name as "MainThread" for Node 24
+    expect(currentProcessInfo?.processName).toMatch(/(node(\.exe)|MainThread)?$/i);
+  });
+
+  test('contains the current pid (async)', async () => {
+    const results: ReadonlyMap<number, IProcessInfo> = await Executable.getProcessInfoByIdAsync();
+    const currentProcessInfo: IProcessInfo | undefined = results.get(process.pid);
+    expect(currentProcessInfo).toBeDefined();
+    expect(currentProcessInfo?.parentProcessInfo?.processId).toEqual(process.ppid);
+    // TODO: Fix parsing of process name as "MainThread" for Node 24
+    expect(currentProcessInfo?.processName).toMatch(/(node(\.exe)|MainThread)?$/i);
+  });
 
   test('parses win32 output', () => {
     const processListMap: Map<number, IProcessInfo> = parseProcessListOutput(

@@ -1,6 +1,82 @@
 # Change Log - @rushstack/eslint-config
 
-This log was last generated on Fri, 24 Oct 2025 11:22:09 GMT and should not be manually modified.
+This log was last generated on Wed, 14 Oct 2026 00:20:26 GMT and should not be manually modified.
+
+## 4.9.0
+Wed, 14 Oct 2026 00:20:26 GMT
+
+### Minor changes
+
+- Enable the rule that prefers ECMAScript private class members.
+
+## 4.8.0
+Tue, 22 Sep 2026 17:35:41 GMT
+
+### Minor changes
+
+- Globally ignore build-output folders (`lib`, `lib-*`, `dist`, `temp`, `coverage`) so that generated output is not linted, which matters for tools that enumerate files from the ESLint configuration (ESLint's flat config does not respect `.gitignore`).
+
+### Patches
+
+- Update the `eslint-plugin-tsdoc` dependency to `~0.5.3`.
+
+## 4.7.0
+Mon, 14 Sep 2026 22:42:32 GMT
+
+### Minor changes
+
+- Group the profile's type-aware rules into an exported `typeAwareRules` set and add a `flat/without-type-information` helper for linting files that are not part of the TypeScript program with only the non-type-aware rules.
+
+### Patches
+
+- Author the package in TypeScript (built to CommonJS via Heft). The existing subpath entry points are preserved via a `package.json` `"exports"` map and the compiled configuration is runtime-identical to the previous JavaScript.
+
+## 4.6.6
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 4.6.5
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 4.6.4
+Wed, 25 Feb 2026 21:39:42 GMT
+
+### Patches
+
+- Bump `eslint-plugin-tsdoc` to `~0.5.1` to mitigate CVE-2026-26996.
+- Bump `@typescript-eslint/*` dependencies to `~8.56.1`.
+
+## 4.6.3
+Fri, 20 Feb 2026 00:15:04 GMT
+
+_Version update only_
+
+## 4.6.2
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Patches
+
+- Add `sideEffects` field to package.json.
+
+## 4.6.1
+Wed, 12 Nov 2025 01:57:54 GMT
+
+_Version update only_
+
+## 4.6.0
+Wed, 12 Nov 2025 01:12:56 GMT
+
+### Minor changes
+
+- Bump the `eslint-plugin-tsdoc` dependency to `~0.5.0`.
+
+## 4.5.4
+Tue, 11 Nov 2025 16:13:26 GMT
+
+_Version update only_
 
 ## 4.5.3
 Fri, 24 Oct 2025 11:22:09 GMT

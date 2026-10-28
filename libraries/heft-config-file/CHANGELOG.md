@@ -1,6 +1,124 @@
 # Change Log - @rushstack/heft-config-file
 
-This log was last generated on Fri, 24 Oct 2025 00:13:38 GMT and should not be manually modified.
+This log was last generated on Tue, 06 Oct 2026 00:04:37 GMT and should not be manually modified.
+
+## 0.20.17
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 0.20.16
+Mon, 28 Sep 2026 20:08:26 GMT
+
+_Version update only_
+
+## 0.20.15
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 0.20.14
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 0.20.13
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 0.20.12
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 0.20.11
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 0.20.10
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 0.20.9
+Sat, 18 Apr 2026 03:47:09 GMT
+
+### Patches
+
+- Remove `@ungap/structured-clone` polyfill; use native `structuredClone` (Node 18+).
+
+## 0.20.8
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 0.20.7
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 0.20.6
+Fri, 10 Apr 2026 22:46:34 GMT
+
+### Patches
+
+- Improve documentation in README.
+
+## 0.20.5
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 0.20.4
+Tue, 31 Mar 2026 15:14:14 GMT
+
+_Version update only_
+
+## 0.20.3
+Wed, 25 Feb 2026 00:34:30 GMT
+
+_Version update only_
+
+## 0.20.2
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 0.20.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 0.20.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 0.19.7
+Wed, 07 Jan 2026 01:12:24 GMT
+
+_Version update only_
+
+## 0.19.6
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 0.19.5
+Sat, 06 Dec 2025 01:12:29 GMT
+
+_Version update only_
+
+## 0.19.4
+Fri, 21 Nov 2025 16:13:55 GMT
+
+_Version update only_
 
 ## 0.19.3
 Fri, 24 Oct 2025 00:13:38 GMT

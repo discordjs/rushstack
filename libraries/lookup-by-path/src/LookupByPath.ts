@@ -36,6 +36,53 @@ export interface IReadonlyPathTrieNode<TItem extends {}> {
   readonly children: ReadonlyMap<string, IReadonlyPathTrieNode<TItem>> | undefined;
 }
 
+/**
+ * JSON-serializable representation of a node in a {@link LookupByPath} trie.
+ *
+ * @beta
+ */
+export interface ISerializedPathTrieNode {
+  /**
+   * Index into the `values` array of the containing {@link ILookupByPathJson}.
+   * If `undefined`, this node has no associated value.
+   */
+  valueIndex?: number;
+
+  /**
+   * Child nodes keyed by path segment.
+   */
+  children?: Record<string, ISerializedPathTrieNode>;
+}
+
+/**
+ * JSON-serializable representation of a {@link LookupByPath} instance.
+ *
+ * @remarks
+ * The `values` array stores each unique value exactly once (by reference identity).
+ * Nodes in the tree reference values by their index in this array, which ensures that
+ * reference equality is preserved across serialization and deserialization.
+ *
+ * @beta
+ */
+export interface ILookupByPathJson<TSerialized> {
+  /**
+   * The path delimiter used by the serialized trie.
+   */
+  delimiter: string;
+
+  /**
+   * Array of serialized values. Nodes in the tree reference values by their index in this array.
+   * Using an array with index-based references preserves reference equality: if multiple nodes
+   * share the same value (by reference), they will reference the same index.
+   */
+  values: TSerialized[];
+
+  /**
+   * The serialized tree structure.
+   */
+  tree: ISerializedPathTrieNode;
+}
+
 interface IPrefixEntry {
   /**
    * The prefix that was matched
@@ -195,6 +242,18 @@ export interface IReadonlyLookupByPath<TItem extends {}> extends Iterable<[strin
    * @returns The trie node at the specified prefix, or `undefined` if no node was found
    */
   getNodeAtPrefix(query: string, delimiter?: string): IReadonlyPathTrieNode<TItem> | undefined;
+
+  /**
+   * Serializes this `LookupByPath` instance to a JSON-compatible representation.
+   *
+   * @param serializeValue - A function that converts a value of type `TItem` to a JSON-serializable form.
+   * @returns A JSON-serializable representation of this trie.
+   *
+   * @remarks
+   * Values that are reference-equal will be serialized once and referenced by index, ensuring
+   * that reference equality is preserved when deserialized via {@link LookupByPath.fromJson}.
+   */
+  toJson<TSerialized>(serializeValue: (value: TItem) => TSerialized): ILookupByPathJson<TSerialized>;
 }
 
 /**
@@ -226,12 +285,12 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
   /**
    * The root node of the trie, corresponding to the path ''
    */
-  private readonly _root: IPathTrieNode<TItem>;
+  readonly #root: IPathTrieNode<TItem>;
 
   /**
    * The number of entries in this trie.
    */
-  private _size: number;
+  #size: number;
 
   /**
    * Constructs a new `LookupByPath`
@@ -239,13 +298,13 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * @param entries - Initial path-value pairs to populate the trie.
    */
   public constructor(entries?: Iterable<[string, TItem]>, delimiter?: string) {
-    this._root = {
+    this.#root = {
       value: undefined,
       children: undefined
     };
 
     this.delimiter = delimiter ?? '/';
-    this._size = 0;
+    this.#size = 0;
 
     if (entries) {
       for (const [path, item] of entries) {
@@ -264,35 +323,8 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * `LookupByPath.iteratePathSegments('foo\\bar\\baz', '\\')` yields 'foo', 'bar', 'baz'
    */
   public static *iteratePathSegments(serializedPath: string, delimiter: string = '/'): Iterable<string> {
-    for (const prefixMatch of this._iteratePrefixes(serializedPath, delimiter)) {
+    for (const prefixMatch of _iteratePrefixes(serializedPath, delimiter)) {
       yield prefixMatch.prefix;
-    }
-  }
-
-  private static *_iteratePrefixes(input: string, delimiter: string = '/'): Iterable<IPrefixEntry> {
-    if (!input) {
-      return;
-    }
-
-    let previousIndex: number = 0;
-    let nextIndex: number = input.indexOf(delimiter);
-
-    // Leading segments
-    while (nextIndex >= 0) {
-      yield {
-        prefix: input.slice(previousIndex, nextIndex),
-        index: nextIndex
-      };
-      previousIndex = nextIndex + 1;
-      nextIndex = input.indexOf(delimiter, previousIndex);
-    }
-
-    // Last segment
-    if (previousIndex < input.length) {
-      yield {
-        prefix: input.slice(previousIndex, input.length),
-        index: input.length
-      };
     }
   }
 
@@ -300,14 +332,14 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * {@inheritdoc IReadonlyLookupByPath.size}
    */
   public get size(): number {
-    return this._size;
+    return this.#size;
   }
 
   /**
    * {@inheritdoc IReadonlyLookupByPath.tree}
    */
   public get tree(): IReadonlyPathTrieNode<TItem> {
-    return this._root;
+    return this.#root;
   }
 
   /**
@@ -316,9 +348,9 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * @returns this, for chained calls
    */
   public clear(): this {
-    this._root.value = undefined;
-    this._root.children = undefined;
-    this._size = 0;
+    this.#root.value = undefined;
+    this.#root.children = undefined;
+    this.#size = 0;
     return this;
   }
 
@@ -341,10 +373,10 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * If the node has children with values, they will be retained.
    */
   public deleteItem(query: string, delimeter: string = this.delimiter): boolean {
-    const node: IPathTrieNode<TItem> | undefined = this._findNodeAtPrefix(query, delimeter);
+    const node: IPathTrieNode<TItem> | undefined = this.#findNodeAtPrefix(query, delimeter);
     if (node?.value !== undefined) {
       node.value = undefined;
-      this._size--;
+      this.#size--;
       return true;
     }
 
@@ -358,7 +390,7 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * @returns `true` if any nodes were deleted, `false` otherwise
    */
   public deleteSubtree(query: string, delimeter: string = this.delimiter): boolean {
-    const queryNode: IPathTrieNode<TItem> | undefined = this._findNodeAtPrefix(query, delimeter);
+    const queryNode: IPathTrieNode<TItem> | undefined = this.#findNodeAtPrefix(query, delimeter);
     if (!queryNode) {
       return false;
     }
@@ -379,7 +411,7 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
       }
     }
 
-    this._size -= removed;
+    this.#size -= removed;
     return removed > 0;
   }
 
@@ -390,7 +422,7 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * @returns this, for chained calls
    */
   public setItemFromSegments(pathSegments: Iterable<string>, value: TItem): this {
-    let node: IPathTrieNode<TItem> = this._root;
+    let node: IPathTrieNode<TItem> = this.#root;
     for (const segment of pathSegments) {
       if (!node.children) {
         node.children = new Map();
@@ -408,7 +440,7 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
       node = child;
     }
     if (node.value === undefined) {
-      this._size++;
+      this.#size++;
     }
     node.value = value;
 
@@ -429,14 +461,14 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
     query: string,
     delimiter: string = this.delimiter
   ): IPrefixMatch<TItem> | undefined {
-    return this._findLongestPrefixMatch(LookupByPath._iteratePrefixes(query, delimiter));
+    return this.#findLongestPrefixMatch(_iteratePrefixes(query, delimiter));
   }
 
   /**
    * {@inheritdoc IReadonlyLookupByPath}
    */
   public findChildPathFromSegments(childPathSegments: Iterable<string>): TItem | undefined {
-    let node: IPathTrieNode<TItem> = this._root;
+    let node: IPathTrieNode<TItem> = this.#root;
     let best: TItem | undefined = node.value;
     // Trivial cases
     if (node.children) {
@@ -503,12 +535,12 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
   public *entries(query?: string, delimiter: string = this.delimiter): IterableIterator<[string, TItem]> {
     let root: IPathTrieNode<TItem> | undefined;
     if (query) {
-      root = this._findNodeAtPrefix(query, delimiter);
+      root = this.#findNodeAtPrefix(query, delimiter);
       if (!root) {
         return;
       }
     } else {
-      root = this._root;
+      root = this.#root;
     }
 
     const stack: [string, IPathTrieNode<TItem>][] = [[query ?? '', root]];
@@ -542,7 +574,99 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
     query: string,
     delimiter: string = this.delimiter
   ): IReadonlyPathTrieNode<TItem> | undefined {
-    return this._findNodeAtPrefix(query, delimiter);
+    return this.#findNodeAtPrefix(query, delimiter);
+  }
+
+  /**
+   * {@inheritdoc IReadonlyLookupByPath.toJson}
+   */
+  public toJson<TSerialized>(serializeValue: (value: TItem) => TSerialized): ILookupByPathJson<TSerialized> {
+    const valueToIndex: Map<TItem, number> = new Map();
+    const values: TSerialized[] = [];
+
+    const getOrAddValueIndex: (value: TItem) => number = (value: TItem) => {
+      let index: number | undefined = valueToIndex.get(value);
+      if (index === undefined) {
+        index = values.length;
+        valueToIndex.set(value, index);
+        values.push(serializeValue(value));
+      }
+      return index;
+    };
+
+    const serializeNode: (node: IPathTrieNode<TItem>) => ISerializedPathTrieNode = (
+      node: IPathTrieNode<TItem>
+    ) => {
+      const result: ISerializedPathTrieNode = {};
+
+      if (node.value !== undefined) {
+        result.valueIndex = getOrAddValueIndex(node.value);
+      }
+
+      if (node.children && node.children.size > 0) {
+        const children: Record<string, ISerializedPathTrieNode> = Object.create(null);
+        for (const [segment, child] of node.children) {
+          children[segment] = serializeNode(child);
+        }
+        result.children = children;
+      }
+
+      return result;
+    };
+
+    return {
+      delimiter: this.delimiter,
+      values,
+      tree: serializeNode(this.#root)
+    };
+  }
+
+  /**
+   * Deserializes a `LookupByPath` instance from a JSON representation previously
+   * created by {@link LookupByPath.toJson}.
+   *
+   * @param json - The JSON representation to deserialize.
+   * @param deserializeValue - A function that converts a serialized value back to its original type.
+   * @returns A new `LookupByPath` instance.
+   *
+   * @remarks
+   * Reference equality is preserved: if multiple nodes in the serialized trie pointed at the same
+   * value (i.e., the same index in the `values` array), the deserialized nodes will share the same
+   * object reference.
+   */
+  public static fromJson<TItem extends {}, TSerialized>(
+    json: ILookupByPathJson<TSerialized>,
+    deserializeValue: (serialized: TSerialized) => TItem
+  ): LookupByPath<TItem> {
+    const deserializedValues: TItem[] = json.values.map(deserializeValue);
+
+    const result: LookupByPath<TItem> = new LookupByPath<TItem>(undefined, json.delimiter);
+
+    const deserializeNode: (jsonNode: ISerializedPathTrieNode, targetNode: IPathTrieNode<TItem>) => void = (
+      jsonNode: ISerializedPathTrieNode,
+      targetNode: IPathTrieNode<TItem>
+    ) => {
+      if (jsonNode.valueIndex !== undefined) {
+        targetNode.value = deserializedValues[jsonNode.valueIndex];
+        result.#size++;
+      }
+
+      if (jsonNode.children) {
+        targetNode.children = new Map();
+        for (const [segment, childJson] of Object.entries(jsonNode.children)) {
+          const childNode: IPathTrieNode<TItem> = {
+            value: undefined,
+            children: undefined
+          };
+          targetNode.children.set(segment, childNode);
+          deserializeNode(childJson, childNode);
+        }
+      }
+    };
+
+    deserializeNode(json.tree, result.#root);
+
+    return result;
   }
 
   /**
@@ -553,8 +677,8 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    *
    * @returns the found item, or `undefined` if no item was found
    */
-  private _findLongestPrefixMatch(prefixes: Iterable<IPrefixEntry>): IPrefixMatch<TItem> | undefined {
-    let node: IPathTrieNode<TItem> = this._root;
+  #findLongestPrefixMatch(prefixes: Iterable<IPrefixEntry>): IPrefixMatch<TItem> | undefined {
+    let node: IPathTrieNode<TItem> = this.#root;
     let best: IPrefixMatch<TItem> | undefined = node.value
       ? {
           value: node.value,
@@ -592,12 +716,12 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
    * @param query - The path to the node to search for
    * @returns The trie node at the specified path, or `undefined` if no node was found
    */
-  private _findNodeAtPrefix(
+  #findNodeAtPrefix(
     query: string,
     delimiter: string = this.delimiter
   ): IPathTrieNode<TItem> | undefined {
-    let node: IPathTrieNode<TItem> = this._root;
-    for (const { prefix } of LookupByPath._iteratePrefixes(query, delimiter)) {
+    let node: IPathTrieNode<TItem> = this.#root;
+    for (const { prefix } of _iteratePrefixes(query, delimiter)) {
       if (!node.children) {
         return undefined;
       }
@@ -608,5 +732,32 @@ export class LookupByPath<TItem extends {}> implements IReadonlyLookupByPath<TIt
       node = child;
     }
     return node;
+  }
+}
+
+function* _iteratePrefixes(input: string, delimiter: string = '/'): Iterable<IPrefixEntry> {
+  if (!input) {
+    return;
+  }
+
+  let previousIndex: number = 0;
+  let nextIndex: number = input.indexOf(delimiter);
+
+  // Leading segments
+  while (nextIndex >= 0) {
+    yield {
+      prefix: input.slice(previousIndex, nextIndex),
+      index: nextIndex
+    };
+    previousIndex = nextIndex + 1;
+    nextIndex = input.indexOf(delimiter, previousIndex);
+  }
+
+  // Last segment
+  if (previousIndex < input.length) {
+    yield {
+      prefix: input.slice(previousIndex, input.length),
+      index: input.length
+    };
   }
 }

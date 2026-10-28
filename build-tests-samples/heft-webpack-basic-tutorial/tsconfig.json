@@ -2,7 +2,7 @@
   "$schema": "http://json.schemastore.org/tsconfig",
 
   "compilerOptions": {
-    "outDir": "lib",
+    "outDir": "lib-esm",
     "rootDir": "src",
 
     "forceConsistentCasingInFileNames": true,
@@ -19,13 +19,20 @@
     "allowUnreachableCode": false,
     "importHelpers": true,
 
-    "types": ["heft-jest", "webpack-env"],
+    "types": ["jest", "webpack-env"],
 
     "module": "esnext",
     "moduleResolution": "node",
     "target": "es5",
-    "lib": ["es5", "scripthost", "es2015.collection", "es2015.promise", "es2015.iterable", "dom"]
+    "lib": [
+      "es5",
+      "scripthost",
+      "es2015.collection",
+      "es2015.promise",
+      "es2015.iterable",
+      "es2015.symbol.wellknown",
+      "dom"
+    ]
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"],
-  "exclude": ["node_modules", "lib"]
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
 }

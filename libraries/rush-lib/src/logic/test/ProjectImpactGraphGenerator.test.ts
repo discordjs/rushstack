@@ -22,13 +22,12 @@ async function runTestForExampleRepoAsync(
   const generator: ProjectImpactGraphGenerator = new ProjectImpactGraphGenerator(terminal, rushConfiguration);
   await testFn(generator);
 
-  expect({
-    output: terminalProvider.getOutput({ normalizeSpecialCharacters: true }),
-    verbose: terminalProvider.getVerbose({ normalizeSpecialCharacters: true }),
-    error: terminalProvider.getDebugOutput({ normalizeSpecialCharacters: true }),
-    warning: terminalProvider.getWarningOutput({ normalizeSpecialCharacters: true }),
-    debug: terminalProvider.getDebugOutput({ normalizeSpecialCharacters: true })
-  }).toMatchSnapshot('Terminal Output');
+  expect(
+    terminalProvider.getAllOutputAsChunks({
+      normalizeSpecialCharacters: true,
+      asLines: true
+    })
+  ).toMatchSnapshot('Terminal Output');
 }
 
 describe(ProjectImpactGraphGenerator.name, () => {

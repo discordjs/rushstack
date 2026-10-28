@@ -1,7 +1,9 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import { JsonFile, type JsonObject } from '@rushstack/node-core-library';
+import * as path from 'node:path';
+
+import { JsonFile, type JsonObject, Path } from '@rushstack/node-core-library';
 import { NonProjectConfigurationFile } from '@rushstack/heft-config-file';
 import { ConsoleTerminalProvider, Terminal } from '@rushstack/terminal';
 
@@ -33,6 +35,16 @@ export type PnpmStoreOptions = PnpmStoreLocation;
  * @public
  */
 export type PnpmResolutionMode = 'highest' | 'time-based' | 'lowest-direct';
+
+/**
+ * Possible values for the `trustPolicy` setting in Rush's pnpm-config.json file.
+ * @remarks
+ * These values correspond to PNPM's `trust-policy` setting, which is documented here:
+ * {@link https://pnpm.io/settings#trustpolicy}
+ *
+ * @public
+ */
+export type PnpmTrustPolicy = 'no-downgrade' | 'off';
 
 /**
  * Possible values for the `pnpmLockfilePolicies` setting in Rush's pnpm-config.json file.
@@ -115,6 +127,14 @@ export interface IPnpmOptionsJson extends IPackageManagerOptionsJsonBase {
    */
   globalNeverBuiltDependencies?: string[];
   /**
+   * {@inheritDoc PnpmOptionsConfiguration.globalOnlyBuiltDependencies}
+   */
+  globalOnlyBuiltDependencies?: string[];
+  /**
+   * {@inheritDoc PnpmOptionsConfiguration.globalAllowBuilds}
+   */
+  globalAllowBuilds?: Record<string, boolean>;
+  /**
    * {@inheritDoc PnpmOptionsConfiguration.globalIgnoredOptionalDependencies}
    */
   globalIgnoredOptionalDependencies?: string[];
@@ -139,13 +159,29 @@ export interface IPnpmOptionsJson extends IPackageManagerOptionsJsonBase {
    */
   autoInstallPeers?: boolean;
   /**
-   * {@inheritDoc PnpmOptionsConfiguration.minimumReleaseAge}
+   * {@inheritDoc PnpmOptionsConfiguration.minimumReleaseAgeMinutes}
+   */
+  minimumReleaseAgeMinutes?: number;
+  /**
+   * @deprecated Use `minimumReleaseAgeMinutes` instead.
    */
   minimumReleaseAge?: number;
   /**
    * {@inheritDoc PnpmOptionsConfiguration.minimumReleaseAgeExclude}
    */
   minimumReleaseAgeExclude?: string[];
+  /**
+   * {@inheritDoc PnpmOptionsConfiguration.trustPolicy}
+   */
+  trustPolicy?: PnpmTrustPolicy;
+  /**
+   * {@inheritDoc PnpmOptionsConfiguration.trustPolicyExclude}
+   */
+  trustPolicyExclude?: string[];
+  /**
+   * {@inheritDoc PnpmOptionsConfiguration.trustPolicyIgnoreAfterMinutes}
+   */
+  trustPolicyIgnoreAfterMinutes?: number;
   /**
    * {@inheritDoc PnpmOptionsConfiguration.alwaysInjectDependenciesFromOtherSubspaces}
    */
@@ -158,6 +194,10 @@ export interface IPnpmOptionsJson extends IPackageManagerOptionsJsonBase {
    * {@inheritDoc PnpmOptionsConfiguration.pnpmLockfilePolicies}
    */
   pnpmLockfilePolicies?: IPnpmLockfilePolicies;
+  /**
+   * {@inheritDoc PnpmOptionsConfiguration.globalCatalogs}
+   */
+  globalCatalogs?: Record<string, Record<string, string>>;
 }
 
 /**
@@ -172,8 +212,9 @@ export interface IPnpmOptionsJson extends IPackageManagerOptionsJsonBase {
  * @public
  */
 export class PnpmOptionsConfiguration extends PackageManagerOptionsConfigurationBase {
-  private readonly _json: JsonObject;
-  private _globalPatchedDependencies: Record<string, string> | undefined;
+  readonly #json: JsonObject;
+  readonly #commonTempFolder: string;
+  #globalPatchedDependencies: Record<string, string> | undefined;
 
   /**
    * The method used to resolve the store used by PNPM.
@@ -201,8 +242,8 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
    * IMPORTANT: Be aware that PNPM 8.0.0 initially defaulted to `lowest-direct` instead of
    * `highest`, but PNPM reverted this decision in 8.6.12 because it caused confusion for users.
    * Rush version 5.106.0 and newer avoids this confusion by consistently defaulting to
-   * `highest` when `resolutionMode` is not explicitly set in pnpm-config.json or .npmrc,
-   * regardless of your PNPM version.
+   * `highest` when `resolutionMode` is not explicitly set in pnpm-config.json or, for PNPM 10
+   * and earlier, .npmrc. PNPM 11 and newer ignore this setting in .npmrc.
    *
    * PNPM documentation: https://pnpm.io/npmrc#resolution-mode
    *
@@ -262,7 +303,8 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
    * When true, any missing non-optional peer dependencies are automatically installed.
    *
    * @remarks
-   * The default value is same as PNPM default value.  (In PNPM 8.x, this value is true)
+   * Rush defaults to false unless explicitly configured. PNPM 10 and earlier can also read
+   * this setting from .npmrc; PNPM 11 and newer require this property instead.
    */
   public readonly autoInstallPeers: boolean | undefined;
 
@@ -278,11 +320,18 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
    *
    * The default value is 0 (disabled).
    */
-  public readonly minimumReleaseAge: number | undefined;
+  public readonly minimumReleaseAgeMinutes: number | undefined;
+
+  /**
+   * @deprecated Use {@link PnpmOptionsConfiguration.minimumReleaseAgeMinutes} instead.
+   */
+  public get minimumReleaseAge(): number | undefined {
+    return this.minimumReleaseAgeMinutes;
+  }
 
   /**
    * List of package names or patterns that are excluded from the minimumReleaseAge check.
-   * These packages will always install the newest version immediately, even if minimumReleaseAge is set.
+   * These packages will always install the newest version immediately, even if minimumReleaseAgeMinutes is set.
    *
    * @remarks
    * (SUPPORTED ONLY IN PNPM 10.16.0 AND NEWER)
@@ -292,6 +341,42 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
    * Example: ["webpack", "react", "\@myorg/*"]
    */
   public readonly minimumReleaseAgeExclude: string[] | undefined;
+
+  /**
+   * The trust policy controls whether pnpm should block installation of package versions where the
+   * trust level has decreased (e.g., a package previously published with provenance is now published
+   * without it). Setting this to `"no-downgrade"` enables the protection.
+   *
+   * @remarks
+   * (SUPPORTED ONLY IN PNPM 10.21.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#trustpolicy
+   */
+  public readonly trustPolicy: PnpmTrustPolicy | undefined;
+
+  /**
+   * List of package names or patterns that are excluded from the trust policy check.
+   * These packages will be allowed to install even if their trust level has decreased.
+   *
+   * @remarks
+   * (SUPPORTED ONLY IN PNPM 10.22.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#trustpolicyexclude
+   *
+   * Example: ["webpack", "react", "\@myorg/*"]
+   */
+  public readonly trustPolicyExclude: string[] | undefined;
+
+  /**
+   * The number of minutes after which pnpm will ignore trust level downgrades. Packages published
+   * longer ago than this threshold will not be blocked even if their trust level has decreased.
+   *
+   * @remarks
+   * (SUPPORTED ONLY IN PNPM 10.27.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#trustpolicyignoreafter
+   */
+  public readonly trustPolicyIgnoreAfterMinutes: number | undefined;
 
   /**
    * If true, then `rush update` add injected install options for all cross-subspace
@@ -362,6 +447,34 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
   public readonly globalNeverBuiltDependencies: string[] | undefined;
 
   /**
+   * The `globalOnlyBuiltDependencies` setting specifies an allowlist of dependencies that are permitted
+   * to run build scripts (`preinstall`, `install`, and `postinstall` lifecycle events). This is the inverse
+   * of `globalNeverBuiltDependencies`. In PNPM 10.x, build scripts are disabled by default for security,
+   * so this setting is required to explicitly permit specific packages to run their build scripts.
+   * The settings are copied into the `pnpm.onlyBuiltDependencies` field of the `common/temp/package.json`
+   * file that is generated by Rush during installation.
+   *
+   * (SUPPORTED ONLY IN PNPM 10.1.0 AND NEWER; replaced by `globalAllowBuilds` in PNPM 11.0.0)
+   *
+   * PNPM documentation: https://pnpm.io/package_json#pnpmonlybuiltdependencies
+   */
+  public readonly globalOnlyBuiltDependencies: string[] | undefined;
+
+  /**
+   * The `globalAllowBuilds` setting controls which packages are allowed to run build scripts
+   * (`preinstall`, `install`, and `postinstall` lifecycle events). A value of `true` means the
+   * package is allowed to run build scripts; `false` means it is explicitly denied.
+   * Packages with build scripts not listed here will cause pnpm to fail with ERR_PNPM_IGNORED_BUILDS.
+   * The settings are written to the `allowBuilds` field of the `pnpm-workspace.yaml` file
+   * that is generated by Rush during installation.
+   *
+   * (SUPPORTED ONLY IN PNPM 11.0.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#allowbuilds
+   */
+  public readonly globalAllowBuilds: Record<string, boolean> | undefined;
+
+  /**
    * The ignoredOptionalDependencies setting allows you to exclude certain optional dependencies from being installed
    * during the Rush installation process. This can be useful when optional dependencies are not required or are
    * problematic in specific environments (e.g., dependencies with incompatible binaries or platform-specific requirements).
@@ -422,6 +535,16 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
   public readonly alwaysFullInstall: boolean | undefined;
 
   /**
+   * The `globalCatalogs` setting provides named catalogs for organizing dependency versions.
+   * Each catalog can be referenced using the `catalog:catalogName` protocol in package.json files
+   * (e.g., `catalog:react18`). The settings are written to the `catalogs` field of the
+   * `pnpm-workspace.yaml` file that is generated by Rush during installation.
+   *
+   * PNPM documentation: https://pnpm.io/catalogs
+   */
+  public readonly globalCatalogs: Record<string, Record<string, string>> | undefined;
+
+  /**
    * (GENERATED BY RUSH-PNPM PATCH-COMMIT) When modifying this property, make sure you know what you are doing.
    *
    * The `globalPatchedDependencies` is added/updated automatically when you run pnpm patch-commit
@@ -431,12 +554,13 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
    * PNPM documentation: https://pnpm.io/package_json#pnpmpatcheddependencies
    */
   public get globalPatchedDependencies(): Record<string, string> | undefined {
-    return this._globalPatchedDependencies;
+    return this.#globalPatchedDependencies;
   }
 
   private constructor(json: IPnpmOptionsJson, commonTempFolder: string, jsonFilename?: string) {
     super(json);
-    this._json = json;
+    this.#json = json;
+    this.#commonTempFolder = commonTempFolder;
     this.jsonFilename = jsonFilename;
     this.pnpmStore = json.pnpmStore || 'local';
     if (EnvironmentConfiguration.pnpmStorePathOverride) {
@@ -454,17 +578,37 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
     this.globalPeerDependencyRules = json.globalPeerDependencyRules;
     this.globalPackageExtensions = json.globalPackageExtensions;
     this.globalNeverBuiltDependencies = json.globalNeverBuiltDependencies;
+    if (json.globalOnlyBuiltDependencies !== undefined && json.globalAllowBuilds !== undefined) {
+      throw new Error(
+        'The "globalOnlyBuiltDependencies" and "globalAllowBuilds" settings cannot both be specified' +
+          ' in pnpm-config.json. Use "globalAllowBuilds" for PNPM 11.0.0 and newer.'
+      );
+    }
+    this.globalOnlyBuiltDependencies = json.globalOnlyBuiltDependencies;
+    this.globalAllowBuilds = json.globalAllowBuilds;
     this.globalIgnoredOptionalDependencies = json.globalIgnoredOptionalDependencies;
     this.globalAllowedDeprecatedVersions = json.globalAllowedDeprecatedVersions;
     this.unsupportedPackageJsonSettings = json.unsupportedPackageJsonSettings;
-    this._globalPatchedDependencies = json.globalPatchedDependencies;
+    this.#globalPatchedDependencies = json.globalPatchedDependencies;
     this.resolutionMode = json.resolutionMode;
     this.autoInstallPeers = json.autoInstallPeers;
-    this.minimumReleaseAge = json.minimumReleaseAge;
+
+    if (json.minimumReleaseAge !== undefined && json.minimumReleaseAgeMinutes !== undefined) {
+      throw new Error(
+        'The "minimumReleaseAge" setting is deprecated. Use "minimumReleaseAgeMinutes" instead.' +
+          ' Both settings cannot be specified together in pnpm-config.json.'
+      );
+    }
+    this.minimumReleaseAgeMinutes = json.minimumReleaseAgeMinutes ?? json.minimumReleaseAge;
+
     this.minimumReleaseAgeExclude = json.minimumReleaseAgeExclude;
+    this.trustPolicy = json.trustPolicy;
+    this.trustPolicyExclude = json.trustPolicyExclude;
+    this.trustPolicyIgnoreAfterMinutes = json.trustPolicyIgnoreAfterMinutes;
     this.alwaysInjectDependenciesFromOtherSubspaces = json.alwaysInjectDependenciesFromOtherSubspaces;
     this.alwaysFullInstall = json.alwaysFullInstall;
     this.pnpmLockfilePolicies = json.pnpmLockfilePolicies;
+    this.globalCatalogs = json.globalCatalogs;
   }
 
   /** @internal */
@@ -495,14 +639,91 @@ export class PnpmOptionsConfiguration extends PackageManagerOptionsConfiguration
     return new PnpmOptionsConfiguration(json, commonTempFolder);
   }
 
+  #getJsonFilenameOrThrow(): string {
+    if (!this.jsonFilename) {
+      throw new Error('Cannot save pnpm-config.json because no jsonFilename was provided.');
+    }
+
+    return this.jsonFilename;
+  }
+
   /**
    * Updates patchedDependencies field of the PNPM options in the common/config/rush/pnpm-config.json file.
+   *
+   * @remarks
+   * When running "pnpm patch-commit"/"pnpm patch-remove" (pnpm 9 and newer), pnpm rewrites the
+   * pre-existing entries using absolute paths pointing into the common/temp folder. Normalize any such
+   * value back to a path relative to the common/temp folder (e.g. "patches/example\@1.0.0.patch") so the location
+   * of the local checkout does not leak into pnpm-config.json.
    */
   public updateGlobalPatchedDependencies(patchedDependencies: Record<string, string> | undefined): void {
-    this._globalPatchedDependencies = patchedDependencies;
-    this._json.globalPatchedDependencies = patchedDependencies;
+    if (patchedDependencies) {
+      const normalized: Record<string, string> = {};
+      for (const [dependency, patchPath] of Object.entries(patchedDependencies)) {
+        normalized[dependency] =
+          path.isAbsolute(patchPath) && Path.isUnder(patchPath, this.#commonTempFolder)
+            ? Path.convertToSlashes(path.relative(this.#commonTempFolder, patchPath))
+            : patchPath;
+      }
+      patchedDependencies = normalized;
+    }
+
+    this.#globalPatchedDependencies = patchedDependencies;
+    this.#json.globalPatchedDependencies = patchedDependencies;
+    JsonFile.save(this.#json, this.#getJsonFilenameOrThrow(), {
+      updateExistingFile: true,
+      ignoreUndefinedValues: true
+    });
+  }
+
+  /**
+   * Updates globalOnlyBuiltDependencies field of the PNPM options in the common/config/rush/pnpm-config.json file.
+   *
+   * @deprecated Use {@link PnpmOptionsConfiguration.updateGlobalOnlyBuiltDependenciesAsync} instead.
+   */
+  public updateGlobalOnlyBuiltDependencies(onlyBuiltDependencies: string[] | undefined): void {
+    this.#json.globalOnlyBuiltDependencies = onlyBuiltDependencies;
     if (this.jsonFilename) {
-      JsonFile.save(this._json, this.jsonFilename, { updateExistingFile: true });
+      JsonFile.save(this.#json, this.jsonFilename, {
+        updateExistingFile: true,
+        ignoreUndefinedValues: true
+      });
+    }
+  }
+
+  /**
+   * Updates globalOnlyBuiltDependencies field of the PNPM options in the common/config/rush/pnpm-config.json file.
+   */
+  public async updateGlobalOnlyBuiltDependenciesAsync(
+    onlyBuiltDependencies: string[] | undefined
+  ): Promise<void> {
+    this.#json.globalOnlyBuiltDependencies = onlyBuiltDependencies;
+    await JsonFile.saveAsync(this.#json, this.#getJsonFilenameOrThrow(), {
+      updateExistingFile: true,
+      ignoreUndefinedValues: true
+    });
+  }
+
+  /**
+   * Updates globalCatalogs field of the PNPM options in the common/config/rush/pnpm-config.json file.
+   */
+  public async updateGlobalCatalogsAsync(
+    catalogs: Record<string, Record<string, string>> | undefined
+  ): Promise<void> {
+    this.#json.globalCatalogs = catalogs;
+    await JsonFile.saveAsync(this.#json, this.#getJsonFilenameOrThrow(), {
+      updateExistingFile: true,
+      ignoreUndefinedValues: true
+    });
+  }
+
+  /**
+   * Updates globalAllowBuilds field of the PNPM options in the common/config/rush/pnpm-config.json file.
+   */
+  public updateGlobalAllowBuilds(allowBuilds: Record<string, boolean> | undefined): void {
+    this.#json.globalAllowBuilds = allowBuilds;
+    if (this.jsonFilename) {
+      JsonFile.save(this.#json, this.jsonFilename, { updateExistingFile: true });
     }
   }
 }

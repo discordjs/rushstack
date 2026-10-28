@@ -1,0 +1,424 @@
+{
+  "name": "@rushstack/rush-published-versions-json-plugin",
+  "entries": [
+    {
+      "version": "0.1.24",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.24",
+      "date": "Tue, 27 Oct 2026 00:20:25 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.23",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.23",
+      "date": "Tue, 06 Oct 2026 00:04:37 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.25.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.17`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.22",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.22",
+      "date": "Mon, 28 Sep 2026 20:08:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.25.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.16`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.21",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.21",
+      "date": "Tue, 22 Sep 2026 17:35:41 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.15`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.20",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.20",
+      "date": "Mon, 14 Sep 2026 22:42:32 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.19",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.19",
+      "date": "Sat, 05 Sep 2026 00:15:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.26`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.14`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.18",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.18",
+      "date": "Fri, 21 Aug 2026 15:16:34 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.25`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.17",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.17",
+      "date": "Thu, 20 Aug 2026 00:16:38 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Require Node.js 20.9 or newer for package consumers."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.24`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.13`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.16",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.16",
+      "date": "Fri, 14 Aug 2026 00:18:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.23`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.15",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.15",
+      "date": "Tue, 21 Jul 2026 02:53:23 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.22`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.14",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.14",
+      "date": "Fri, 17 Jul 2026 00:16:00 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.21`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.12`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.13",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.13",
+      "date": "Thu, 16 Jul 2026 00:16:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.20`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.11`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.12",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.12",
+      "date": "Sat, 13 Jun 2026 00:16:19 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.19`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.11",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.11",
+      "date": "Mon, 08 Jun 2026 15:15:50 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.18`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.10",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.10",
+      "date": "Mon, 20 Apr 2026 23:31:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.17`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.9",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.9",
+      "date": "Mon, 20 Apr 2026 15:15:25 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.16`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.8",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.8",
+      "date": "Sat, 18 Apr 2026 03:47:10 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.23.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.15`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.7",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.7",
+      "date": "Sat, 18 Apr 2026 00:15:17 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.14`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.6",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.6",
+      "date": "Fri, 17 Apr 2026 15:14:57 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.13`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.5",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.5",
+      "date": "Fri, 10 Apr 2026 22:46:35 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.12`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.4",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.4",
+      "date": "Thu, 09 Apr 2026 00:15:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.22.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.11`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.5`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.3",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.3",
+      "date": "Sat, 04 Apr 2026 00:14:00 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.2",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.2",
+      "date": "Wed, 01 Apr 2026 15:13:38 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.1",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.1",
+      "date": "Tue, 31 Mar 2026 15:14:15 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.21.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.8`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/ts-command-line\" to `5.3.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "0.1.0",
+      "tag": "@rushstack/rush-published-versions-json-plugin_v0.1.0",
+      "date": "Tue, 24 Mar 2026 21:51:54 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Initial release."
+          }
+        ]
+      }
+    }
+  ]
+}

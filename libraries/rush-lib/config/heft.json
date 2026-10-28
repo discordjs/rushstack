@@ -9,9 +9,19 @@
   // TODO: Add comments
   "phasesByName": {
     "build": {
-      "cleanFiles": [{ "includeGlobs": ["lib-esnext"] }],
+      "cleanFiles": [{ "includeGlobs": ["lib-intermediate-commonjs", "lib-intermediate-esm"] }],
 
       "tasksByName": {
+        "check-bootstrap-protocol": {
+          "taskPlugin": {
+            "pluginPackage": "@rushstack/heft",
+            "pluginName": "run-script-plugin",
+            "options": {
+              "scriptPath": "../reporter/scripts/generateBootstrapProtocol.js"
+            }
+          }
+        },
+
         "copy-mock-flush-telemetry-plugin": {
           "taskDependencies": ["typescript"],
           "taskPlugin": {
@@ -20,26 +30,34 @@
             "options": {
               "copyOperations": [
                 {
-                  "sourcePath": "lib-commonjs/cli/test/rush-mock-flush-telemetry-plugin",
+                  "sourcePath": "lib-intermediate-commonjs/cli/test/rush-mock-flush-telemetry-plugin",
                   "destinationFolders": [
-                    "lib-commonjs/cli/test/tapFlushTelemetryAndRunBuildActionRepo/common/autoinstallers/plugins/node_modules/rush-mock-flush-telemetry-plugin"
+                    "lib-intermediate-commonjs/cli/test/tapFlushTelemetryAndRunBuildActionRepo/common/autoinstallers/plugins/node_modules/rush-mock-flush-telemetry-plugin"
+                  ],
+                  "fileExtensions": [".json", ".js", ".map"],
+                  "hardlink": true
+                },
+                {
+                  "sourcePath": "lib-intermediate-commonjs/cli/test/rush-mock-clear-operations-plugin",
+                  "destinationFolders": [
+                    "lib-intermediate-commonjs/cli/test/clearOperationsAndRunBuildActionRepo/common/autoinstallers/plugins/node_modules/rush-mock-clear-operations-plugin"
                   ],
                   "fileExtensions": [".json", ".js", ".map"],
                   "hardlink": true
                 },
                 {
                   "sourcePath": "src/cli/test",
-                  "destinationFolders": ["lib-commonjs/cli/test"],
-                  "fileExtensions": [".js"]
+                  "destinationFolders": ["lib-intermediate-commonjs/cli/test"],
+                  "fileExtensions": [".js", ".yaml"]
                 },
                 {
                   "sourcePath": "src/logic/pnpm/test",
-                  "destinationFolders": ["lib-commonjs/logic/pnpm/test"],
+                  "destinationFolders": ["lib-intermediate-commonjs/logic/pnpm/test"],
                   "fileExtensions": [".yaml"]
                 },
                 {
                   "sourcePath": "src/logic/test",
-                  "destinationFolders": ["lib-commonjs/logic/test"],
+                  "destinationFolders": ["lib-intermediate-commonjs/logic/test"],
                   "includeGlobs": ["**/.mergequeueignore"]
                 }
               ]
@@ -54,6 +72,23 @@
             "pluginName": "run-script-plugin",
             "options": {
               "scriptPath": "./scripts/copyEmptyModules.js"
+            }
+          }
+        },
+
+        "copy-legacy-compatibility-index-js": {
+          "taskDependencies": ["typescript"],
+          "taskPlugin": {
+            "pluginPackage": "@rushstack/heft",
+            "pluginName": "copy-files-plugin",
+            "options": {
+              "copyOperations": [
+                {
+                  "sourcePath": "src/legacy-compatibility",
+                  "destinationFolders": ["lib"],
+                  "includeGlobs": ["*"]
+                }
+              ]
             }
           }
         },

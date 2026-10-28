@@ -2,6 +2,656 @@
   "name": "@rushstack/debug-certificate-manager",
   "entries": [
     {
+      "version": "1.7.32",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.32",
+      "date": "Tue, 27 Oct 2026 00:20:25 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.31",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.31",
+      "date": "Tue, 06 Oct 2026 00:04:37 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.25.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.30",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.30",
+      "date": "Mon, 28 Sep 2026 20:08:26 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.25.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.29",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.29",
+      "date": "Tue, 22 Sep 2026 17:35:41 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.28",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.28",
+      "date": "Mon, 14 Sep 2026 22:42:32 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Use ECMAScript private syntax for internal class members."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.3.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.27",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.27",
+      "date": "Sat, 05 Sep 2026 00:15:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.26`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.26",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.26",
+      "date": "Fri, 21 Aug 2026 15:16:34 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.25`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.25",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.25",
+      "date": "Thu, 20 Aug 2026 00:16:38 GMT",
+      "comments": {
+        "none": [
+          {
+            "comment": "Require Node.js 20.9 or newer for package consumers."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.24.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.24`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.24",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.24",
+      "date": "Fri, 14 Aug 2026 00:18:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.23`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.23",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.23",
+      "date": "Tue, 21 Jul 2026 02:53:22 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.22`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.22",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.22",
+      "date": "Fri, 17 Jul 2026 00:15:59 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.21`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.21",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.21",
+      "date": "Thu, 16 Jul 2026 00:16:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.20`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.20",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.20",
+      "date": "Sat, 13 Jun 2026 00:16:19 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.19`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.19",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.19",
+      "date": "Mon, 08 Jun 2026 15:15:50 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.18`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.18",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.18",
+      "date": "Mon, 20 Apr 2026 23:31:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.24.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.17`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.17",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.17",
+      "date": "Mon, 20 Apr 2026 15:15:24 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.16`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.16",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.16",
+      "date": "Sat, 18 Apr 2026 03:47:10 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.23.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.15`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.15",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.15",
+      "date": "Sat, 18 Apr 2026 00:15:16 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.7`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.14`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.14",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.14",
+      "date": "Fri, 17 Apr 2026 15:14:57 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.23.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.6`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.13`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.13",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.13",
+      "date": "Fri, 10 Apr 2026 22:46:34 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.12`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.12",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.12",
+      "date": "Thu, 09 Apr 2026 00:15:07 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.22.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.11`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.11",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.11",
+      "date": "Sat, 04 Apr 2026 00:14:00 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.10",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.10",
+      "date": "Thu, 02 Apr 2026 00:14:38 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump node-forge to 1.4.0 to address CVEs GHSA-2328-f5f3-gj25, GHSA-q67f-28xg-22rw, GHSA-5m6q-g25r-mvwx, GHSA-ppp5-5v6c-4jwp\""
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.9",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.9",
+      "date": "Wed, 01 Apr 2026 15:13:38 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.8",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.8",
+      "date": "Tue, 31 Mar 2026 15:14:15 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.21.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.7",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.7",
+      "date": "Mon, 09 Mar 2026 15:14:08 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.6",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.6",
+      "date": "Wed, 25 Feb 2026 21:39:42 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.5",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.5",
+      "date": "Wed, 25 Feb 2026 00:34:29 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.3`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.5`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.4",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.4",
+      "date": "Tue, 24 Feb 2026 01:13:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.2`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.4`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.3",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.3",
+      "date": "Mon, 23 Feb 2026 00:42:21 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.3`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.2",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.2",
+      "date": "Fri, 20 Feb 2026 16:14:49 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.2`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.1",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.1",
+      "date": "Fri, 20 Feb 2026 00:15:04 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add `\"node\"` condition before `\"import\"` in the `\"exports\"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `\"import\"`. Fixes https://github.com/microsoft/rushstack/issues/5644."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.7.0",
+      "tag": "@rushstack/debug-certificate-manager_v1.7.0",
+      "date": "Thu, 19 Feb 2026 00:04:52 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `\"exports\"` field in `package.json`."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.20.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.22.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.2.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.14",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.14",
+      "date": "Sat, 07 Feb 2026 01:13:26 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.14`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.13",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.13",
+      "date": "Wed, 04 Feb 2026 20:42:47 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.13`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.12",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.12",
+      "date": "Wed, 04 Feb 2026 16:13:27 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.12`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.11",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.11",
+      "date": "Fri, 30 Jan 2026 01:16:13 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.11`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.10",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.10",
+      "date": "Thu, 08 Jan 2026 01:12:30 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.10`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.9",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.9",
+      "date": "Wed, 07 Jan 2026 01:12:24 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.21.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.9`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.8",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.8",
+      "date": "Mon, 05 Jan 2026 16:12:49 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.20.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.8`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.7",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.7",
+      "date": "Sat, 06 Dec 2025 01:12:28 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.19.1`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.19.5`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.7`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.6",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.6",
+      "date": "Fri, 21 Nov 2025 16:13:56 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/node-core-library\" to `5.19.0`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/terminal\" to `0.19.4`"
+          },
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.6`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "1.6.5",
+      "tag": "@rushstack/debug-certificate-manager_v1.6.5",
+      "date": "Wed, 12 Nov 2025 01:12:56 GMT",
+      "comments": {
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/heft\" to `1.1.5`"
+          }
+        ]
+      }
+    },
+    {
       "version": "1.6.4",
       "tag": "@rushstack/debug-certificate-manager_v1.6.4",
       "date": "Tue, 04 Nov 2025 08:15:14 GMT",

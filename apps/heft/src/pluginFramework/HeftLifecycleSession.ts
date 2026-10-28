@@ -214,8 +214,8 @@ export interface IHeftLifecycleSessionOptions extends IInternalHeftSessionOption
 }
 
 export class HeftLifecycleSession implements IHeftLifecycleSession {
-  private _options: IHeftLifecycleSessionOptions;
-  private _pluginHost: HeftPluginHost;
+  #options: IHeftLifecycleSessionOptions;
+  #pluginHost: HeftPluginHost;
 
   public readonly hooks: IHeftLifecycleHooks;
   public readonly parameters: IHeftParameters;
@@ -229,21 +229,23 @@ export class HeftLifecycleSession implements IHeftLifecycleSession {
   public readonly metricsCollector: MetricsCollector;
 
   public constructor(options: IHeftLifecycleSessionOptions) {
-    this._options = options;
-    this.logger = options.logger;
-    this.metricsCollector = options.metricsCollector;
-    this.hooks = options.lifecycleHooks;
-    this.parameters = options.lifecycleParameters;
-    this.debug = options.debug;
+    this.#options = options;
+    const { logger, metricsCollector, lifecycleHooks, lifecycleParameters, debug, pluginDefinition, heftConfiguration, pluginHost } =
+      options;
+    this.logger = logger;
+    this.metricsCollector = metricsCollector;
+    this.hooks = lifecycleHooks;
+    this.parameters = lifecycleParameters;
+    this.debug = debug;
 
     // Guranteed to be unique since phases are forbidden from using the name 'lifecycle'
     // and lifecycle plugin names are enforced to be unique.
-    const uniquePluginFolderName: string = `lifecycle.${options.pluginDefinition.pluginName}`;
+    const uniquePluginFolderName: string = `lifecycle.${pluginDefinition.pluginName}`;
 
     // <projectFolder>/temp/<phaseName>.<taskName>
-    this.tempFolderPath = path.join(options.heftConfiguration.tempFolderPath, uniquePluginFolderName);
+    this.tempFolderPath = path.join(heftConfiguration.tempFolderPath, uniquePluginFolderName);
 
-    this._pluginHost = options.pluginHost;
+    this.#pluginHost = pluginHost;
   }
 
   public requestAccessToPluginByName<T extends object>(
@@ -251,9 +253,9 @@ export class HeftLifecycleSession implements IHeftLifecycleSession {
     pluginToAccessName: string,
     pluginApply: (pluginAccessor: T) => void
   ): void {
-    const { pluginPackageName, pluginName } = this._options.pluginDefinition;
-    const pluginHookName: string = this._pluginHost.getPluginHookName(pluginPackageName, pluginName);
-    this._pluginHost.requestAccessToPluginByName(
+    const { pluginPackageName, pluginName } = this.#options.pluginDefinition;
+    const pluginHookName: string = this.#pluginHost.getPluginHookName(pluginPackageName, pluginName);
+    this.#pluginHost.requestAccessToPluginByName(
       pluginHookName,
       pluginToAccessPackage,
       pluginToAccessName,

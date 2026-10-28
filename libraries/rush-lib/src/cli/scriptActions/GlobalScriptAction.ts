@@ -5,12 +5,11 @@ import * as path from 'node:path';
 
 import type { AsyncSeriesHook } from 'tapable';
 
+import type { CommandLineParameter } from '@rushstack/ts-command-line';
 import {
   FileSystem,
   type IPackageJson,
-  JsonFile,
   AlreadyReportedError,
-  Text
 } from '@rushstack/node-core-library';
 import { Colorize } from '@rushstack/terminal';
 
@@ -19,8 +18,10 @@ import { BaseScriptAction, type IBaseScriptActionOptions } from './BaseScriptAct
 import { Utilities } from '../../utilities/Utilities';
 import { Stopwatch } from '../../utilities/Stopwatch';
 import { Autoinstaller } from '../../logic/Autoinstaller';
+import { RushConstants } from '../../logic/RushConstants';
 import type { IGlobalCommandConfig, IShellCommandTokenContext } from '../../api/CommandLineConfiguration';
 import { measureAsyncFn } from '../../utilities/performance';
+import { type JsonFileLoadCache, loadJsonFile } from '../../utilities/JsonFileLoadCache';
 
 /**
  * Constructor parameters for GlobalScriptAction.
@@ -28,6 +29,9 @@ import { measureAsyncFn } from '../../utilities/performance';
 export interface IGlobalScriptActionOptions extends IBaseScriptActionOptions<IGlobalCommandConfig> {
   shellCommand: string;
   autoinstallerName: string | undefined;
+  providedByPlugin: boolean;
+  /** The cache of a long-lived engine host, through which the action reads its autoinstaller's package.json. */
+  jsonFileLoadCache?: JsonFileLoadCache;
 }
 
 /**
@@ -41,34 +45,40 @@ export interface IGlobalScriptActionOptions extends IBaseScriptActionOptions<IGl
  * invoke scripts from package.json in the same way as a custom command.
  */
 export class GlobalScriptAction extends BaseScriptAction<IGlobalCommandConfig> {
-  private readonly _shellCommand: string;
-  private readonly _autoinstallerName: string;
-  private readonly _autoinstallerFullPath: string;
+  readonly #shellCommand: string;
+  readonly #autoinstallerName: string;
+  readonly #autoinstallerFullPath: string;
+  readonly #providedByPlugin: boolean;
+
+  #customParametersByLongName: ReadonlyMap<string, CommandLineParameter> | undefined;
+  #isHandled: boolean = false;
 
   public constructor(options: IGlobalScriptActionOptions) {
     super(options);
-    this._shellCommand = options.shellCommand;
-    this._autoinstallerName = options.autoinstallerName || '';
+    const { shellCommand, providedByPlugin, autoinstallerName = '', jsonFileLoadCache } = options;
+    this.#shellCommand = shellCommand;
+    this.#providedByPlugin = providedByPlugin;
+    this.#autoinstallerName = autoinstallerName;
 
-    if (this._autoinstallerName) {
-      Autoinstaller.validateName(this._autoinstallerName);
+    if (this.#autoinstallerName) {
+      Autoinstaller.validateName(this.#autoinstallerName);
 
       // Example: .../common/autoinstallers/my-task
-      this._autoinstallerFullPath = path.join(
+      this.#autoinstallerFullPath = path.join(
         this.rushConfiguration.commonAutoinstallersFolder,
-        this._autoinstallerName
+        this.#autoinstallerName
       );
 
-      if (!FileSystem.exists(this._autoinstallerFullPath)) {
+      if (!FileSystem.exists(this.#autoinstallerFullPath)) {
         throw new Error(
           `The custom command "${this.actionName}" specifies an "autoinstallerName" setting` +
             ' but the path does not exist: ' +
-            this._autoinstallerFullPath
+            this.#autoinstallerFullPath
         );
       }
 
       // Example: .../common/autoinstallers/my-task/package.json
-      const packageJsonPath: string = path.join(this._autoinstallerFullPath, 'package.json');
+      const packageJsonPath: string = path.join(this.#autoinstallerFullPath, 'package.json');
       if (!FileSystem.exists(packageJsonPath)) {
         throw new Error(
           `The custom command "${this.actionName}" specifies an "autoinstallerName" setting` +
@@ -77,25 +87,60 @@ export class GlobalScriptAction extends BaseScriptAction<IGlobalCommandConfig> {
         );
       }
 
-      const packageJson: IPackageJson = JsonFile.load(packageJsonPath);
+      const packageName: string | undefined = loadJsonFile(
+        jsonFileLoadCache,
+        packageJsonPath,
+        (packageJson) => (packageJson as IPackageJson).name
+      );
 
-      if (packageJson.name !== this._autoinstallerName) {
+      if (packageName !== this.#autoinstallerName) {
         throw new Error(
           `The custom command "${this.actionName}" specifies an "autoinstallerName" setting,` +
-            ` but the package.json file's "name" field is not "${this._autoinstallerName}": ` +
+            ` but the package.json file's "name" field is not "${this.#autoinstallerName}": ` +
             packageJsonPath
         );
       }
     } else {
-      this._autoinstallerFullPath = '';
+      this.#autoinstallerFullPath = '';
     }
 
     this.defineScriptParameters();
   }
 
-  private async _prepareAutoinstallerNameAsync(): Promise<void> {
+  /**
+   * {@inheritDoc IGlobalCommand.setHandled}
+   */
+  public setHandled(): void {
+    this.#isHandled = true;
+  }
+
+  /**
+   * {@inheritDoc IGlobalCommand.getCustomParametersByLongName}
+   */
+  public getCustomParametersByLongName<TParameter extends CommandLineParameter>(
+    longName: string
+  ): TParameter {
+    if (!this.#customParametersByLongName) {
+      const map: Map<string, CommandLineParameter> = new Map();
+      for (const [parameterJson, parameter] of this.customParameters) {
+        map.set(parameterJson.longName, parameter);
+      }
+      this.#customParametersByLongName = map;
+    }
+
+    const parameter: CommandLineParameter | undefined = this.#customParametersByLongName.get(longName);
+    if (!parameter) {
+      throw new Error(
+        `The command "${this.actionName}" does not have a custom parameter with long name "${longName}".`
+      );
+    }
+
+    return parameter as TParameter;
+  }
+
+  async #prepareAutoinstallerNameAsync(): Promise<void> {
     const autoInstaller: Autoinstaller = new Autoinstaller({
-      autoinstallerName: this._autoinstallerName,
+      autoinstallerName: this.#autoinstallerName,
       rushConfiguration: this.rushConfiguration,
       rushGlobalFolder: this.rushGlobalFolder
     });
@@ -117,15 +162,38 @@ export class GlobalScriptAction extends BaseScriptAction<IGlobalCommandConfig> {
       await hookForAction.promise(this);
     }
 
+    // If a plugin hook called setHandled(), the command has been fully handled.
+    // Skip the default shell command execution.
+    if (this.#isHandled) {
+      return;
+    }
+
+    if (this.#providedByPlugin) {
+      throw new Error(
+        `The custom command "${this.actionName}" is a "${RushConstants.globalPluginCommandKind}" command, ` +
+          'meaning its implementation must be provided entirely by a Rush plugin. However, no plugin ' +
+          'called setHandled() for this command. Ensure that the plugin defining this command is ' +
+          'properly installed and that it handles this command.'
+      );
+    }
+
+    if (this.#shellCommand === '') {
+      throw new Error(
+        `The custom command "${this.actionName}" has an empty "shellCommand" value, but no plugin ` +
+          'called setHandled() for this command. An empty "shellCommand" is intended for global ' +
+          'commands whose implementation is provided entirely by a Rush plugin.'
+      );
+    }
+
     const additionalPathFolders: string[] =
       this.commandLineConfiguration?.additionalPathFolders.slice() || [];
 
-    if (this._autoinstallerName) {
+    if (this.#autoinstallerName) {
       await measureAsyncFn('rush:globalScriptAction:prepareAutoinstaller', () =>
-        this._prepareAutoinstallerNameAsync()
+        this.#prepareAutoinstallerNameAsync()
       );
 
-      const autoinstallerNameBinPath: string = path.join(this._autoinstallerFullPath, 'node_modules', '.bin');
+      const autoinstallerNameBinPath: string = path.join(this.#autoinstallerFullPath, 'node_modules', '.bin');
       additionalPathFolders.push(autoinstallerNameBinPath);
     }
 
@@ -146,7 +214,7 @@ export class GlobalScriptAction extends BaseScriptAction<IGlobalCommandConfig> {
       customParameterValues[i] = customParameterValue;
     }
 
-    let shellCommand: string = this._shellCommand;
+    let shellCommand: string = this.#shellCommand;
     if (customParameterValues.length > 0) {
       shellCommand += ' ' + customParameterValues.join(' ');
     }
@@ -154,9 +222,9 @@ export class GlobalScriptAction extends BaseScriptAction<IGlobalCommandConfig> {
     const shellCommandTokenContext: IShellCommandTokenContext | undefined =
       this.commandLineConfiguration?.shellCommandTokenContext;
     if (shellCommandTokenContext) {
-      shellCommand = this._expandShellCommandWithTokens(shellCommand, shellCommandTokenContext);
+      shellCommand = this.#expandShellCommandWithTokens(shellCommand, shellCommandTokenContext);
     }
-    this._rejectAnyTokensInShellCommand(shellCommand, shellCommandTokenContext);
+    this.#rejectAnyTokensInShellCommand(shellCommand, shellCommandTokenContext);
 
     const stopwatch: Stopwatch = Stopwatch.start();
 
@@ -195,18 +263,18 @@ export class GlobalScriptAction extends BaseScriptAction<IGlobalCommandConfig> {
     }
   }
 
-  private _expandShellCommandWithTokens(
+  #expandShellCommandWithTokens(
     shellCommand: string,
     tokenContext: IShellCommandTokenContext
   ): string {
     let expandedShellCommand: string = shellCommand;
     for (const [token, tokenReplacement] of Object.entries(tokenContext)) {
-      expandedShellCommand = Text.replaceAll(expandedShellCommand, `<${token}>`, tokenReplacement);
+      expandedShellCommand = expandedShellCommand.replaceAll(`<${token}>`, tokenReplacement);
     }
     return expandedShellCommand;
   }
 
-  private _rejectAnyTokensInShellCommand(
+  #rejectAnyTokensInShellCommand(
     shellCommand: string,
     tokenContext?: IShellCommandTokenContext
   ): void {

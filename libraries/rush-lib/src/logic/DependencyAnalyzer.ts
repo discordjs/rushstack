@@ -28,28 +28,26 @@ export interface IDependencyAnalysis {
   allVersionsByPackageName: Map<string, Set<string>>;
 }
 
-export class DependencyAnalyzer {
-  private static _dependencyAnalyzerByRushConfiguration:
-    | WeakMap<RushConfiguration, DependencyAnalyzer>
-    | undefined;
+let _dependencyAnalyzerByRushConfiguration: WeakMap<RushConfiguration, DependencyAnalyzer> | undefined;
 
-  private _rushConfiguration: RushConfiguration;
-  private _analysisByVariantBySubspace: Map<string, WeakMap<Subspace, IDependencyAnalysis>> | undefined;
+export class DependencyAnalyzer {
+  #rushConfiguration: RushConfiguration;
+  #analysisByVariantBySubspace: Map<string, WeakMap<Subspace, IDependencyAnalysis>> | undefined;
 
   private constructor(rushConfiguration: RushConfiguration) {
-    this._rushConfiguration = rushConfiguration;
+    this.#rushConfiguration = rushConfiguration;
   }
 
   public static forRushConfiguration(rushConfiguration: RushConfiguration): DependencyAnalyzer {
-    if (!DependencyAnalyzer._dependencyAnalyzerByRushConfiguration) {
-      DependencyAnalyzer._dependencyAnalyzerByRushConfiguration = new WeakMap();
+    if (!_dependencyAnalyzerByRushConfiguration) {
+      _dependencyAnalyzerByRushConfiguration = new WeakMap();
     }
 
     let analyzer: DependencyAnalyzer | undefined =
-      DependencyAnalyzer._dependencyAnalyzerByRushConfiguration.get(rushConfiguration);
+      _dependencyAnalyzerByRushConfiguration.get(rushConfiguration);
     if (!analyzer) {
       analyzer = new DependencyAnalyzer(rushConfiguration);
-      DependencyAnalyzer._dependencyAnalyzerByRushConfiguration.set(rushConfiguration, analyzer);
+      _dependencyAnalyzerByRushConfiguration.set(rushConfiguration, analyzer);
     }
 
     return analyzer;
@@ -64,22 +62,22 @@ export class DependencyAnalyzer {
     // with a variant created by the user
     const variantKey: string = variant || '';
 
-    if (!this._analysisByVariantBySubspace) {
-      this._analysisByVariantBySubspace = new Map();
+    if (!this.#analysisByVariantBySubspace) {
+      this.#analysisByVariantBySubspace = new Map();
     }
 
-    const subspaceToAnalyze: Subspace = subspace || this._rushConfiguration.defaultSubspace;
+    const subspaceToAnalyze: Subspace = subspace || this.#rushConfiguration.defaultSubspace;
     let analysisForVariant: WeakMap<Subspace, IDependencyAnalysis> | undefined =
-      this._analysisByVariantBySubspace.get(variantKey);
+      this.#analysisByVariantBySubspace.get(variantKey);
 
     if (!analysisForVariant) {
       analysisForVariant = new WeakMap();
-      this._analysisByVariantBySubspace.set(variantKey, analysisForVariant);
+      this.#analysisByVariantBySubspace.set(variantKey, analysisForVariant);
     }
 
     let analysisForSubspace: IDependencyAnalysis | undefined = analysisForVariant.get(subspaceToAnalyze);
     if (!analysisForSubspace) {
-      analysisForSubspace = this._getAnalysisInternal(subspaceToAnalyze, variant, addAction);
+      analysisForSubspace = this.#getAnalysisInternal(subspaceToAnalyze, variant, addAction);
 
       analysisForVariant.set(subspaceToAnalyze, analysisForSubspace);
     }
@@ -93,7 +91,7 @@ export class DependencyAnalyzer {
    * @remarks
    * The result of this function is not cached.
    */
-  private _getAnalysisInternal(
+  #getAnalysisInternal(
     subspace: Subspace,
     variant: string | undefined,
     addAction: boolean
@@ -105,8 +103,8 @@ export class DependencyAnalyzer {
       ReadonlyArray<string>
     > = commonVersionsConfiguration.allowedAlternativeVersions;
 
-    let projectsToProcess: RushConfigurationProject[] = this._rushConfiguration.projects;
-    if (addAction && this._rushConfiguration.subspacesFeatureEnabled) {
+    let projectsToProcess: RushConfigurationProject[] = this.#rushConfiguration.projects;
+    if (addAction && this.#rushConfiguration.subspacesFeatureEnabled) {
       projectsToProcess = subspace.getProjects();
     }
 
@@ -129,7 +127,7 @@ export class DependencyAnalyzer {
 
         // Is it a local project?
         const localProject: RushConfigurationProject | undefined =
-          this._rushConfiguration.getProjectByName(dependencyName);
+          this.#rushConfiguration.getProjectByName(dependencyName);
         if (localProject) {
           if (
             !project.decoupledLocalDependencies.has(dependencyName) &&

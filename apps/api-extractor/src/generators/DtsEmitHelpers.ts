@@ -12,6 +12,8 @@ import type { Collector } from '../collector/Collector';
 import type { Span } from '../analyzer/Span';
 import type { IndentedWriter } from './IndentedWriter';
 import { SourceFileLocationFormatter } from '../analyzer/SourceFileLocationFormatter';
+import { TypeScriptHelpers } from '../analyzer/TypeScriptHelpers';
+import { ExtractorMessageId } from '../api/ExtractorMessageId';
 
 /**
  * Some common code shared between DtsRollupGenerator and ApiReportGenerator.
@@ -169,6 +171,140 @@ export class DtsEmitHelpers {
         span.modification.skipAll();
         span.modification.prefix = `${referencedEntity.nameForEmit}${typeArgumentsText}${separatorAfter}`;
       }
+    } else if (ts.isLiteralTypeNode(node.argument) && ts.isStringLiteral(node.argument.literal)) {
+      // The import was not resolved to a rolled up entity, so its span gets emitted verbatim. A relative
+      // path is meaningless in the rollup, which does not preserve the original file layout, so the
+      // emitted .d.ts would not compile. Report that instead of leaving the user to discover it later.
+      const modulePath: string = node.argument.literal.text;
+      if (modulePath.startsWith('.')) {
+        collector.messageRouter.addAnalyzerIssue(
+          ExtractorMessageId.UnresolvedImportPath,
+          `The inline import path "${modulePath}" could not be resolved, so it would be emitted unchanged` +
+            ` into the .d.ts rollup, where it does not resolve to anything. Import the symbol at the top` +
+            ` of the file instead of using an inline import() type.`,
+          astDeclaration
+        );
+      }
+    }
+  }
+
+  /**
+   * Checks if an export keyword is part of an ExportDeclaration inside a namespace
+   * (e.g., "export { Foo, Bar };" inside "declare namespace SDK { ... }").
+   * In that case, the export keyword must be preserved, otherwise the output is invalid TypeScript.
+   */
+  public static isExportKeywordInNamespaceExportDeclaration(node: ts.Node): boolean {
+    if (node.parent && ts.isExportDeclaration(node.parent)) {
+      const moduleBlock: ts.ModuleBlock | undefined = TypeScriptHelpers.findFirstParent(
+        node,
+        ts.SyntaxKind.ModuleBlock
+      );
+      if (moduleBlock) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Given an array that includes some parameter nodes, this returns an array of the same length;
+   * elements that are not undefined correspond to a parameter that should be renamed.
+   */
+  public static forEachParameterToNormalize(
+    nodes: ArrayLike<ts.Node>,
+    action: (parameter: ts.ParameterDeclaration, syntheticName: string | undefined) => void
+  ): void {
+    let actionIndex: number = 0;
+
+    // Optimistically assume that no parameters need to be normalized
+    for (actionIndex = 0; actionIndex < nodes.length; ++actionIndex) {
+      const parameter: ts.Node = nodes[actionIndex];
+      if (!ts.isParameter(parameter)) {
+        continue;
+      }
+      action(parameter, undefined);
+      if (ts.isObjectBindingPattern(parameter.name) || ts.isArrayBindingPattern(parameter.name)) {
+        // Our optimistic assumption was not true; we'll need to stop and calculate alreadyUsedNames
+        break;
+      }
+    }
+
+    if (actionIndex === nodes.length) {
+      // Our optimistic assumption was true
+      return;
+    }
+
+    // First, calculate alreadyUsedNames
+    const alreadyUsedNames: string[] = [];
+
+    for (let index: number = 0; index < nodes.length; ++index) {
+      const parameter: ts.Node = nodes[index];
+      if (!ts.isParameter(parameter)) {
+        continue;
+      }
+
+      if (!(ts.isObjectBindingPattern(parameter.name) || ts.isArrayBindingPattern(parameter.name))) {
+        alreadyUsedNames.push(parameter.name.text.trim());
+      }
+    }
+
+    // Now continue with the rest of the actions
+    for (; actionIndex < nodes.length; ++actionIndex) {
+      const parameter: ts.Node = nodes[actionIndex];
+      if (!ts.isParameter(parameter)) {
+        continue;
+      }
+
+      if (ts.isObjectBindingPattern(parameter.name) || ts.isArrayBindingPattern(parameter.name)) {
+        // Examples:
+        //
+        //      function f({ y, z }: { y: string, z: string })
+        // ---> function f(input: { y: string, z: string })
+        //
+        //      function f(x: number, [a, b]: [number, number])
+        // ---> function f(x: number, input: [number, number])
+        //
+        // Example of a naming collision:
+        //
+        //      function f({ a }: { a: string }, { b }: { b: string }, input2: string)
+        // ---> function f(input: { a: string }, input3: { b: string }, input2: string)
+        const baseName: string = 'input';
+        let counter: number = 2;
+
+        let syntheticName: string = baseName;
+        while (alreadyUsedNames.includes(syntheticName)) {
+          syntheticName = `${baseName}${counter++}`;
+        }
+        alreadyUsedNames.push(syntheticName);
+
+        action(parameter, syntheticName);
+      } else {
+        action(parameter, undefined);
+      }
+    }
+  }
+
+  public static normalizeParameterNames(signatureSpan: Span): void {
+    const syntheticNamesByNode: Map<ts.Node, string> = new Map();
+
+    DtsEmitHelpers.forEachParameterToNormalize(
+      signatureSpan.node.getChildren(),
+      (parameter: ts.ParameterDeclaration, syntheticName: string | undefined): void => {
+        if (syntheticName !== undefined) {
+          syntheticNamesByNode.set(parameter.name, syntheticName);
+        }
+      }
+    );
+
+    if (syntheticNamesByNode.size > 0) {
+      signatureSpan.forEach((childSpan: Span): void => {
+        const syntheticName: string | undefined = syntheticNamesByNode.get(childSpan.node);
+        if (syntheticName !== undefined) {
+          childSpan.modification.prefix = syntheticName;
+          childSpan.modification.suffix = '';
+          childSpan.modification.omitChildren = true;
+        }
+      });
     }
   }
 }

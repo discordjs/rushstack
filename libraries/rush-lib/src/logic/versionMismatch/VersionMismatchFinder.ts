@@ -52,18 +52,18 @@ export class VersionMismatchFinder {
    *   }
    * }
    */
-  private _allowedAlternativeVersion: Map<string, ReadonlyArray<string>>;
-  private _mismatches: Map<string, Map<string, VersionMismatchFinderEntity[]>>;
-  private _projects: VersionMismatchFinderEntity[];
+  #allowedAlternativeVersion: Map<string, ReadonlyArray<string>>;
+  #mismatches: Map<string, Map<string, VersionMismatchFinderEntity[]>>;
+  #projects: VersionMismatchFinderEntity[];
 
   public constructor(
     projects: VersionMismatchFinderEntity[],
     allowedAlternativeVersions?: Map<string, ReadonlyArray<string>>
   ) {
-    this._projects = projects;
-    this._mismatches = new Map<string, Map<string, VersionMismatchFinderEntity[]>>();
-    this._allowedAlternativeVersion = allowedAlternativeVersions || new Map<string, ReadonlyArray<string>>();
-    this._analyze();
+    this.#projects = projects;
+    this.#mismatches = new Map<string, Map<string, VersionMismatchFinderEntity[]>>();
+    this.#allowedAlternativeVersion = allowedAlternativeVersions || new Map<string, ReadonlyArray<string>>();
+    this.#analyze();
   }
 
   public static rushCheck(
@@ -78,7 +78,7 @@ export class VersionMismatchFinder {
       truncateLongPackageNameLists
     } = options ?? {};
 
-    VersionMismatchFinder._checkForInconsistentVersions(rushConfiguration, {
+    _checkForInconsistentVersions(rushConfiguration, {
       variant,
       subspace,
       printAsJson,
@@ -95,7 +95,7 @@ export class VersionMismatchFinder {
   ): void {
     const { variant, subspace = rushConfiguration.defaultSubspace } = options ?? {};
 
-    VersionMismatchFinder._checkForInconsistentVersions(rushConfiguration, {
+    _checkForInconsistentVersions(rushConfiguration, {
       subspace,
       variant,
       terminal,
@@ -129,76 +129,20 @@ export class VersionMismatchFinder {
     return new VersionMismatchFinder(projects, commonVersions.allowedAlternativeVersions);
   }
 
-  private static _checkForInconsistentVersions(
-    rushConfiguration: RushConfiguration,
-    options: {
-      isRushCheckCommand: boolean;
-      subspace: Subspace;
-      variant: string | undefined;
-      printAsJson?: boolean | undefined;
-      terminal: ITerminal;
-      truncateLongPackageNameLists?: boolean | undefined;
-    }
-  ): void {
-    const { variant, isRushCheckCommand, printAsJson, subspace, truncateLongPackageNameLists, terminal } =
-      options;
-    if (subspace.shouldEnsureConsistentVersions(variant) || isRushCheckCommand) {
-      const mismatchFinder: VersionMismatchFinder = VersionMismatchFinder.getMismatches(
-        rushConfiguration,
-        options
-      );
-
-      if (printAsJson) {
-        mismatchFinder.printAsJson();
-      } else {
-        mismatchFinder.print(truncateLongPackageNameLists);
-
-        if (mismatchFinder.numberOfMismatches > 0) {
-          // eslint-disable-next-line no-console
-          console.log(
-            Colorize.red(
-              `Found ${mismatchFinder.numberOfMismatches} mis-matching dependencies ${
-                subspace?.subspaceName ? `in subspace: ${subspace?.subspaceName}` : ''
-              }`
-            )
-          );
-          rushConfiguration.customTipsConfiguration._showErrorTip(
-            terminal,
-            CustomTipId.TIP_RUSH_INCONSISTENT_VERSIONS
-          );
-          if (!isRushCheckCommand && truncateLongPackageNameLists) {
-            // There isn't a --verbose flag in `rush install`/`rush update`, so a long list will always be truncated.
-            // eslint-disable-next-line no-console
-            console.log(
-              'For more detailed reporting about these version mismatches, use the "rush check --verbose" command.'
-            );
-          }
-
-          throw new AlreadyReportedError();
-        } else {
-          if (isRushCheckCommand) {
-            // eslint-disable-next-line no-console
-            console.log(Colorize.green(`Found no mis-matching dependencies!`));
-          }
-        }
-      }
-    }
-  }
-
   public get mismatches(): ReadonlyMap<string, ReadonlyMap<string, readonly VersionMismatchFinderEntity[]>> {
-    return this._mismatches;
+    return this.#mismatches;
   }
 
   public get numberOfMismatches(): number {
-    return this._mismatches.size;
+    return this.#mismatches.size;
   }
 
   public getMismatches(): string[] {
-    return this._getKeys(this._mismatches);
+    return this.#getKeys(this.#mismatches);
   }
 
   public getVersionsOfMismatch(mismatch: string): string[] | undefined {
-    return this._mismatches.has(mismatch) ? this._getKeys(this._mismatches.get(mismatch)) : undefined;
+    return this.#mismatches.has(mismatch) ? this.#getKeys(this.#mismatches.get(mismatch)) : undefined;
   }
 
   public getConsumersOfMismatch(
@@ -206,7 +150,7 @@ export class VersionMismatchFinder {
     version: string
   ): VersionMismatchFinderEntity[] | undefined {
     const mismatchedPackage: Map<string, VersionMismatchFinderEntity[]> | undefined =
-      this._mismatches.get(mismatch);
+      this.#mismatches.get(mismatch);
     if (!mismatchedPackage) {
       return undefined;
     }
@@ -284,8 +228,8 @@ export class VersionMismatchFinder {
     });
   }
 
-  private _analyze(): void {
-    this._projects.forEach((project: VersionMismatchFinderEntity) => {
+  #analyze(): void {
+    this.#projects.forEach((project: VersionMismatchFinderEntity) => {
       if (!project.skipRushCheck) {
         // NOTE: We do not consider peer dependencies here.  The purpose of "rush check" is
         // mainly to avoid side-by-side duplicates in the node_modules folder, whereas
@@ -300,16 +244,16 @@ export class VersionMismatchFinder {
 
             const isCyclic: boolean = project.decoupledLocalDependencies.has(dependency.name);
 
-            if (this._isVersionAllowedAlternative(dependency.name, version)) {
+            if (this.#isVersionAllowedAlternative(dependency.name, version)) {
               return;
             }
 
             const name: string = dependency.name + (isCyclic ? ' (cyclic)' : '');
 
             let dependencyVersions: Map<string, VersionMismatchFinderEntity[]> | undefined =
-              this._mismatches.get(name);
+              this.#mismatches.get(name);
             if (!dependencyVersions) {
-              this._mismatches.set(
+              this.#mismatches.set(
                 name,
                 (dependencyVersions = new Map<string, VersionMismatchFinderEntity[]>())
               );
@@ -326,21 +270,21 @@ export class VersionMismatchFinder {
       }
     });
 
-    this._mismatches.forEach((mismatches: Map<string, VersionMismatchFinderEntity[]>, project: string) => {
+    this.#mismatches.forEach((mismatches: Map<string, VersionMismatchFinderEntity[]>, project: string) => {
       if (mismatches.size <= 1) {
-        this._mismatches.delete(project);
+        this.#mismatches.delete(project);
       }
     });
   }
 
-  private _isVersionAllowedAlternative(dependency: string, version: string): boolean {
+  #isVersionAllowedAlternative(dependency: string, version: string): boolean {
     const allowedAlternatives: ReadonlyArray<string> | undefined =
-      this._allowedAlternativeVersion.get(dependency);
+      this.#allowedAlternativeVersion.get(dependency);
     return Boolean(allowedAlternatives && allowedAlternatives.indexOf(version) > -1);
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private _getKeys(iterable: Map<string, any> | undefined): string[] {
+  #getKeys(iterable: Map<string, any> | undefined): string[] {
     const keys: string[] = [];
     if (iterable) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -349,5 +293,61 @@ export class VersionMismatchFinder {
       });
     }
     return keys;
+  }
+}
+
+function _checkForInconsistentVersions(
+  rushConfiguration: RushConfiguration,
+  options: {
+    isRushCheckCommand: boolean;
+    subspace: Subspace;
+    variant: string | undefined;
+    printAsJson?: boolean | undefined;
+    terminal: ITerminal;
+    truncateLongPackageNameLists?: boolean | undefined;
+  }
+): void {
+  const { variant, isRushCheckCommand, printAsJson, subspace, truncateLongPackageNameLists, terminal } =
+    options;
+  if (subspace.shouldEnsureConsistentVersions(variant) || isRushCheckCommand) {
+    const mismatchFinder: VersionMismatchFinder = VersionMismatchFinder.getMismatches(
+      rushConfiguration,
+      options
+    );
+
+    if (printAsJson) {
+      mismatchFinder.printAsJson();
+    } else {
+      mismatchFinder.print(truncateLongPackageNameLists);
+
+      if (mismatchFinder.numberOfMismatches > 0) {
+        // eslint-disable-next-line no-console
+        console.log(
+          Colorize.red(
+            `Found ${mismatchFinder.numberOfMismatches} mis-matching dependencies ${
+              subspace?.subspaceName ? `in subspace: ${subspace?.subspaceName}` : ''
+            }`
+          )
+        );
+        rushConfiguration.customTipsConfiguration._showErrorTip(
+          terminal,
+          CustomTipId.TIP_RUSH_INCONSISTENT_VERSIONS
+        );
+        if (!isRushCheckCommand && truncateLongPackageNameLists) {
+          // There isn't a --verbose flag in `rush install`/`rush update`, so a long list will always be truncated.
+          // eslint-disable-next-line no-console
+          console.log(
+            'For more detailed reporting about these version mismatches, use the "rush check --verbose" command.'
+          );
+        }
+
+        throw new AlreadyReportedError();
+      } else {
+        if (isRushCheckCommand) {
+          // eslint-disable-next-line no-console
+          console.log(Colorize.green(`Found no mis-matching dependencies!`));
+        }
+      }
+    }
   }
 }

@@ -2,6 +2,9 @@
 // See LICENSE in the project root for license information.
 
 export class Foo {
-  private _bar: string = 'bar';
-  public baz: string = this._bar;
+  // eslint-disable-next-line @typescript-eslint/typedef
+  #bar = 'bar';
+  public baz: string = this.#bar;
 }
+
+export const Bad_Name: string = '37';

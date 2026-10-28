@@ -2,7 +2,12 @@
 // See LICENSE in the project root for license information.
 
 import { JsonFile } from '@rushstack/node-core-library';
-import { PrintUtilities, StringBufferTerminalProvider, Terminal } from '@rushstack/terminal';
+import {
+  type IOutputChunk,
+  PrintUtilities,
+  StringBufferTerminalProvider,
+  Terminal
+} from '@rushstack/terminal';
 
 import { CustomTipId, CustomTipsConfiguration, type ICustomTipsJson } from '../CustomTipsConfiguration';
 import { RushConfiguration } from '../RushConfiguration';
@@ -20,7 +25,7 @@ describe(CustomTipsConfiguration.name, () => {
   it('reports an error for duplicate tips', () => {
     expect(() => {
       new CustomTipsConfiguration(`${__dirname}/jsonFiles/custom-tips.error.json`);
-    }).toThrowError('TIP_RUSH_INCONSISTENT_VERSIONS');
+    }).toThrow('TIP_RUSH_INCONSISTENT_VERSIONS');
   });
 
   function runFormattingTests(testName: string, customTipText: string): void {
@@ -51,21 +56,17 @@ describe(CustomTipsConfiguration.name, () => {
 
       afterEach(() => {
         jest.restoreAllMocks();
-        const outputLines: string[] = [];
 
-        function appendOutputLines(output: string, kind: string): void {
-          outputLines.push(`--- ${kind} ---`);
-          outputLines.push(...output.split('[n]'));
-          outputLines.push('-'.repeat(kind.length + 8));
+        const terminalProviderOutput: IOutputChunk[] = terminalProvider.getAllOutputAsChunks();
+        const lineSplitTerminalProviderOutput: string[] = [];
+        for (const { text, severity } of terminalProviderOutput) {
+          const lines: string[] = text.split('[n]');
+          for (const line of lines) {
+            lineSplitTerminalProviderOutput.push(`[${severity}] ${line}`);
+          }
         }
 
-        appendOutputLines(terminalProvider.getOutput(), 'normal output');
-        appendOutputLines(terminalProvider.getErrorOutput(), 'error output');
-        appendOutputLines(terminalProvider.getWarningOutput(), 'warning output');
-        appendOutputLines(terminalProvider.getVerboseOutput(), 'verbose output');
-        appendOutputLines(terminalProvider.getDebugOutput(), 'debug output');
-
-        expect(outputLines).toMatchSnapshot();
+        expect(lineSplitTerminalProviderOutput).toMatchSnapshot();
       });
 
       const printFunctions = [

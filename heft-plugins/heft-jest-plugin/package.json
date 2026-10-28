@@ -1,11 +1,14 @@
 {
   "name": "@rushstack/heft-jest-plugin",
-  "version": "1.1.4",
+  "version": "2.0.21",
   "description": "Heft plugin for Jest",
   "repository": {
     "type": "git",
     "url": "https://github.com/microsoft/rushstack.git",
     "directory": "heft-plugins/heft-jest-plugin"
+  },
+  "engines": {
+    "node": ">=20.9.0"
   },
   "homepage": "https://rushstack.io/pages/heft/overview/",
   "license": "MIT",
@@ -13,14 +16,19 @@
     "build": "heft test --clean",
     "start": "heft build-watch",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "peerDependencies": {
-    "@rushstack/heft": "^1.1.4",
-    "jest-environment-jsdom": "^29.5.0",
-    "jest-environment-node": "^29.5.0"
+    "@rushstack/heft": "^1.3.4",
+    "@types/jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.3.0",
+    "jest-environment-node": "^30.3.0"
   },
   "peerDependenciesMeta": {
+    "@types/jest": {
+      "optional": true
+    },
     "jest-environment-jsdom": {
       "optional": true
     },
@@ -29,27 +37,44 @@
     }
   },
   "dependencies": {
-    "@jest/core": "~29.5.0",
-    "@jest/reporters": "~29.5.0",
-    "@jest/transform": "~29.5.0",
+    "@jest/core": "~30.3.0",
+    "@jest/reporters": "~30.3.0",
+    "@jest/transform": "~30.3.0",
     "@rushstack/heft-config-file": "workspace:*",
     "@rushstack/node-core-library": "workspace:*",
     "@rushstack/terminal": "workspace:*",
-    "jest-config": "~29.5.0",
-    "jest-resolve": "~29.5.0",
-    "jest-snapshot": "~29.5.0",
-    "lodash": "~4.17.15",
-    "punycode": "~2.3.1"
+    "jest-config": "~30.3.0",
+    "jest-resolve": "~30.3.0",
+    "jest-snapshot": "~30.3.0"
   },
   "devDependencies": {
-    "@jest/types": "29.5.0",
+    "@jest/types": "30.3.0",
     "@rushstack/heft": "workspace:*",
-    "@types/lodash": "4.14.116",
     "@types/node": "20.17.19",
     "decoupled-local-node-rig": "workspace:*",
     "eslint": "~9.37.0",
-    "jest-environment-jsdom": "~29.5.0",
-    "jest-environment-node": "~29.5.0",
+    "jest-environment-jsdom": "~30.3.0",
+    "jest-environment-node": "~30.3.0",
     "jest-watch-select-projects": "2.0.0"
-  }
+  },
+  "exports": {
+    "./includes/*.json": "./includes/*.json",
+    "./lib/*.schema.json": "./lib-commonjs/*.schema.json",
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./heft-plugin.json": "./heft-plugin.json",
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
+  "sideEffects": false
 }

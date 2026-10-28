@@ -1,0 +1,1330 @@
+// Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
+// See LICENSE in the project root for license information.
+
+import path from 'node:path';
+import nodeJsPath from 'node:path';
+
+import { FileSystem, Path, Text } from '@rushstack/node-core-library';
+import { MockScopedLogger } from '@rushstack/heft/lib/pluginFramework/logging/MockScopedLogger';
+import { StringBufferTerminalProvider, Terminal } from '@rushstack/terminal';
+
+import { type ICssOutputFolder, type ISassProcessorOptions, SassProcessor } from '../SassProcessor';
+
+const projectFolder: string = path.resolve(__dirname, '../..');
+const fixturesFolder: string = path.resolve(__dirname, '../../src/test/fixtures');
+// Fixture writes must bypass the per-test mock that captures compiler outputs.
+const writeFixtureFileAsync: typeof FileSystem.writeFileAsync = FileSystem.writeFileAsync;
+
+/**
+ * Root of a synthesized project used by the bare specifier tests. It is generated on disk rather than
+ * checked in because it contains a `node_modules` folder, which is excluded by the repository .gitignore.
+ */
+const bareSpecifierFolder: string = `${Path.convertToSlashes(projectFolder)}/temp/test/bare-specifiers`;
+const bareSpecifierSrcFolder: string = `${bareSpecifierFolder}/src`;
+
+/** Contents of the synthesized project, keyed by path relative to {@link bareSpecifierFolder}. */
+const BARE_SPECIFIER_FILES: Record<string, string> = {
+  // A package that ships Sass sources, like a design system or component library.
+  'node_modules/fake-sass-package/package.json': '{ "name": "fake-sass-package", "version": "1.0.0" }',
+  'node_modules/fake-sass-package/lib/sass/_colors.scss': '$fake-brand: #00ff00;\n',
+
+  // A package that consumes the one above using a bare specifier. A consuming project cannot rewrite
+  // this import, so it must resolve without any modification to node_modules.
+  'node_modules/shared-styles/package.json': '{ "name": "shared-styles", "version": "1.0.0" }',
+  'node_modules/shared-styles/_index.scss':
+    "@use 'fake-sass-package/lib/sass/colors';\n\n.shared {\n  color: colors.$fake-brand;\n}\n",
+
+  // A package with no bare specifiers of its own, so that the legacy `~` tests exercise only the
+  // tilde rewrite and not the opt-in bare specifier fallback.
+  'node_modules/plain-styles/package.json': '{ "name": "plain-styles", "version": "1.0.0" }',
+  'node_modules/plain-styles/_index.scss': '.plain {\n  color: #123456;\n}\n',
+
+  'src/bare-import.module.scss':
+    "@use 'fake-sass-package/lib/sass/colors';\n\n.root {\n  color: colors.$fake-brand;\n}\n",
+  'src/dependency-bare-import.module.scss':
+    "@use 'sass:meta';\n\n.root {\n  :global {\n    @include meta.load-css('pkg:shared-styles');\n  }\n}\n",
+  'src/tilde-load-css.module.scss':
+    "@use 'sass:meta';\n\n.root {\n  :global {\n    @include meta.load-css('~plain-styles');\n  }\n}\n",
+  'src/missing-bare-import.module.scss': "@use 'definitely-not-a-real-package/colors';\n",
+
+  // A folder that shadows the package name, to verify that relative resolution takes precedence.
+  // It lives in a subfolder so that it does not shadow the package for the other fixtures.
+  'src/nested/fake-sass-package/lib/sass/_colors.scss': '$fake-brand: #0000ff;\n',
+  'src/nested/relative-precedence.module.scss':
+    "@use 'fake-sass-package/lib/sass/colors';\n\n.root {\n  color: colors.$fake-brand;\n}\n"
+};
+
+// Fake output folder paths - never actually written to disk because FileSystem.writeFileAsync is mocked.
+const FAKE_OUTPUT_BASE_FOLDER: string = '/fake/output';
+const NORMALIZED_PLATFORM_FAKE_OUTPUT_BASE_FOLDER: string = Path.convertToSlashes(
+  nodeJsPath.resolve(FAKE_OUTPUT_BASE_FOLDER)
+);
+const CSS_OUTPUT_FOLDER: string = `${FAKE_OUTPUT_BASE_FOLDER}/css`;
+const DTS_OUTPUT_FOLDER: string = `${FAKE_OUTPUT_BASE_FOLDER}/dts`;
+
+type ICreateProcessorOptions = Partial<
+  Pick<
+    ISassProcessorOptions,
+    | 'cssOutputFolders'
+    | 'doNotTrimOriginalFileExtension'
+    | 'dtsOutputFolders'
+    | 'exportAsDefault'
+    | 'fileExtensions'
+    | 'loadPaths'
+    | 'nonModuleFileExtensions'
+    | 'postProcessCssAsync'
+    | 'preserveIcssExports'
+    | 'resolveBareSpecifiersAsPackages'
+    | 'silenceDeprecations'
+    | 'sourceMap'
+    | 'srcFolder'
+  >
+>;
+
+function createProcessor(
+  terminalProvider: StringBufferTerminalProvider,
+  options: ICreateProcessorOptions = {}
+): {
+  processor: SassProcessor;
+  logger: MockScopedLogger;
+} {
+  const terminal: Terminal = new Terminal(terminalProvider);
+  const logger: MockScopedLogger = new MockScopedLogger(terminal);
+
+  const processor: SassProcessor = new SassProcessor({
+    logger,
+    buildFolder: projectFolder,
+    concurrency: 1,
+    srcFolder: fixturesFolder,
+    dtsOutputFolders: [DTS_OUTPUT_FOLDER],
+    cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: undefined }],
+    exportAsDefault: true,
+    ...options
+  });
+
+  return { processor, logger };
+}
+
+async function compileFixtureAsync(processor: SassProcessor, fixtureFilename: string): Promise<void> {
+  await processor.compileFilesAsync(new Set([`${fixturesFolder}/${fixtureFilename}`]));
+}
+
+/**
+ * Replaces OS-/checkout-dependent fields in a source map JSON string with stable placeholders so
+ * the test can snapshot the result on any machine. Specifically, rewrites `sources[]` entries that
+ * point at the fixtures folder to a `fixtures/<name>` form, and normalizes `sourcesContent[]`
+ * line endings to LF.
+ */
+function normalizeSourceMapForSnapshot(json: string): string {
+  const map: {
+    sources?: string[];
+    sourcesContent?: string[];
+    [key: string]: unknown;
+  } = JSON.parse(json);
+
+  if (map.sources) {
+    // sources[] are relative paths from the .css.map output file back to the source .scss.
+    // In real use both ends live on disk in the same project so this is stable; in this test
+    // the output folder is the mocked /fake/output/css/ while the source is the real fixture
+    // on disk, so the relative path traverses the entire checkout-specific path from /fake up
+    // to the real fixtures folder. Strip everything before the "/fixtures/" segment so the
+    // snapshot is checkout-independent.
+    map.sources = map.sources.map((source) => {
+      const normalized: string = Path.convertToSlashes(source);
+      const fixturesIndex: number = normalized.indexOf('/fixtures/');
+      if (fixturesIndex >= 0) {
+        return normalized.slice(fixturesIndex + 1);
+      }
+      const lastSlash: number = normalized.lastIndexOf('/');
+      return `fixtures/${lastSlash >= 0 ? normalized.slice(lastSlash + 1) : normalized}`;
+    });
+  }
+  if (map.sourcesContent) {
+    map.sourcesContent = map.sourcesContent.map(Text.convertToLf);
+  }
+
+  return JSON.stringify(map);
+}
+
+describe(SassProcessor.name, () => {
+  let terminalProvider: StringBufferTerminalProvider;
+  /** Files captured by the mocked FileSystem.writeFileAsync, keyed by absolute path. */
+  let writtenFiles: Map<string, string>;
+
+  /** Returns the content written to a path whose last segment matches the given filename. */
+  function getWrittenFile(filename: string): string {
+    for (const [filePath, content] of writtenFiles) {
+      if (filePath.endsWith(`/${filename}`)) {
+        return content;
+      }
+    }
+
+    throw new Error(
+      `No file written matching ".../${filename}". Written paths:\n${[...writtenFiles.keys()].join('\n')}`
+    );
+  }
+
+  /** Returns all paths written that end with the given suffix. */
+  function getAllWrittenPathsMatching(suffix: string): string[] {
+    return [...writtenFiles.keys()].filter((p) => p.endsWith(suffix));
+  }
+
+  function getCssOutput(fixtureFilename: string): string {
+    // SassProcessor strips the last extension then appends .css
+    // export-only.module.scss → export-only.module.css
+    const withoutExt: string = fixtureFilename.slice(0, fixtureFilename.lastIndexOf('.'));
+    return getWrittenFile(`${withoutExt}.css`);
+  }
+
+  function getDtsOutput(fixtureFilename: string): string {
+    return getWrittenFile(`${fixtureFilename}.d.ts`);
+  }
+
+  function getJsShimOutput(fixtureFilename: string): string {
+    return getWrittenFile(`${fixtureFilename}.js`);
+  }
+
+  beforeEach(() => {
+    terminalProvider = new StringBufferTerminalProvider();
+
+    writtenFiles = new Map();
+    jest.spyOn(FileSystem, 'writeFileAsync').mockImplementation(async (filePath, content) => {
+      filePath = Path.convertToSlashes(filePath).replace(
+        NORMALIZED_PLATFORM_FAKE_OUTPUT_BASE_FOLDER,
+        FAKE_OUTPUT_BASE_FOLDER
+      );
+      let serialized: string = String(content);
+      // Source map contents include the absolute-relative path back to the source file and the
+      // verbatim source file bytes. Both vary by checkout location and OS line endings, which makes
+      // raw snapshots non-portable. Normalize them to stable forms before storing.
+      if (filePath.endsWith('.css.map')) {
+        serialized = normalizeSourceMapForSnapshot(serialized);
+      }
+      writtenFiles.set(filePath, serialized);
+    });
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+
+    expect(writtenFiles).toMatchSnapshot('written-files');
+    expect(terminalProvider.getAllOutputAsChunks({ asLines: true })).toMatchSnapshot('terminal-output');
+  });
+
+  describe('export-only.module.scss', () => {
+    it('strips the :export block from CSS when preserveIcssExports is false', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'export-only.module.scss');
+      const css: string = getCssOutput('export-only.module.scss');
+      expect(css).not.toContain(':export');
+    });
+
+    it('preserves the :export block in CSS when preserveIcssExports is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { preserveIcssExports: true });
+      await compileFixtureAsync(processor, 'export-only.module.scss');
+      const css: string = getCssOutput('export-only.module.scss');
+      expect(css).toContain(':export');
+    });
+
+    it('generates the same .d.ts regardless of preserveIcssExports', async () => {
+      const { processor: processorFalse } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processorFalse, 'export-only.module.scss');
+      const dtsFalse: string = getDtsOutput('export-only.module.scss');
+
+      writtenFiles.clear();
+
+      const { processor: processorTrue } = createProcessor(terminalProvider, {
+        preserveIcssExports: true
+      });
+      await compileFixtureAsync(processorTrue, 'export-only.module.scss');
+      const dtsTrue: string = getDtsOutput('export-only.module.scss');
+
+      expect(dtsFalse).toEqual(dtsTrue);
+    });
+  });
+
+  describe('classes-and-exports.module.scss', () => {
+    it('strips the :export block from CSS when preserveIcssExports is false', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const css: string = getCssOutput('classes-and-exports.module.scss');
+      expect(css).not.toContain(':export');
+      expect(css).toContain('.root');
+    });
+
+    it('preserves the :export block in CSS when preserveIcssExports is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { preserveIcssExports: true });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const css: string = getCssOutput('classes-and-exports.module.scss');
+      expect(css).toContain(':export');
+      expect(css).toContain('.root');
+    });
+
+    it('generates correct .d.ts with both class names and :export values', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const dts: string = getDtsOutput('classes-and-exports.module.scss');
+      expect(dts).toContain('root');
+      expect(dts).toContain('highlighted');
+      expect(dts).toContain('themeColor');
+      expect(dts).toContain('spacing');
+    });
+
+    it('generates named exports in .d.ts when exportAsDefault is false', async () => {
+      // cssOutputFolders requires exportAsDefault: true, so omit it here
+      const { processor } = createProcessor(terminalProvider, {
+        exportAsDefault: false,
+        cssOutputFolders: []
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const dts: string = getDtsOutput('classes-and-exports.module.scss');
+      // Named exports: "export const root: string;" instead of a default interface
+      expect(dts).toContain('export const root');
+      expect(dts).toContain('export const highlighted');
+      expect(dts).toContain('export const themeColor');
+      expect(dts).not.toContain('export default');
+    });
+  });
+
+  describe('sass-variables-and-exports.module.scss (Sass variables, nesting, BEM)', () => {
+    it('resolves Sass variables and expands nested rules in CSS output', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'sass-variables-and-exports.module.scss');
+      const css: string = getCssOutput('sass-variables-and-exports.module.scss');
+      // Sass variables should be resolved to literal values
+      expect(css).toContain('#0078d4');
+      expect(css).toContain('#106ebe');
+      // Nested rules should be expanded
+      expect(css).toContain('.container:hover');
+      expect(css).toContain('.container__title');
+      // :export block should be stripped (preserveIcssExports: false)
+      expect(css).not.toContain(':export');
+    });
+
+    it('resolves Sass variables inside the :export block when preserveIcssExports is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { preserveIcssExports: true });
+      await compileFixtureAsync(processor, 'sass-variables-and-exports.module.scss');
+      const css: string = getCssOutput('sass-variables-and-exports.module.scss');
+      // The :export block should contain resolved values, not Sass variable names
+      expect(css).toContain(':export');
+      expect(css).toContain('#0078d4');
+      expect(css).not.toContain('$primary-color');
+    });
+
+    it('generates .d.ts with resolved :export keys as typed properties', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'sass-variables-and-exports.module.scss');
+      const dts: string = getDtsOutput('sass-variables-and-exports.module.scss');
+      expect(dts).toContain('container');
+      expect(dts).toContain('primaryColor');
+      expect(dts).toContain('secondaryColor');
+      expect(dts).toContain('baseSpacing');
+    });
+  });
+
+  describe('mixin-with-exports.module.scss (Sass @mixin)', () => {
+    it('expands @mixin calls in CSS output', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'mixin-with-exports.module.scss');
+      const css: string = getCssOutput('mixin-with-exports.module.scss');
+      // Mixin output should be inlined - no @mixin or @include in the output
+      expect(css).not.toContain('@mixin');
+      expect(css).not.toContain('@include');
+      expect(css).toContain('display: flex');
+      expect(css).toContain('.card');
+      expect(css).toContain('.card--vertical');
+    });
+
+    it('preserves :export alongside expanded @mixin output when preserveIcssExports is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { preserveIcssExports: true });
+      await compileFixtureAsync(processor, 'mixin-with-exports.module.scss');
+      const css: string = getCssOutput('mixin-with-exports.module.scss');
+      expect(css).toContain(':export');
+      expect(css).toContain('display: flex');
+      expect(css).not.toContain('@mixin');
+    });
+
+    it('generates .d.ts with :export values and class names from @mixin-using file', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'mixin-with-exports.module.scss');
+      const dts: string = getDtsOutput('mixin-with-exports.module.scss');
+      expect(dts).toContain('card');
+      expect(dts).toContain('cardRadius');
+      expect(dts).toContain('animationDuration');
+    });
+  });
+
+  describe('extend-with-exports.module.scss (Sass @extend / placeholder selectors)', () => {
+    it('merges @extend selectors and strips :export when preserveIcssExports is false', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'extend-with-exports.module.scss');
+      const css: string = getCssOutput('extend-with-exports.module.scss');
+      // Placeholder %button-base should not appear literally; its rules should be merged
+      expect(css).not.toContain('%button-base');
+      expect(css).toContain('.primaryButton');
+      expect(css).toContain('.dangerButton');
+      expect(css).not.toContain(':export');
+    });
+
+    it('preserves :export alongside @extend-merged output when preserveIcssExports is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { preserveIcssExports: true });
+      await compileFixtureAsync(processor, 'extend-with-exports.module.scss');
+      const css: string = getCssOutput('extend-with-exports.module.scss');
+      expect(css).toContain(':export');
+      expect(css).toContain('.primaryButton');
+      expect(css).not.toContain('%button-base');
+    });
+
+    it('generates .d.ts with class names and :export values for @extend file', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'extend-with-exports.module.scss');
+      const dts: string = getDtsOutput('extend-with-exports.module.scss');
+      expect(dts).toContain('primaryButton');
+      expect(dts).toContain('dangerButton');
+      expect(dts).toContain('colorPrimary');
+      expect(dts).toContain('colorDanger');
+    });
+  });
+
+  describe('JS shim files', () => {
+    it('emits a CommonJS shim for a module file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'commonjs' }]
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const shim: string = getJsShimOutput('classes-and-exports.module.scss');
+      // CJS module shim re-exports from the CSS file and mirrors it as .default
+      expect(shim).toContain(`require("./classes-and-exports.module.css")`);
+      expect(shim).toContain('module.exports.default = module.exports');
+    });
+
+    it('emits an ESM shim for a module file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'esnext' }]
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const shim: string = getJsShimOutput('classes-and-exports.module.scss');
+      // ESM module shim re-exports the default from the CSS file
+      expect(shim).toBe(`export { default } from "./classes-and-exports.module.css";`);
+    });
+
+    it('emits a CommonJS shim for a non-module (global) file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'commonjs' }],
+        // Register the .global.scss extension so the processor classifies it correctly
+        nonModuleFileExtensions: ['.global.scss']
+      });
+      await compileFixtureAsync(processor, 'global-styles.global.scss');
+      const shim: string = getJsShimOutput('global-styles.global.scss');
+      // CJS non-module shim: side-effect require only
+      expect(shim).toBe(`require("./global-styles.global.css");`);
+    });
+
+    it('emits an ESM shim for a non-module (global) file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'esnext' }],
+        nonModuleFileExtensions: ['.global.scss']
+      });
+      await compileFixtureAsync(processor, 'global-styles.global.scss');
+      const shim: string = getJsShimOutput('global-styles.global.scss');
+      // ESM non-module shim: side-effect import only
+      expect(shim).toBe(`import "./global-styles.global.css";export {};`);
+    });
+
+    it('does not emit a shim when shimModuleFormat is undefined', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: undefined }]
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      // Only the CSS and DTS files should be written - no .js shim
+      const shimPaths: string[] = getAllWrittenPathsMatching('.module.scss.js');
+      expect(shimPaths).toHaveLength(0);
+    });
+
+    it('writes shims to each configured cssOutputFolder independently', async () => {
+      const CSS_FOLDER_ESM: string = '/fake/output/css-esm';
+      const CSS_FOLDER_CJS: string = '/fake/output/css-cjs';
+      const cssOutputFolders: ICssOutputFolder[] = [
+        { folder: CSS_FOLDER_ESM, shimModuleFormat: 'esnext' },
+        { folder: CSS_FOLDER_CJS, shimModuleFormat: 'commonjs' }
+      ];
+      const { processor } = createProcessor(terminalProvider, { cssOutputFolders });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+
+      const esmShim: string = writtenFiles.get(`${CSS_FOLDER_ESM}/classes-and-exports.module.scss.js`)!;
+      const cjsShim: string = writtenFiles.get(`${CSS_FOLDER_CJS}/classes-and-exports.module.scss.js`)!;
+
+      expect(esmShim).toBe(`export { default } from "./classes-and-exports.module.css";`);
+      expect(cjsShim).toContain('module.exports.default = module.exports');
+    });
+  });
+
+  describe('global-only.module.scss (module file with only :global styles)', () => {
+    it('emits export {}; in the .d.ts when all styles are :global', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'global-only.module.scss');
+      const dts: string = getDtsOutput('global-only.module.scss');
+      expect(dts).toBe('export {};');
+    });
+
+    it('emits a side-effect ESM shim (no default re-export) when all styles are :global', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'esnext' }]
+      });
+      await compileFixtureAsync(processor, 'global-only.module.scss');
+      const shim: string = getJsShimOutput('global-only.module.scss');
+      expect(shim).toBe(`import "./global-only.module.css";export {};`);
+    });
+
+    it('emits a side-effect CJS shim (no module.exports assignment) when all styles are :global', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'commonjs' }]
+      });
+      await compileFixtureAsync(processor, 'global-only.module.scss');
+      const shim: string = getJsShimOutput('global-only.module.scss');
+      expect(shim).toBe(`require("./global-only.module.css");`);
+    });
+
+    it('emits compiled CSS with the :global styles applied', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'global-only.module.scss');
+      const css: string = getCssOutput('global-only.module.scss');
+      expect(css).toContain('.ms-Nav-group');
+      expect(css).toContain('.ms-Nav-link');
+    });
+  });
+
+  describe('simple.module.sass (indented Sass syntax)', () => {
+    it('compiles indented Sass syntax to CSS correctly', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'simple.module.sass');
+      const css: string = getCssOutput('simple.module.sass');
+      expect(css).toContain('.exampleClass');
+      expect(css).toContain('color: red');
+      expect(css).toContain('.exampleHeading');
+      expect(css).toContain('font-weight: bold');
+    });
+
+    it('generates .d.ts with class names from indented Sass', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'simple.module.sass');
+      const dts: string = getDtsOutput('simple.module.sass');
+      expect(dts).toContain('exampleClass');
+      expect(dts).toContain('exampleHeading');
+      expect(dts).toContain('export default styles');
+    });
+
+    it('emits an ESM shim for an indented Sass module file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'esnext' }]
+      });
+      await compileFixtureAsync(processor, 'simple.module.sass');
+      const shim: string = getJsShimOutput('simple.module.sass');
+      expect(shim).toBe(`export { default } from "./simple.module.css";`);
+    });
+  });
+
+  describe('use-with-partial.module.scss (@use with local partial)', () => {
+    it('resolves variables from a @use partial in CSS output', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'use-with-partial.module.scss');
+      const css: string = getCssOutput('use-with-partial.module.scss');
+      // $brand-color from the partial should be resolved to its value
+      expect(css).toContain('#0078d4');
+      // $spacing-unit * 2 = 8px
+      expect(css).toContain('8px');
+      expect(css).toContain('.container');
+      expect(css).toContain('.header');
+    });
+
+    it('generates .d.ts with class names from a file using @use', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'use-with-partial.module.scss');
+      const dts: string = getDtsOutput('use-with-partial.module.scss');
+      expect(dts).toContain('container');
+      expect(dts).toContain('header');
+      expect(dts).toContain('export default styles');
+    });
+  });
+
+  describe('use-plain-css.module.scss (@use of a plain .css file)', () => {
+    it('resolves a plain .css file referenced via @use with an explicit extension', async () => {
+      const { processor, logger } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'use-plain-css.module.scss');
+      // The @use must resolve without "Can't find stylesheet to import."
+      expect(logger.errors).toHaveLength(0);
+      const css: string = getCssOutput('use-plain-css.module.scss');
+      // Rules from the plain .css file should be inlined into the output
+      expect(css).toContain('.token-base');
+      expect(css).toContain('#0078d4');
+      expect(css).toContain('.container');
+    });
+
+    it('resolves a plain .css file referenced via @use without an explicit extension', async () => {
+      const { processor, logger } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'use-plain-css-extensionless.module.scss');
+      // Extensionless loads must fall back to the `.css` candidate, matching dart-sass
+      expect(logger.errors).toHaveLength(0);
+      const css: string = getCssOutput('use-plain-css-extensionless.module.scss');
+      expect(css).toContain('.token-base');
+      expect(css).toContain('#0078d4');
+      expect(css).toContain('.container');
+    });
+  });
+
+  describe('global-styles.global.sass (.global.sass non-module file)', () => {
+    it('compiles indented Sass syntax to plain CSS for a .global.sass file', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'global-styles.global.sass');
+      const css: string = getCssOutput('global-styles.global.sass');
+      expect(css).toContain('body');
+      expect(css).toContain('h1');
+      // $heading-size should be resolved to its value
+      expect(css).toContain('24px');
+      expect(css).toContain('#333');
+    });
+
+    it('emits export {}; in the .d.ts for a .global.sass file', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'global-styles.global.sass');
+      const dts: string = getDtsOutput('global-styles.global.sass');
+      expect(dts).toBe('export {};');
+    });
+
+    it('emits a side-effect ESM shim for a .global.sass file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'esnext' }]
+      });
+      await compileFixtureAsync(processor, 'global-styles.global.sass');
+      const shim: string = getJsShimOutput('global-styles.global.sass');
+      expect(shim).toBe(`import "./global-styles.global.css";export {};`);
+    });
+  });
+
+  describe('css-module.module.css (plain CSS as CSS module input)', () => {
+    it('generates .d.ts with class names from a .module.css input file', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'css-module.module.css');
+      const dts: string = getDtsOutput('css-module.module.css');
+      expect(dts).toContain('root');
+      expect(dts).toContain('header');
+      expect(dts).toContain('export default styles');
+    });
+
+    it('passes CSS through the pipeline unchanged for a .module.css input file', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'css-module.module.css');
+      const css: string = getCssOutput('css-module.module.css');
+      expect(css).toContain('.root');
+      expect(css).toContain('.header');
+      expect(css).toContain('display: flex');
+    });
+
+    it('does not emit a JS shim for a .module.css input file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'esnext' }]
+      });
+      await compileFixtureAsync(processor, 'css-module.module.css');
+      // .css inputs cannot have a shim (the shim would reference itself)
+      const shimPaths: string[] = getAllWrittenPathsMatching('.module.css.js');
+      expect(shimPaths).toHaveLength(0);
+    });
+  });
+
+  describe('silenceDeprecations option', () => {
+    it('throws at construction time when given an unknown deprecation code', () => {
+      expect(() =>
+        createProcessor(terminalProvider, { silenceDeprecations: ['not-a-real-deprecation-code'] })
+      ).toThrow('Unknown deprecation code: not-a-real-deprecation-code');
+    });
+  });
+
+  describe('non-module (global) files', () => {
+    it('emits plain compiled CSS for a .global.scss file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        nonModuleFileExtensions: ['.global.scss']
+      });
+      await compileFixtureAsync(processor, 'global-styles.global.scss');
+      const css: string = getCssOutput('global-styles.global.scss');
+      // Variables should be resolved; selectors should be present
+      expect(css).toContain('body');
+      expect(css).toContain('h1');
+      expect(css).toContain('font-family');
+      expect(css).not.toContain('$body-font');
+    });
+
+    it('emits export {}; in the .d.ts for a non-module file', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        nonModuleFileExtensions: ['.global.scss']
+      });
+      await compileFixtureAsync(processor, 'global-styles.global.scss');
+      const dts: string = getDtsOutput('global-styles.global.scss');
+      expect(dts).toBe('export {};');
+    });
+  });
+
+  describe('multiple output folders', () => {
+    it('writes .d.ts to every configured dtsOutputFolder', async () => {
+      const DTS_FOLDER_A: string = '/fake/output/dts-a';
+      const DTS_FOLDER_B: string = '/fake/output/dts-b';
+      const { processor } = createProcessor(terminalProvider, {
+        dtsOutputFolders: [DTS_FOLDER_A, DTS_FOLDER_B]
+      });
+      await compileFixtureAsync(processor, 'export-only.module.scss');
+
+      const dtsA: string = writtenFiles.get(`${DTS_FOLDER_A}/export-only.module.scss.d.ts`)!;
+      const dtsB: string = writtenFiles.get(`${DTS_FOLDER_B}/export-only.module.scss.d.ts`)!;
+
+      expect(dtsA).toBeDefined();
+      expect(dtsA).toEqual(dtsB);
+    });
+
+    it('writes CSS to every configured cssOutputFolder', async () => {
+      const CSS_FOLDER_A: string = '/fake/output/css-a';
+      const CSS_FOLDER_B: string = '/fake/output/css-b';
+      const { processor } = createProcessor(terminalProvider, {
+        cssOutputFolders: [
+          { folder: CSS_FOLDER_A, shimModuleFormat: undefined },
+          { folder: CSS_FOLDER_B, shimModuleFormat: undefined }
+        ]
+      });
+      await compileFixtureAsync(processor, 'export-only.module.scss');
+
+      const cssA: string = writtenFiles.get(`${CSS_FOLDER_A}/export-only.module.css`)!;
+      const cssB: string = writtenFiles.get(`${CSS_FOLDER_B}/export-only.module.css`)!;
+
+      expect(cssA).toBeDefined();
+      expect(cssA).toEqual(cssB);
+    });
+  });
+
+  describe('postProcessCssAsync', () => {
+    it('passes compiled CSS through the post-processor callback', async () => {
+      const postProcessed: string[] = [];
+      const { processor } = createProcessor(terminalProvider, {
+        postProcessCssAsync: async (css: string) => {
+          postProcessed.push(css);
+          return css.replace(/color:/g, 'color: /* post-processed */');
+        }
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+
+      // The callback should have been called with the raw CSS
+      expect(postProcessed.length).toBe(1);
+      expect(postProcessed[0]).toContain('color:');
+
+      // The emitted CSS should reflect the transformation
+      const css: string = getCssOutput('classes-and-exports.module.scss');
+      expect(css).toContain('color: /* post-processed */');
+    });
+
+    it('post-processor runs after postcss-modules strips :export', async () => {
+      const seenCss: string[] = [];
+      const { processor } = createProcessor(terminalProvider, {
+        postProcessCssAsync: async (css: string) => {
+          seenCss.push(css);
+          return css;
+        }
+      });
+      await compileFixtureAsync(processor, 'export-only.module.scss');
+
+      // With preserveIcssExports: false (default), the CSS seen by the callback
+      // should already have the :export block stripped
+      expect(seenCss[0]).not.toContain(':export');
+    });
+
+    it('post-processor receives the original CSS including :export when preserveIcssExports is true', async () => {
+      const seenCss: string[] = [];
+      const { processor } = createProcessor(terminalProvider, {
+        preserveIcssExports: true,
+        postProcessCssAsync: async (css: string) => {
+          seenCss.push(css);
+          return css;
+        }
+      });
+      await compileFixtureAsync(processor, 'export-only.module.scss');
+
+      expect(seenCss[0]).toContain(':export');
+    });
+  });
+
+  describe('doNotTrimOriginalFileExtension', () => {
+    it('strips the source extension by default (doNotTrimOriginalFileExtension: false)', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      // Default: "classes-and-exports.module.scss" → "classes-and-exports.module.css"
+      const css: string = writtenFiles.get(`${CSS_OUTPUT_FOLDER}/classes-and-exports.module.css`)!;
+      expect(css).toBeDefined();
+      expect(writtenFiles.has(`${CSS_OUTPUT_FOLDER}/classes-and-exports.module.scss.css`)).toBe(false);
+    });
+
+    it('preserves the source extension when doNotTrimOriginalFileExtension is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { doNotTrimOriginalFileExtension: true });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      // "classes-and-exports.module.scss" → "classes-and-exports.module.scss.css"
+      const css: string = writtenFiles.get(`${CSS_OUTPUT_FOLDER}/classes-and-exports.module.scss.css`)!;
+      expect(css).toBeDefined();
+      expect(writtenFiles.has(`${CSS_OUTPUT_FOLDER}/classes-and-exports.module.css`)).toBe(false);
+    });
+
+    it('uses the .scss.css filename in JS shims when doNotTrimOriginalFileExtension is true', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        doNotTrimOriginalFileExtension: true,
+        cssOutputFolders: [{ folder: CSS_OUTPUT_FOLDER, shimModuleFormat: 'commonjs' }]
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+      const shim: string = writtenFiles.get(`${CSS_OUTPUT_FOLDER}/classes-and-exports.module.scss.js`)!;
+      expect(shim).toContain(`require("./classes-and-exports.module.scss.css")`);
+    });
+
+    it('the CSS content is the same regardless of doNotTrimOriginalFileExtension', async () => {
+      const { processor: processorDefault } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processorDefault, 'classes-and-exports.module.scss');
+      const cssDefault: string = writtenFiles.get(`${CSS_OUTPUT_FOLDER}/classes-and-exports.module.css`)!;
+
+      writtenFiles.clear();
+
+      const { processor: processorPreserve } = createProcessor(terminalProvider, {
+        doNotTrimOriginalFileExtension: true
+      });
+      await compileFixtureAsync(processorPreserve, 'classes-and-exports.module.scss');
+      const cssPreserve: string = writtenFiles.get(
+        `${CSS_OUTPUT_FOLDER}/classes-and-exports.module.scss.css`
+      )!;
+
+      expect(cssDefault).toEqual(cssPreserve);
+    });
+  });
+
+  describe('error reporting', () => {
+    it('emits an error for invalid SCSS syntax', async () => {
+      const { processor, logger } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'invalid.module.scss');
+      expect(logger.errors.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('bare specifier resolution', () => {
+    beforeAll(async () => {
+      await FileSystem.ensureEmptyFolderAsync(bareSpecifierFolder);
+      for (const [relativePath, content] of Object.entries(BARE_SPECIFIER_FILES)) {
+        await writeFixtureFileAsync(`${bareSpecifierFolder}/${relativePath}`, content, {
+          ensureFolderExists: true
+        });
+      }
+    });
+
+    function createBareSpecifierProcessor(options: ICreateProcessorOptions = {}): {
+      processor: SassProcessor;
+      logger: MockScopedLogger;
+    } {
+      return createProcessor(terminalProvider, {
+        srcFolder: bareSpecifierSrcFolder,
+        ...options
+      });
+    }
+
+    async function compileBareSpecifierFixtureAsync(
+      processor: SassProcessor,
+      relativePath: string
+    ): Promise<void> {
+      await processor.compileFilesAsync(new Set([`${bareSpecifierSrcFolder}/${relativePath}`]));
+    }
+
+    it('resolves a bare specifier from node_modules', async () => {
+      const { processor, logger } = createBareSpecifierProcessor({
+        resolveBareSpecifiersAsPackages: true
+      });
+      await compileBareSpecifierFixtureAsync(processor, 'bare-import.module.scss');
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('bare-import.module.scss')).toContain('#00ff00');
+    });
+
+    it('resolves a bare specifier used inside a dependency stylesheet', async () => {
+      // The failing import lives in node_modules/shared-styles, which the consuming project cannot edit.
+      const { processor, logger } = createBareSpecifierProcessor({
+        resolveBareSpecifiersAsPackages: true
+      });
+      await compileBareSpecifierFixtureAsync(processor, 'dependency-bare-import.module.scss');
+
+      expect(logger.errors).toHaveLength(0);
+      const css: string = getCssOutput('dependency-bare-import.module.scss');
+      expect(css).toContain('.shared');
+      expect(css).toContain('#00ff00');
+    });
+
+    it('resolves a legacy tilde specifier inside meta.load-css()', async () => {
+      // The `~` rewrite is applied by the resolver, not only by the @use/@import/@forward preprocessor.
+      // `~` is an explicit package reference, so it is not gated by resolveBareSpecifiersAsPackages;
+      // this processor deliberately leaves that option at its default.
+      const { processor, logger } = createBareSpecifierProcessor();
+      await compileBareSpecifierFixtureAsync(processor, 'tilde-load-css.module.scss');
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('tilde-load-css.module.scss')).toContain('.plain');
+    });
+
+    it('does not resolve a bare specifier as a package by default', async () => {
+      // Per the Sass specification a bare specifier is a relative path, so package resolution must
+      // happen only when the configuration explicitly opts in. This processor does not pass the
+      // option at all, so it asserts the default value and not merely an explicit `false`.
+      const { processor, logger } = createBareSpecifierProcessor();
+      await compileBareSpecifierFixtureAsync(processor, 'bare-import.module.scss');
+
+      expect(logger.errors).toHaveLength(1);
+      expect(logger.errors[0].message).toContain("Can't find stylesheet to import");
+    });
+
+    it('prefers a file relative to the importer over a package of the same name', async () => {
+      const { processor, logger } = createBareSpecifierProcessor({
+        resolveBareSpecifiersAsPackages: true
+      });
+      await compileBareSpecifierFixtureAsync(processor, 'nested/relative-precedence.module.scss');
+
+      expect(logger.errors).toHaveLength(0);
+      const css: string = getCssOutput('relative-precedence.module.scss');
+      expect(css).toContain('#0000ff');
+      expect(css).not.toContain('#00ff00');
+    });
+
+    it('reports a normal Sass error when a bare specifier names no installed package', async () => {
+      const { processor, logger } = createBareSpecifierProcessor({
+        resolveBareSpecifiersAsPackages: true
+      });
+      await compileBareSpecifierFixtureAsync(processor, 'missing-bare-import.module.scss');
+
+      expect(logger.errors).toHaveLength(1);
+      const message: string = logger.errors[0].message;
+      expect(message).toContain("Can't find stylesheet to import");
+      // The package resolution failure must not leak out in place of the normal Sass diagnostic.
+      expect(message).not.toContain('Cannot find package');
+    });
+  });
+
+  describe('package exports resolution', () => {
+    const testFolder: string = `${Path.convertToSlashes(projectFolder)}/temp/test/package-exports`;
+    const srcFolder: string = `${testFolder}/src`;
+    const packageFolder: string = `${testFolder}/node_modules/@test/exported-styles`;
+    const sourcePath: string = `${srcFolder}/exports.module.scss`;
+
+    async function writePackageAsync(fields: Record<string, unknown>): Promise<void> {
+      await writeFixtureFileAsync(
+        `${packageFolder}/package.json`,
+        JSON.stringify({ name: '@test/exported-styles', version: '1.0.0', ...fields }),
+        { ensureFolderExists: true }
+      );
+    }
+
+    async function compilePackageAsync(
+      specifier: string = 'pkg:@test/exported-styles',
+      options: ICreateProcessorOptions = {}
+    ): Promise<{ processor: SassProcessor; logger: MockScopedLogger }> {
+      await writeFixtureFileAsync(
+        sourcePath,
+        `@use '${specifier}' as tokens;\n.root { color: tokens.$brand; }\n`,
+        { ensureFolderExists: true }
+      );
+      const result: { processor: SassProcessor; logger: MockScopedLogger } = createProcessor(
+        terminalProvider,
+        { srcFolder, ...options }
+      );
+      await result.processor.compileFilesAsync(new Set([sourcePath]));
+      return result;
+    }
+
+    beforeEach(async () => {
+      await FileSystem.ensureEmptyFolderAsync(testFolder);
+      await FileSystem.copyFilesAsync({
+        sourcePath: `${fixturesFolder}/package-exports`,
+        destinationPath: testFolder
+      });
+    });
+
+    afterAll(async () => {
+      await FileSystem.deleteFolderAsync(testFolder);
+    });
+
+    it.each([
+      './styles/_tokens.scss',
+      { sass: './styles/_tokens.scss', default: './index.js' },
+      { '.': { sass: './styles/_tokens.scss', default: './index.js' } },
+      { '.': ['./styles/_tokens.scss', './styles/other.scss'] },
+      { '.': { style: './styles/_tokens.scss' } },
+      { '.': { default: './styles/_tokens.scss' } },
+      { '.': { import: './index.js', require: './index.js', sass: './styles/_tokens.scss' } }
+    ])('resolves the package root with exports %j', async (exports) => {
+      await writePackageAsync({ exports });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('matches conditions in manifest order rather than imposing sass-first priority', async () => {
+      await writePackageAsync({
+        exports: { '.': { style: './styles/other.scss', sass: './styles/_tokens.scss' } }
+      });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#abcdef');
+    });
+
+    it.each([
+      ['./tokens', 'tokens'],
+      ['./tokens.scss', 'tokens'],
+      ['./_tokens.scss', 'tokens'],
+      ['./theme/index.scss', 'theme'],
+      ['./theme/_index.scss', 'theme'],
+      ['./theme/*.scss', 'theme/tokens'],
+      ['./theme/*.scss', 'theme/_tokens.scss']
+    ])('resolves export %s from subpath %s', async (key, subpath) => {
+      await writePackageAsync({
+        exports: {
+          [key]: key.includes('*') ? './styles/_*.scss' : { sass: './styles/_tokens.scss' }
+        }
+      });
+      // Use an existing filename for both wildcard spellings.
+      if (subpath === 'theme/_tokens.scss') {
+        await writePackageAsync({ exports: { [key]: './styles/*.scss' } });
+      }
+      const { logger } = await compilePackageAsync(`pkg:@test/exported-styles/${subpath}`);
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('prefers an exact export over a wildcard export', async () => {
+      await writePackageAsync({
+        exports: {
+          './theme/*': './styles/*',
+          './theme/_tokens.scss': './styles/other.scss'
+        }
+      });
+      const { logger } = await compilePackageAsync('pkg:@test/exported-styles/theme/_tokens.scss');
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#abcdef');
+    });
+
+    it('reuses a wildcard fallback target already read during resolution', async () => {
+      await writePackageAsync({
+        exports: { './theme/*.scss': ['./missing/*.scss', './styles/*.scss'] }
+      });
+      const readSpy: jest.SpyInstance = jest.spyOn(FileSystem, 'readFileToBufferAsync');
+      const { logger } = await compilePackageAsync('pkg:@test/exported-styles/theme/tokens');
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+      expect(
+        readSpy.mock.calls.filter(
+          ([filePath]) => Path.convertToSlashes(filePath) === `${packageFolder}/styles/_tokens.scss`
+        )
+      ).toHaveLength(1);
+    });
+
+    it.each(['pkg:', '~', ''])('supports the %j package-import prefix', async (prefix) => {
+      await writePackageAsync({ exports: { './tokens': { sass: './styles/_tokens.scss' } } });
+      const { logger } = await compilePackageAsync(`${prefix}@test/exported-styles/tokens`, {
+        resolveBareSpecifiersAsPackages: prefix === ''
+      });
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it.each(['sass', 'style'])('falls back to the top-level %s field', async (field) => {
+      await writePackageAsync({
+        exports: { '.': { import: './index.js' } },
+        [field]: './styles/_tokens.scss'
+      });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('prefers a top-level sass entry point over style', async () => {
+      await writePackageAsync({ sass: './styles/_tokens.scss', style: './styles/other.scss' });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('preserves physical deep imports when no Sass export matches', async () => {
+      await writePackageAsync({ exports: { '.': { import: './index.js' } } });
+      const { logger } = await compilePackageAsync('pkg:@test/exported-styles/styles/tokens');
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('falls back to the package index when no entry point matches', async () => {
+      await writePackageAsync({ exports: { '.': { import: './index.js' } }, main: './index.js' });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#00ff00');
+    });
+
+    it('loads an exported indented Sass stylesheet', async () => {
+      await writePackageAsync({ exports: { '.': { sass: './styles/indented.sass' } } });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('decodes URL-encoded export targets', async () => {
+      await writePackageAsync({ exports: { '.': { sass: './styles/_spaced%20tokens.scss' } } });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('preserves source maps for rules loaded through package exports', async () => {
+      await writePackageAsync({ exports: { '.': { sass: './styles/_tokens.scss' } } });
+      const paletteContent: string = '$brand: #123456;\n.palette { color: $brand; }\n';
+      await writeFixtureFileAsync(`${packageFolder}/styles/_palette.scss`, paletteContent);
+      const { logger } = await compilePackageAsync('pkg:@test/exported-styles', { sourceMap: true });
+      const sourceMap: { sources: string[]; sourcesContent: string[] } = JSON.parse(
+        getWrittenFile('exports.module.css.map')
+      );
+
+      expect(logger.errors).toHaveLength(0);
+      expect(sourceMap.sources.some((source) => source.endsWith('/_palette.scss'))).toBe(true);
+      expect(sourceMap.sourcesContent).toContain(paletteContent);
+    });
+
+    it('loads exported plain CSS through meta.load-css()', async () => {
+      await writePackageAsync({ exports: { './plain': { style: './styles/plain.css' } } });
+      await writeFixtureFileAsync(
+        sourcePath,
+        '@use "sass:meta";\n@include meta.load-css("pkg:@test/exported-styles/plain");\n',
+        { ensureFolderExists: true }
+      );
+      const { processor, logger } = createProcessor(terminalProvider, { srcFolder });
+      await processor.compileFilesAsync(new Set([sourcePath]));
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+    });
+
+    it('retains dependency tracking for exported files and their relative imports', async () => {
+      await writePackageAsync({ exports: { '.': { sass: './styles/_tokens.scss' } } });
+      const { processor, logger } = await compilePackageAsync();
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+
+      writtenFiles.clear();
+      const palettePath: string = `${packageFolder}/styles/_palette.scss`;
+      await writeFixtureFileAsync(palettePath, '$brand: #654321;\n');
+      await processor.compileFilesAsync(new Set([palettePath]));
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#654321');
+    });
+
+    describe.each(['exports', 'sass', 'style'])('manifest-only %s changes', (field) => {
+      it.each([false, true])('retargets imports with a persisted cache: %s', async (persistCache) => {
+        const getEntryPoint = (target: string): Record<string, unknown> =>
+          field === 'exports' ? { exports: { '.': { sass: target } } } : { [field]: target };
+        await writePackageAsync(getEntryPoint('./styles/_tokens.scss'));
+        let { processor, logger } = createProcessor(terminalProvider, { srcFolder });
+        const cacheFolder: string = `${testFolder}/cache`;
+        if (persistCache) {
+          await processor.loadCacheAsync(cacheFolder);
+        }
+
+        await processor.compileFilesAsync(new Set([sourcePath]));
+        expect(logger.errors).toHaveLength(0);
+        expect(getCssOutput('exports.module.scss')).toContain('#123456');
+        expect(processor.packageManifestPaths).toContain(path.resolve(packageFolder, 'package.json'));
+
+        if (persistCache) {
+          const cacheFile: [string, string] | undefined = [...writtenFiles].find(([filePath]) =>
+            filePath.startsWith(`${cacheFolder}/`)
+          );
+          if (!cacheFile) {
+            throw new Error('Expected the processor to write its persistent cache.');
+          }
+
+          await writeFixtureFileAsync(cacheFile[0], cacheFile[1], { ensureFolderExists: true });
+          ({ processor, logger } = createProcessor(terminalProvider, { srcFolder }));
+          await processor.loadCacheAsync(cacheFolder);
+          expect(processor.packageManifestPaths).toContain(path.resolve(packageFolder, 'package.json'));
+        }
+
+        writtenFiles.clear();
+        await writePackageAsync(getEntryPoint('./styles/other.scss'));
+        await processor.compileFilesAsync(new Set([sourcePath]));
+        for (const filePath of writtenFiles.keys()) {
+          if (filePath.startsWith(`${cacheFolder}/`)) {
+            writtenFiles.delete(filePath);
+          }
+        }
+
+        expect(logger.errors).toHaveLength(0);
+        expect(getCssOutput('exports.module.scss')).toContain('#abcdef');
+        expect(getAllWrittenPathsMatching('package.json.d.ts')).toHaveLength(0);
+      });
+    });
+
+    it('recompiles consumers when only a package manifest is reported as changed', async () => {
+      await writePackageAsync({ exports: { '.': './styles/_tokens.scss' } });
+      const { processor, logger } = await compilePackageAsync();
+      expect(logger.errors).toHaveLength(0);
+      writtenFiles.clear();
+
+      await writePackageAsync({ exports: { '.': './styles/other.scss' } });
+      await processor.compileFilesAsync(new Set([path.resolve(packageFolder, 'package.json')]));
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#abcdef');
+      expect(getAllWrittenPathsMatching('package.json.d.ts')).toHaveLength(0);
+    });
+
+    it('tracks manifests for package imports made by a dependency stylesheet', async () => {
+      await writePackageAsync({ exports: { '.': './styles/_tokens.scss' } });
+      const { processor, logger } = await compilePackageAsync('./package-consumer');
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#123456');
+      writtenFiles.clear();
+
+      await writePackageAsync({ exports: { '.': './styles/other.scss' } });
+      await processor.compileFilesAsync(new Set([sourcePath]));
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('exports.module.scss')).toContain('#abcdef');
+    });
+
+    it.each(['pkg:', ''])('reports invalid export targets for the %j prefix', async (prefix) => {
+      await writePackageAsync({ exports: { '.': { default: './index.js' } } });
+      const { logger } = await compilePackageAsync(`${prefix}@test/exported-styles`, {
+        resolveBareSpecifiersAsPackages: prefix === ''
+      });
+
+      expect(logger.errors).toHaveLength(1);
+      expect(logger.errors[0].message).toContain('not a .scss, .sass, or .css file');
+      expect(writtenFiles.size).toBe(0);
+    });
+
+    it('reports malformed export maps instead of falling back to the filesystem', async () => {
+      await writePackageAsync({ exports: { '.': './styles/_tokens.scss', sass: './styles/other.scss' } });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(1);
+      expect(logger.errors[0].message).toContain('"exports" cannot contain');
+    });
+
+    it('reports ambiguous extensionless exports', async () => {
+      await writePackageAsync({
+        exports: {
+          './tokens.scss': './styles/_tokens.scss',
+          './tokens.sass': './styles/indented.sass'
+        }
+      });
+      const { logger } = await compilePackageAsync('pkg:@test/exported-styles/tokens');
+
+      expect(logger.errors).toHaveLength(1);
+      expect(logger.errors[0].message).toContain('Ambiguous Sass exports');
+    });
+
+    it('does not resolve incomplete export targets as partials', async () => {
+      await writePackageAsync({ exports: { '.': { sass: './styles/tokens.scss' } } });
+      const { logger } = await compilePackageAsync();
+
+      expect(logger.errors).toHaveLength(1);
+      expect(writtenFiles.size).toBe(0);
+    });
+  });
+
+  describe('loadPaths option', () => {
+    it('resolves a bare specifier from a configured load path', async () => {
+      const { processor, logger } = createProcessor(terminalProvider, {
+        loadPaths: [`${fixturesFolder}/load-paths`]
+      });
+      await compileFixtureAsync(processor, 'use-load-path.module.scss');
+
+      expect(logger.errors).toHaveLength(0);
+      expect(getCssOutput('use-load-path.module.scss')).toContain('#ff00ff');
+    });
+
+    it('does not resolve a bare specifier from an unconfigured folder', async () => {
+      const { processor, logger } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'use-load-path.module.scss');
+
+      expect(logger.errors).toHaveLength(1);
+      expect(logger.errors[0].message).toContain("Can't find stylesheet to import");
+    });
+  });
+
+  describe('sourceMap option', () => {
+    it('emits .css.map and sourceMappingURL comment when sourceMap is true', async () => {
+      const { processor } = createProcessor(terminalProvider, { sourceMap: true });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+
+      const mapPaths: string[] = getAllWrittenPathsMatching('.css.map');
+      expect(mapPaths).toHaveLength(1);
+
+      const css: string = getCssOutput('classes-and-exports.module.scss');
+      expect(css).toMatch(/\/\*# sourceMappingURL=classes-and-exports\.module\.css\.map \*\//);
+
+      const mapJson: string = getWrittenFile('classes-and-exports.module.css.map');
+      const parsedMap: {
+        version: number;
+        mappings: string;
+        sources: string[];
+      } = JSON.parse(mapJson);
+      expect(parsedMap.version).toBe(3);
+      expect(parsedMap.mappings).toBeTruthy();
+      expect(parsedMap.sources).toHaveLength(1);
+      expect(parsedMap.sources[0]).toMatch(/classes-and-exports\.module\.scss$/);
+    });
+
+    it('emits a valid .css.map when the entry file @uses a partial (Linux/macOS regression)', async () => {
+      // use-with-partial.module.scss uses @use 'partial', which goes through loadAsync.
+      // Without sourceMapUrl on the ImporterResult, sass-embedded falls back to a data: URL
+      // for the partial in the source map; heftUrlToPath then crashes on Linux/macOS.
+      const { processor } = createProcessor(terminalProvider, { sourceMap: true });
+      await compileFixtureAsync(processor, 'use-with-partial.module.scss');
+
+      const mapPaths: string[] = getAllWrittenPathsMatching('.css.map');
+      expect(mapPaths).toHaveLength(1);
+
+      const mapJson: string = getWrittenFile('use-with-partial.module.css.map');
+      const parsedMap: { version: number; mappings: string; sources: string[] } = JSON.parse(mapJson);
+      expect(parsedMap.version).toBe(3);
+      expect(parsedMap.mappings).toBeTruthy();
+      // Both the entry file and the partial must resolve to real paths, not data: URLs
+      expect(parsedMap.sources.every((s: string) => !s.startsWith('data:'))).toBe(true);
+    });
+
+    it('does not emit .css.map or sourceMappingURL comment by default', async () => {
+      const { processor } = createProcessor(terminalProvider);
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+
+      expect(getAllWrittenPathsMatching('.css.map')).toHaveLength(0);
+      expect(getCssOutput('classes-and-exports.module.scss')).not.toContain('sourceMappingURL');
+    });
+
+    it('uses the correct map filename when doNotTrimOriginalFileExtension is true', async () => {
+      const { processor } = createProcessor(terminalProvider, {
+        sourceMap: true,
+        doNotTrimOriginalFileExtension: true
+      });
+      await compileFixtureAsync(processor, 'classes-and-exports.module.scss');
+
+      // With doNotTrimOriginalFileExtension the CSS file is foo.scss.css, so the map is foo.scss.css.map
+      const mapPaths: string[] = getAllWrittenPathsMatching('.css.map');
+      expect(mapPaths).toHaveLength(1);
+      expect(mapPaths[0]).toMatch(/classes-and-exports\.module\.scss\.css\.map$/);
+
+      const css: string = getWrittenFile('classes-and-exports.module.scss.css');
+      expect(css).toMatch(/\/\*# sourceMappingURL=classes-and-exports\.module\.scss\.css\.map \*\//);
+    });
+  });
+});

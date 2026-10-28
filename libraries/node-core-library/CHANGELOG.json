@@ -2,6 +2,238 @@
   "name": "@rushstack/node-core-library",
   "entries": [
     {
+      "version": "5.25.1",
+      "tag": "@rushstack/node-core-library_v5.25.1",
+      "date": "Tue, 06 Oct 2026 00:04:37 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix `LockFile` on Linux and macOS granting one lock to two processes whose lockfiles share a birthtime, or deleting a live holder's lockfile when the processes use different time zones or locales. On Linux, check lock holders through /proc instead of running `ps`, which makes contended locks much faster."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.25.0",
+      "tag": "@rushstack/node-core-library_v5.25.0",
+      "date": "Mon, 28 Sep 2026 20:08:26 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Fail Windows lock acquisition safely when exclusive sharing is unsupported, clean up failed releases while preserving dirty recovery and errors, and expose all backing paths through LockFile.getLockFilePaths()."
+          }
+        ],
+        "patch": [
+          {
+            "comment": "Use native Windows exclusive sharing for file mutexes and preserve dirty-owner state across close/delete handoffs."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.24.2",
+      "tag": "@rushstack/node-core-library_v5.24.2",
+      "date": "Tue, 22 Sep 2026 17:35:41 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix incorrect decoding of multi-byte UTF-8 characters in Executable.waitForExitAsync and getProcessInfoByIdAsync by explicitly setting stream encoding before attaching handlers"
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.24.1",
+      "tag": "@rushstack/node-core-library_v5.24.1",
+      "date": "Sat, 05 Sep 2026 00:15:08 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Prevent prototype pollution when Objects.mergeWith() processes attacker-controlled properties."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.24.0",
+      "tag": "@rushstack/node-core-library_v5.24.0",
+      "date": "Thu, 20 Aug 2026 00:16:38 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Deprecate `Text.replaceAll()` in favor of the native `String.prototype.replaceAll()` function."
+          }
+        ],
+        "none": [
+          {
+            "comment": "Require Node.js 20.9 or newer for package consumers."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.23.3",
+      "tag": "@rushstack/node-core-library_v5.23.3",
+      "date": "Fri, 17 Jul 2026 00:15:59 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Replace `@override` with the `override` keyword."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.23.2",
+      "tag": "@rushstack/node-core-library_v5.23.2",
+      "date": "Thu, 16 Jul 2026 00:16:13 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Update `ajv` dependency to `~8.20.0` to resolve vulnerable transitive `fast-uri` versions."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.23.1",
+      "tag": "@rushstack/node-core-library_v5.23.1",
+      "date": "Sat, 18 Apr 2026 00:15:16 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Bump semver."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.23.0",
+      "tag": "@rushstack/node-core-library_v5.23.0",
+      "date": "Fri, 17 Apr 2026 15:14:57 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add two new APIs: `Object.isRecord` asserts if an object is a `Record<string, unknown>` object and `Object.mergeWith` is a customizable deep object merge."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.22.0",
+      "tag": "@rushstack/node-core-library_v5.22.0",
+      "date": "Thu, 09 Apr 2026 00:15:07 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Add `FileSystem.createReadStream`, `FileSystem.createWriteStream`, and `FileSystem.createWriteStreamAsync` APIs for creating read and write filesystem streams."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.21.0",
+      "tag": "@rushstack/node-core-library_v5.21.0",
+      "date": "Tue, 31 Mar 2026 15:14:14 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix an issue where the LockFile API sometimes incorrectly reported a dirty acquisition, causing Rush autoinstaller failures (GitHub #5684)"
+          }
+        ],
+        "minor": [
+          {
+            "comment": "Regression risk: This narrows when a lock is considered \"dirty\". Although the previous behavior was incorrect, the fix could break consumers that implicitly relied on those false positives."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.20.3",
+      "tag": "@rushstack/node-core-library_v5.20.3",
+      "date": "Wed, 25 Feb 2026 00:34:29 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Update `ajv` dependency to `~8.18.0` to mitigate CVE-2025-69873."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.20.2",
+      "tag": "@rushstack/node-core-library_v5.20.2",
+      "date": "Tue, 24 Feb 2026 01:13:27 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Fix race condition in FileSystem.create*Link helpers: EEXIST errors that occur after ensureFolder/ensureFolderAsync are now handled consistently with the initial EEXIST handling."
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.20.1",
+      "tag": "@rushstack/node-core-library_v5.20.1",
+      "date": "Fri, 20 Feb 2026 00:15:04 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Add `\"node\"` condition before `\"import\"` in the `\"exports\"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `\"import\"`. Fixes https://github.com/microsoft/rushstack/issues/5644."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/problem-matcher\" to `0.2.1`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.20.0",
+      "tag": "@rushstack/node-core-library_v5.20.0",
+      "date": "Thu, 19 Feb 2026 00:04:53 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `\"exports\"` field in `package.json`."
+          },
+          {
+            "comment": "Add a property to the `JsonSchema` validator to control the handling of vendor extension keywords. By default, vendor extension keywords matching the `x-<vendor>-<keyword>` pattern are accepted. Set the new `rejectVendorExtensionKeywords` option to `true` to restore the previous strict behavior."
+          }
+        ],
+        "dependency": [
+          {
+            "comment": "Updating dependency \"@rushstack/problem-matcher\" to `0.2.0`"
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.19.1",
+      "tag": "@rushstack/node-core-library_v5.19.1",
+      "date": "Sat, 06 Dec 2025 01:12:28 GMT",
+      "comments": {
+        "patch": [
+          {
+            "comment": "Replace fs-extra with node:fs in FileWriter"
+          }
+        ]
+      }
+    },
+    {
+      "version": "5.19.0",
+      "tag": "@rushstack/node-core-library_v5.19.0",
+      "date": "Fri, 21 Nov 2025 16:13:56 GMT",
+      "comments": {
+        "minor": [
+          {
+            "comment": "Update `Executable.getProcessInfoBy*` APIs to use PowerShell on Windows to support latest Windows 11 versions."
+          }
+        ]
+      }
+    },
+    {
       "version": "5.18.0",
       "tag": "@rushstack/node-core-library_v5.18.0",
       "date": "Fri, 24 Oct 2025 00:13:38 GMT",

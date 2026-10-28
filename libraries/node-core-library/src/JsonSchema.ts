@@ -11,6 +11,27 @@ import addFormats from 'ajv-formats';
 import { JsonFile, type JsonObject } from './JsonFile';
 import { FileSystem } from './FileSystem';
 
+/**
+ * Pattern matching JSON Schema vendor extension keywords in the form `x-<vendor>-<keyword>`,
+ * where `<vendor>` is alphanumeric and `<keyword>` is kebab-case alphanumeric.
+ * @example `x-tsdoc-release-tag`, `x-myvendor-description`
+ */
+const VENDOR_EXTENSION_KEY_PATTERN: RegExp = /^x-[a-z0-9]+-[a-z0-9]+(-[a-z0-9]+)*$/;
+
+/**
+ * Collects top-level property keys from a JSON object that match the vendor extension
+ * pattern `x-<vendor>-<keyword>`.  Only root-level keys are inspected for performance.
+ */
+function _collectVendorExtensionKeywords(obj: unknown, keywords: Set<string>): void {
+  if (typeof obj === 'object' && obj !== null && !Array.isArray(obj)) {
+    for (const key of Object.keys(obj as Record<string, unknown>)) {
+      if (VENDOR_EXTENSION_KEY_PATTERN.test(key)) {
+        keywords.add(key);
+      }
+    }
+  }
+}
+
 interface ISchemaWithId {
   // draft-04 uses "id"
   id: string | undefined;
@@ -119,6 +140,25 @@ export interface IJsonSchemaLoadOptions {
    * for example define generic numeric formats (e.g. uint8) or domain-specific formats.
    */
   customFormats?: Record<string, IJsonSchemaCustomFormat<string> | IJsonSchemaCustomFormat<number>>;
+
+  /**
+   * If true, the AJV validator will reject JSON Schema vendor extension keywords
+   * matching the pattern `x-<vendor>-<keyword>` as unknown keywords.
+   *
+   * @remarks
+   * The JSON Schema specification allows vendor-specific extensions using the `x-` prefix.
+   * For example, `x-tsdoc-release-tag` is used by `@rushstack/heft-json-schema-typings-plugin`.
+   * Other tools may define their own extensions such as `x-myvendor-html-description`.
+   *
+   * By default, the schema tree is scanned for any keys matching the `x-<vendor>-<keyword>`
+   * pattern, and those keys are registered as custom AJV keywords so that strict mode validation
+   * succeeds.  Set this option to `true` to disable this behavior and treat vendor extension
+   * keywords as unknown (which causes AJV strict mode to reject them).
+   *
+   * @defaultValue false
+   * @beta
+   */
+  rejectVendorExtensionKeywords?: boolean;
 }
 
 /**
@@ -169,6 +209,7 @@ export class JsonSchema {
   private _customFormats:
     | Record<string, IJsonSchemaCustomFormat<string> | IJsonSchemaCustomFormat<number>>
     | undefined = undefined;
+  private _rejectVendorExtensionKeywords: boolean = false;
 
   private constructor() {}
 
@@ -192,6 +233,7 @@ export class JsonSchema {
       schema._dependentSchemas = options.dependentSchemas || [];
       schema._schemaVersion = options.schemaVersion;
       schema._customFormats = options.customFormats;
+      schema._rejectVendorExtensionKeywords = options.rejectVendorExtensionKeywords ?? false;
     }
 
     return schema;
@@ -211,75 +253,10 @@ export class JsonSchema {
       schema._dependentSchemas = options.dependentSchemas || [];
       schema._schemaVersion = options.schemaVersion;
       schema._customFormats = options.customFormats;
+      schema._rejectVendorExtensionKeywords = options.rejectVendorExtensionKeywords ?? false;
     }
 
     return schema;
-  }
-
-  private static _collectDependentSchemas(
-    collectedSchemas: JsonSchema[],
-    dependentSchemas: JsonSchema[],
-    seenObjects: Set<JsonSchema>,
-    seenIds: Set<string>
-  ): void {
-    for (const dependentSchema of dependentSchemas) {
-      // It's okay for the same schema to appear multiple times in the tree, but we only process it once
-      if (seenObjects.has(dependentSchema)) {
-        continue;
-      }
-      seenObjects.add(dependentSchema);
-
-      const schemaId: string = dependentSchema._ensureLoaded();
-      if (schemaId === '') {
-        throw new Error(
-          `This schema ${dependentSchema.shortName} cannot be referenced` +
-            ' because is missing the "id" (draft-04) or "$id" field'
-        );
-      }
-      if (seenIds.has(schemaId)) {
-        throw new Error(
-          `This schema ${dependentSchema.shortName} has the same "id" (draft-04) or "$id" as another schema in this set`
-        );
-      }
-
-      seenIds.add(schemaId);
-
-      collectedSchemas.push(dependentSchema);
-
-      JsonSchema._collectDependentSchemas(
-        collectedSchemas,
-        dependentSchema._dependentSchemas,
-        seenObjects,
-        seenIds
-      );
-    }
-  }
-
-  /**
-   * Used to nicely format the ZSchema error tree.
-   */
-  private static _formatErrorDetails(errorDetails: ErrorObject[]): string {
-    return JsonSchema._formatErrorDetailsHelper(errorDetails, '', '');
-  }
-
-  /**
-   * Used by _formatErrorDetails.
-   */
-  private static _formatErrorDetailsHelper(
-    errorDetails: ErrorObject[],
-    indent: string,
-    buffer: string
-  ): string {
-    for (const errorDetail of errorDetails) {
-      buffer += os.EOL + indent + `Error: #${errorDetail.instancePath}`;
-
-      buffer += os.EOL + indent + `       ${errorDetail.message}`;
-      if (errorDetail.params?.additionalProperty) {
-        buffer += `: ${errorDetail.params?.additionalProperty}`;
-      }
-    }
-
-    return buffer;
   }
 
   /**
@@ -348,7 +325,21 @@ export class JsonSchema {
       const seenObjects: Set<JsonSchema> = new Set<JsonSchema>();
       const seenIds: Set<string> = new Set<string>();
 
-      JsonSchema._collectDependentSchemas(collectedSchemas, this._dependentSchemas, seenObjects, seenIds);
+      this._collectDependentSchemas(collectedSchemas, this._dependentSchemas, seenObjects, seenIds);
+
+      // Unless explicitly rejected, scan the top-level keys of each schema for vendor
+      // extension keys matching the x-<vendor>-<keyword> pattern and register them with
+      // AJV so that strict mode does not reject them as unknown keywords.
+      if (!this._rejectVendorExtensionKeywords) {
+        const vendorKeywords: Set<string> = new Set<string>();
+        _collectVendorExtensionKeywords(this._schemaObject, vendorKeywords);
+        for (const collectedSchema of collectedSchemas) {
+          _collectVendorExtensionKeywords(collectedSchema._schemaObject, vendorKeywords);
+        }
+        for (const keyword of vendorKeywords) {
+          validator.addKeyword(keyword);
+        }
+      }
 
       // Validate each schema in order.  We specifically do not supply them all together, because we want
       // to make sure that circular references will fail to validate.
@@ -358,7 +349,7 @@ export class JsonSchema {
           throw new Error(
             `Failed to validate schema "${collectedSchema.shortName}":` +
               os.EOL +
-              JsonSchema._formatErrorDetails(validator.errors)
+              _formatErrorDetails(validator.errors)
           );
         }
         validator.addSchema(collectedSchema._schemaObject);
@@ -413,7 +404,7 @@ export class JsonSchema {
     }
 
     if (this._validator && !this._validator(jsonObject)) {
-      const errorDetails: string = JsonSchema._formatErrorDetails(this._validator.errors!);
+      const errorDetails: string = _formatErrorDetails(this._validator.errors!);
 
       const args: IJsonSchemaErrorInfo = {
         details: errorDetails
@@ -428,4 +419,66 @@ export class JsonSchema {
     }
     return (this._schemaObject as ISchemaWithId).id || (this._schemaObject as ISchemaWithId).$id || '';
   }
+
+  private _collectDependentSchemas(
+    collectedSchemas: JsonSchema[],
+    dependentSchemas: JsonSchema[],
+    seenObjects: Set<JsonSchema>,
+    seenIds: Set<string>
+  ): void {
+    for (const dependentSchema of dependentSchemas) {
+      // It's okay for the same schema to appear multiple times in the tree, but we only process it once
+      if (seenObjects.has(dependentSchema)) {
+        continue;
+      }
+      seenObjects.add(dependentSchema);
+
+      const schemaId: string = dependentSchema._ensureLoaded();
+      if (schemaId === '') {
+        throw new Error(
+          `This schema ${dependentSchema.shortName} cannot be referenced` +
+            ' because is missing the "id" (draft-04) or "$id" field'
+        );
+      }
+      if (seenIds.has(schemaId)) {
+        throw new Error(
+          `This schema ${dependentSchema.shortName} has the same "id" (draft-04) or "$id" as another schema in this set`
+        );
+      }
+
+      seenIds.add(schemaId);
+
+      collectedSchemas.push(dependentSchema);
+
+      this._collectDependentSchemas(
+        collectedSchemas,
+        dependentSchema._dependentSchemas,
+        seenObjects,
+        seenIds
+      );
+    }
+  }
+}
+
+/**
+ * Used to nicely format the ZSchema error tree.
+ */
+function _formatErrorDetails(errorDetails: ErrorObject[]): string {
+  return _formatErrorDetailsHelper(errorDetails, '', '');
+}
+
+/**
+ * Used by _formatErrorDetails.
+ */
+function _formatErrorDetailsHelper(errorDetails: ErrorObject[], indent: string, buffer: string): string {
+  for (const errorDetail of errorDetails) {
+    buffer += os.EOL + indent + `Error: #${errorDetail.instancePath}`;
+
+    buffer += os.EOL + indent + `       ${errorDetail.message}`;
+    if (errorDetail.params?.additionalProperty) {
+      buffer += `: ${errorDetail.params?.additionalProperty}`;
+    }
+  }
+
+  return buffer;
 }

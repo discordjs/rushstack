@@ -1,0 +1,292 @@
+// Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
+// See LICENSE in the project root for license information.
+
+import Watchpack, { type WatchOptions } from 'watchpack';
+import type { Compiler, RspackPluginInstance, WatchFileSystem } from '@rspack/core';
+
+import { _waitForWatchpackPendingEventsAsync } from '@rushstack/heft';
+
+// InputFileSystem type is defined inline since it's not exported from @rspack/core
+// missing re-export here: https://github.com/web-infra-dev/rspack/blob/9542b49ad43f91ecbcb37ff277e0445e67b99967/packages/rspack/src/exports.ts#L133
+// type definition here: https://github.com/web-infra-dev/rspack/blob/9542b49ad43f91ecbcb37ff277e0445e67b99967/packages/rspack/src/util/fs.ts#L496
+// eslint-disable-next-line @typescript-eslint/naming-convention
+export interface InputFileSystem {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readFile: (...args: any[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readlink: (...args: any[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  readdir: (...args: any[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  stat: (...args: any[]) => void;
+  purge?: (files?: string | string[] | Set<string>) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  [key: string]: any;
+}
+
+export type WatchCallback = Parameters<WatchFileSystem['watch']>[5];
+export type WatchUndelayedCallback = Parameters<WatchFileSystem['watch']>[6];
+export type Watcher = ReturnType<WatchFileSystem['watch']>;
+export type WatcherInfo = ReturnType<Required<Watcher>['getInfo']>;
+type FileSystemMap = ReturnType<NonNullable<Watcher['getFileTimeInfoEntries']>>;
+
+interface IWatchState {
+  changes: Set<string>;
+  removals: Set<string>;
+
+  callback: WatchCallback;
+}
+
+interface ITimeEntry {
+  timestamp: number;
+  safeTime: number;
+}
+
+type IRawFileSystemMap = Map<string, ITimeEntry>;
+
+interface ITimeInfoEntries {
+  fileTimeInfoEntries: FileSystemMap;
+  contextTimeInfoEntries: FileSystemMap;
+}
+
+export class DeferredWatchFileSystem implements WatchFileSystem {
+  public readonly inputFileSystem: InputFileSystem;
+  public readonly watcherOptions: WatchOptions;
+  public watcher: Watchpack | undefined;
+
+  readonly #onChange: () => void;
+  #state: IWatchState | undefined;
+  #isFlushing: boolean = false;
+
+  public constructor(inputFileSystem: InputFileSystem, onChange: () => void) {
+    this.inputFileSystem = inputFileSystem;
+    this.watcherOptions = {
+      aggregateTimeout: 0
+    };
+    this.watcher = new Watchpack(this.watcherOptions);
+    this.#onChange = onChange;
+  }
+
+  public flush(): boolean {
+    const state: IWatchState | undefined = this.#state;
+
+    if (!state) {
+      return false;
+    }
+
+    const { changes, removals, callback } = state;
+
+    // Force flush the aggregation callback
+    const { changes: newChanges, removals: newRemovals } = this.watcher!.getAggregated();
+
+    // Rspack (like Webpack 5) treats changes and removals as separate things
+    if (newRemovals) {
+      for (const removal of newRemovals) {
+        changes.delete(removal);
+        removals.add(removal);
+      }
+    }
+    if (newChanges) {
+      for (const change of newChanges) {
+        removals.delete(change);
+        changes.add(change);
+      }
+    }
+
+    if (changes.size > 0 || removals.size > 0) {
+      this.#purge(removals, changes);
+
+      const { fileTimeInfoEntries, contextTimeInfoEntries } = this.#fetchTimeInfo();
+
+      callback(null, fileTimeInfoEntries, contextTimeInfoEntries, changes, removals);
+
+      changes.clear();
+      removals.clear();
+
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Like {@link DeferredWatchFileSystem.flush}, but first lets watchpack finish recording the file system events
+   * that it has already received.
+   *
+   * @remarks
+   * Watchpack records a changed file only after an asynchronous `fs.lstat()` of it, so a file that an upstream
+   * task wrote just before a call to `flush()` can be missing from the changes. This method waits until the
+   * directory watchers have no events or scans in progress, for up to 1 second. If there are changes, it then
+   * waits for the clock to pass the time when they were recorded. The compilation that the callback starts takes
+   * its start time from the clock, and the next `watch()` call reports every change recorded at or after that
+   * start time again, as "outdated on attach".
+   *
+   * While this method waits, it keeps the changes that the watcher reports for the flush, and doesn't call
+   * `onChange` for them.
+   */
+  public async flushAsync(): Promise<boolean> {
+    if (!this.#state) {
+      return false;
+    }
+
+    this.#isFlushing = true;
+    try {
+      await this.#waitForPendingEventsAsync();
+      if (!this.watcher) {
+        // The watcher was closed while this method waited.
+        return false;
+      }
+
+      return this.flush();
+    } finally {
+      this.#isFlushing = false;
+    }
+  }
+
+  public watch(
+    files: Iterable<string>,
+    directories: Iterable<string>,
+    missing: Iterable<string>,
+    startTime: number,
+    options: WatchOptions,
+    callback: WatchCallback,
+    callbackUndelayed: WatchUndelayedCallback
+  ): Watcher {
+    const oldWatcher: Watchpack | undefined = this.watcher;
+    this.watcher = new Watchpack(options);
+
+    const changes: Set<string> = new Set();
+    const removals: Set<string> = new Set();
+
+    this.#state = {
+      changes,
+      removals,
+
+      callback
+    };
+
+    this.watcher.on('aggregated', (newChanges: Set<string>, newRemovals: Set<string>) => {
+      for (const change of newChanges) {
+        removals.delete(change);
+        changes.add(change);
+      }
+      for (const removal of newRemovals) {
+        changes.delete(removal);
+        removals.add(removal);
+      }
+
+      // flushAsync() passes these changes to the callback when it finishes waiting, so they don't need
+      // another run.
+      if (!this.#isFlushing) {
+        this.#onChange();
+      }
+    });
+
+    this.watcher.watch({
+      files,
+      directories,
+      missing,
+      startTime
+    });
+
+    if (oldWatcher) {
+      oldWatcher.close();
+    }
+
+    return {
+      close: () => {
+        if (this.watcher) {
+          this.watcher.close();
+          this.watcher = undefined;
+        }
+      },
+      pause: () => {
+        if (this.watcher) {
+          this.watcher.pause();
+        }
+      },
+      getInfo: () => {
+        const newRemovals: Set<string> | undefined = this.watcher?.aggregatedRemovals;
+        const newChanges: Set<string> | undefined = this.watcher?.aggregatedChanges;
+        this.#purge(newRemovals, newChanges);
+        const { fileTimeInfoEntries, contextTimeInfoEntries } = this.#fetchTimeInfo();
+        return {
+          changes: newChanges!,
+          removals: newRemovals!,
+          fileTimeInfoEntries,
+          contextTimeInfoEntries
+        };
+      },
+      getContextTimeInfoEntries: () => {
+        const { contextTimeInfoEntries } = this.#fetchTimeInfo();
+        return contextTimeInfoEntries;
+      },
+      getFileTimeInfoEntries: () => {
+        const { fileTimeInfoEntries } = this.#fetchTimeInfo();
+        return fileTimeInfoEntries;
+      }
+    };
+  }
+
+  async #waitForPendingEventsAsync(): Promise<void> {
+    await _waitForWatchpackPendingEventsAsync(
+      () => this.watcher,
+      () => this.#hasChanges()
+    );
+  }
+
+  #hasChanges(): boolean {
+    const state: IWatchState | undefined = this.#state;
+    const watcher: Watchpack | undefined = this.watcher;
+    return (
+      (!!state && (state.changes.size > 0 || state.removals.size > 0)) ||
+      (!!watcher && (watcher.aggregatedChanges.size > 0 || watcher.aggregatedRemovals.size > 0))
+    );
+  }
+
+  #fetchTimeInfo(): ITimeInfoEntries {
+    const fileTimeInfoEntries: IRawFileSystemMap = new Map();
+    const contextTimeInfoEntries: IRawFileSystemMap = new Map();
+    this.watcher?.collectTimeInfoEntries(fileTimeInfoEntries, contextTimeInfoEntries);
+    return { fileTimeInfoEntries, contextTimeInfoEntries };
+  }
+
+  #purge(removals: Set<string> | undefined, changes: Set<string> | undefined): void {
+    const fs: InputFileSystem = this.inputFileSystem;
+    if (fs.purge) {
+      if (removals) {
+        for (const removal of removals) {
+          fs.purge(removal);
+        }
+      }
+      if (changes) {
+        for (const change of changes) {
+          fs.purge(change);
+        }
+      }
+    }
+  }
+}
+
+export class OverrideNodeWatchFSPlugin implements RspackPluginInstance {
+  public readonly fileSystems: Set<DeferredWatchFileSystem> = new Set();
+  readonly #onChange: () => void;
+
+  public constructor(onChange: () => void) {
+    this.#onChange = onChange;
+  }
+
+  public apply(compiler: Compiler): void {
+    const { inputFileSystem } = compiler;
+    if (!inputFileSystem) {
+      throw new Error(`compiler.inputFileSystem is not defined`);
+    }
+
+    const watchFileSystem: DeferredWatchFileSystem = new DeferredWatchFileSystem(
+      inputFileSystem,
+      this.#onChange
+    );
+    this.fileSystems.add(watchFileSystem);
+    compiler.watchFileSystem = watchFileSystem;
+  }
+}

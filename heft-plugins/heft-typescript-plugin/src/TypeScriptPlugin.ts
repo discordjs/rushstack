@@ -33,12 +33,19 @@ import { getTsconfigFilePath } from './tsconfigLoader';
 export const PLUGIN_NAME: 'typescript-plugin' = 'typescript-plugin';
 
 /**
+ * The ${configDir} token supported in TypeScript 5.5
+ * @see {@link https://www.typescriptlang.org/docs/handbook/release-notes/typescript-5-5.html#the-configdir-template-variable-for-configuration-files}
+ */
+const CONFIG_DIR_TOKEN: '${configDir}' = '${configDir}';
+
+/**
  * @beta
  */
 export interface IEmitModuleKind {
   moduleKind: 'commonjs' | 'amd' | 'umd' | 'system' | 'es2015' | 'esnext';
   outFolderName: string;
   jsExtensionOverride?: string;
+  emitModulePackageJson?: boolean;
 }
 
 /**
@@ -203,7 +210,20 @@ export async function loadPartialTsconfigFileAsync(
           },
           jsonPathMetadata: {
             '$.compilerOptions.outDir': {
-              pathResolutionMethod: PathResolutionMethod.resolvePathRelativeToConfigurationFile
+              pathResolutionMethod: PathResolutionMethod.custom,
+              customResolver(
+                resolverOptions: ConfigurationFile.IJsonPathMetadataResolverOptions<IPartialTsconfig>
+              ): string {
+                if (resolverOptions.propertyValue.includes(CONFIG_DIR_TOKEN)) {
+                  // Typescript 5.5. introduced the `${configDir}` token to refer to the directory containing the root tsconfig
+                  const configDir: string = path.dirname(tsconfigFilePath);
+                  // The token is an absolute path, so it should occur at most once.
+                  return path.resolve(resolverOptions.propertyValue.replace(CONFIG_DIR_TOKEN, configDir));
+                } else {
+                  const thisConfigDir: string = path.dirname(resolverOptions.configurationFilePath);
+                  return path.resolve(thisConfigDir, resolverOptions.propertyValue);
+                }
+              }
             }
           }
         });
@@ -239,7 +259,7 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
         // all source files to this set of static assets. This would allow us to avoid
         // having to copy the static assets multiple times, increasing build times and
         // package size.
-        for (const copyOperation of await this._getStaticAssetCopyOperationsAsync(
+        for (const copyOperation of await this.#getStaticAssetCopyOperationsAsync(
           taskSession,
           heftConfiguration
         )) {
@@ -251,7 +271,7 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
     );
 
     taskSession.hooks.run.tapPromise(PLUGIN_NAME, async (runOptions: IHeftTaskRunHookOptions) => {
-      const builder: TypeScriptBuilder | false = await this._getTypeScriptBuilderAsync(
+      const builder: TypeScriptBuilder | false = await this.#getTypeScriptBuilderAsync(
         taskSession,
         heftConfiguration
       );
@@ -266,7 +286,7 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
       async (runIncrementalOptions: IHeftTaskRunIncrementalHookOptions) => {
         if (incrementalBuilder === undefined) {
           // eslint-disable-next-line require-atomic-updates
-          incrementalBuilder = await this._getTypeScriptBuilderAsync(taskSession, heftConfiguration);
+          incrementalBuilder = await this.#getTypeScriptBuilderAsync(taskSession, heftConfiguration);
         }
 
         if (incrementalBuilder) {
@@ -276,11 +296,11 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
     );
   }
 
-  private async _getStaticAssetCopyOperationsAsync(
+  async #getStaticAssetCopyOperationsAsync(
     taskSession: IHeftTaskSession,
     heftConfiguration: HeftConfiguration
   ): Promise<ICopyOperation[]> {
-    const { typeScriptConfigurationJson, partialTsconfigFile } = await this._loadConfigAsync(
+    const { typeScriptConfigurationJson, partialTsconfigFile } = await this.#loadConfigAsync(
       taskSession,
       heftConfiguration
     );
@@ -321,11 +341,11 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
     return copyOperations;
   }
 
-  private async _getTypeScriptBuilderAsync(
+  async #getTypeScriptBuilderAsync(
     taskSession: IHeftTaskSession,
     heftConfiguration: HeftConfiguration
   ): Promise<TypeScriptBuilder | false> {
-    const { typeScriptConfigurationJson, partialTsconfigFile } = await this._loadConfigAsync(
+    const { typeScriptConfigurationJson, partialTsconfigFile } = await this.#loadConfigAsync(
       taskSession,
       heftConfiguration
     );
@@ -371,7 +391,7 @@ export default class TypeScriptPlugin implements IHeftTaskPlugin {
     return typeScriptBuilder;
   }
 
-  private async _loadConfigAsync(
+  async #loadConfigAsync(
     taskSession: IHeftTaskSession,
     heftConfiguration: HeftConfiguration
   ): Promise<ITypeScriptConfigurationJsonAndPartialTsconfigFile> {

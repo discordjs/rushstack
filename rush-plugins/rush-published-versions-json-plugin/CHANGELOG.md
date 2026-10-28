@@ -1,0 +1,131 @@
+# Change Log - @rushstack/rush-published-versions-json-plugin
+
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 0.1.24
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 0.1.23
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 0.1.22
+Mon, 28 Sep 2026 20:08:27 GMT
+
+_Version update only_
+
+## 0.1.21
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 0.1.20
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 0.1.19
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 0.1.18
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 0.1.17
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 0.1.16
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 0.1.15
+Tue, 21 Jul 2026 02:53:23 GMT
+
+_Version update only_
+
+## 0.1.14
+Fri, 17 Jul 2026 00:16:00 GMT
+
+_Version update only_
+
+## 0.1.13
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 0.1.12
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 0.1.11
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 0.1.10
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 0.1.9
+Mon, 20 Apr 2026 15:15:25 GMT
+
+_Version update only_
+
+## 0.1.8
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 0.1.7
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 0.1.6
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 0.1.5
+Fri, 10 Apr 2026 22:46:35 GMT
+
+_Version update only_
+
+## 0.1.4
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 0.1.3
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 0.1.2
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 0.1.1
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 0.1.0
+Tue, 24 Mar 2026 21:51:54 GMT
+
+### Minor changes
+
+- Initial release.
+

@@ -5,7 +5,7 @@ import * as path from 'node:path';
 import type { Config } from '@jest/types';
 import type { IHeftTaskSession, HeftConfiguration, CommandLineParameter } from '@rushstack/heft';
 import type { ProjectConfigurationFile } from '@rushstack/heft-config-file';
-import { Import, JsonFile, Path } from '@rushstack/node-core-library';
+import { Import, JsonFile } from '@rushstack/node-core-library';
 import { StringBufferTerminalProvider, Terminal } from '@rushstack/terminal';
 
 import {
@@ -75,9 +75,9 @@ describe('JestConfigLoader', () => {
   });
 
   it('resolves extended config modules', async () => {
-    // Because we require the built modules, we need to set our rootDir to be in the 'lib' folder, since transpilation
+    // Because we require the built modules, we need to set our rootDir to be in the 'lib-commonjs' folder, since transpilation
     // means that we don't run on the built test assets directly
-    const rootDir: string = path.resolve(__dirname, '..', '..', 'lib', 'test', 'project1');
+    const rootDir: string = path.resolve(__dirname, '..', '..', 'lib-commonjs', 'test', 'project1');
     const loader: ProjectConfigurationFile<IHeftJestConfiguration> = JestPlugin._getJestConfigurationLoader(
       rootDir,
       'config/jest.config.json'
@@ -162,9 +162,9 @@ describe('JestConfigLoader', () => {
   });
 
   it('resolves extended package modules', async () => {
-    // Because we require the built modules, we need to set our rootDir to be in the 'lib' folder, since transpilation
+    // Because we require the built modules, we need to set our rootDir to be in the 'lib-commonjs' folder, since transpilation
     // means that we don't run on the built test assets directly
-    const rootDir: string = path.resolve(__dirname, '..', '..', 'lib', 'test', 'project2');
+    const rootDir: string = path.resolve(__dirname, '..', '..', 'lib-commonjs', 'test', 'project2');
     const loader: ProjectConfigurationFile<IHeftJestConfiguration> = JestPlugin._getJestConfigurationLoader(
       rootDir,
       'config/jest.config.json'
@@ -188,10 +188,10 @@ describe('JestConfigLoader', () => {
     expect(testEnvironment).toEqual(JEST_CONFIG_JSDOM_PACKAGE_NAME);
   });
 
-  it('replaces jest-environment-jsdom with the patched version', async () => {
-    // Because we require the built modules, we need to set our rootDir to be in the 'lib' folder, since transpilation
+  it('resolves jest-environment-jsdom from the extends config', async () => {
+    // Because we require the built modules, we need to set our rootDir to be in the 'lib-commonjs' folder, since transpilation
     // means that we don't run on the built test assets directly
-    const rootDir: string = path.resolve(__dirname, '..', '..', 'lib', 'test', 'project3');
+    const rootDir: string = path.resolve(__dirname, '..', '..', 'lib-commonjs', 'test', 'project3');
     const loader: ProjectConfigurationFile<IHeftJestConfiguration> = JestPlugin._getJestConfigurationLoader(
       rootDir,
       'config/jest.config.json'
@@ -200,7 +200,7 @@ describe('JestConfigLoader', () => {
       terminal,
       rootDir
     );
-    const testEnvironment: string = Path.convertToPlatformDefault(loadedConfig.testEnvironment!);
-    expect(testEnvironment).toEqual(require.resolve('../exports/patched-jest-environment-jsdom'));
+    expect(loadedConfig.testEnvironment).toContain('jest-environment-jsdom');
+    expect(loadedConfig.testEnvironment).toMatch(/index.js$/);
   });
 });

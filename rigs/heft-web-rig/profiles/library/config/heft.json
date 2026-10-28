@@ -22,7 +22,17 @@
   "phasesByName": {
     "build": {
       "cleanFiles": [
-        { "includeGlobs": ["dist", "lib", "lib-amd", "lib-commonjs", "lib-es6", "temp/sass-ts"] }
+        {
+          "includeGlobs": [
+            "dist",
+            "lib",
+            "lib-amd",
+            "lib-commonjs",
+            "lib-es6",
+            "temp/sass-ts",
+            "temp/image-typings"
+          ]
+        }
       ],
 
       "tasksByName": {
@@ -47,8 +57,22 @@
             "pluginPackage": "@rushstack/heft-sass-plugin"
           }
         },
+        "image-typings": {
+          "taskDependencies": ["set-browserslist-ignore-old-data-env-var"],
+          "taskPlugin": {
+            "pluginPackage": "@rushstack/heft-static-asset-typings-plugin",
+            "pluginName": "resource-assets-plugin",
+            "options": {
+              "configType": "inline",
+              "config": {
+                "fileExtensions": [".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".webp", ".avif"],
+                "generatedTsFolders": ["temp/image-typings"]
+              }
+            }
+          }
+        },
         "typescript": {
-          "taskDependencies": ["sass"],
+          "taskDependencies": ["sass", "image-typings"],
           "taskPlugin": {
             "pluginPackage": "@rushstack/heft-typescript-plugin"
           }

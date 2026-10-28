@@ -1,18 +1,45 @@
 {
   "name": "@rushstack/set-webpack-public-path-plugin",
-  "version": "5.2.4",
+  "version": "5.3.33",
   "description": "This plugin sets the webpack public path at runtime.",
-  "main": "lib/index.js",
-  "typings": "dist/set-webpack-public-path-plugin.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/set-webpack-public-path-plugin.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/set-webpack-public-path-plugin.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/microsoft/rushstack.git",
     "directory": "webpack/set-webpack-public-path-plugin"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "build": "heft build --clean",
-    "_phase:build": "heft run --only build -- --clean"
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack"
   },
   "peerDependencies": {
     "webpack": "^5.68.0",
@@ -33,6 +60,7 @@
     "eslint": "~9.37.0",
     "local-node-rig": "workspace:*",
     "memfs": "4.12.0",
-    "webpack": "~5.98.0"
-  }
+    "webpack": "~5.105.2"
+  },
+  "sideEffects": false
 }

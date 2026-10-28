@@ -16,7 +16,7 @@
    * path segment in the "$schema" field for all your Rush config files.  This will ensure
    * correct error-underlining and tab-completion for editors such as VS Code.
    */
-  "rushVersion": "5.162.0",
+  "rushVersion": "5.181.0",
 
   /**
    * The next field selects which package manager should be installed and determines its version.
@@ -26,7 +26,7 @@
    * Specify one of: "pnpmVersion", "npmVersion", or "yarnVersion".  See the Rush documentation
    * for details about these alternatives.
    */
-  "pnpmVersion": "8.15.9",
+  "pnpmVersion": "10.27.0",
 
   // "npmVersion": "6.14.15",
   // "yarnVersion": "1.9.4",
@@ -42,7 +42,7 @@
    * LTS schedule: https://nodejs.org/en/about/releases/
    * LTS versions: https://nodejs.org/en/download/releases/
    */
-  "nodeSupportedVersionRange": ">=18.15.0 <19.0.0 || >=20.9.0 <21.0.0 || >=22.12.0 <23.0.0",
+  "nodeSupportedVersionRange": ">=22.23.4 <23.0.0 || >=24.22.1 <25.0.0 || >=26.12.1 <27.0.0",
 
   /**
    * If the version check above fails, Rush will display a message showing the current
@@ -467,6 +467,12 @@
       "reviewCategory": "libraries"
     },
     {
+      "packageName": "@rushstack/playwright-browser-tunnel",
+      "projectFolder": "apps/playwright-browser-tunnel",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
       "packageName": "@rushstack/rush-themed-ui",
       "projectFolder": "libraries/rush-themed-ui",
       "reviewCategory": "libraries"
@@ -482,6 +488,12 @@
       "projectFolder": "apps/rush",
       "reviewCategory": "libraries",
       "versionPolicyName": "rush"
+    },
+    {
+      "packageName": "@rushstack/rush-serve-dashboard",
+      "projectFolder": "apps/rush-serve-dashboard",
+      "reviewCategory": "libraries",
+      "shouldPublish": false
     },
     {
       "packageName": "@rushstack/trace-import",
@@ -636,6 +648,12 @@
       "shouldPublish": false
     },
     {
+      "packageName": "esm-node-import-test",
+      "projectFolder": "build-tests/esm-node-import-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
       "packageName": "eslint-bulk-suppressions-test",
       "projectFolder": "build-tests/eslint-bulk-suppressions-test",
       "reviewCategory": "tests",
@@ -679,6 +697,12 @@
       "shouldPublish": false
     },
     {
+      "packageName": "package-extractor-test-05",
+      "projectFolder": "build-tests/package-extractor-test-05",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
       "packageName": "rush-mcp-example-plugin",
       "projectFolder": "build-tests/rush-mcp-example-plugin",
       "reviewCategory": "tests",
@@ -717,20 +741,38 @@
       "shouldPublish": false
     },
     {
-      "packageName": "heft-storybook-react-tutorial",
-      "projectFolder": "build-tests-samples/heft-storybook-react-tutorial",
+      "packageName": "heft-storybook-v6-react-tutorial",
+      "projectFolder": "build-tests-samples/heft-storybook-v6-react-tutorial",
       "reviewCategory": "tests",
       "shouldPublish": false
     },
     {
-      "packageName": "heft-storybook-react-tutorial-storykit",
-      "projectFolder": "build-tests-samples/heft-storybook-react-tutorial-storykit",
+      "packageName": "heft-storybook-v9-react-tutorial",
+      "projectFolder": "build-tests-samples/heft-storybook-v9-react-tutorial",
       "reviewCategory": "tests",
       "shouldPublish": false
     },
     {
-      "packageName": "heft-storybook-react-tutorial-app",
-      "projectFolder": "build-tests-samples/heft-storybook-react-tutorial-app",
+      "packageName": "heft-storybook-v6-react-tutorial-storykit",
+      "projectFolder": "build-tests-samples/heft-storybook-v6-react-tutorial-storykit",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
+      "packageName": "heft-storybook-v9-react-tutorial-storykit",
+      "projectFolder": "build-tests-samples/heft-storybook-v9-react-tutorial-storykit",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
+      "packageName": "heft-storybook-v6-react-tutorial-app",
+      "projectFolder": "build-tests-samples/heft-storybook-v6-react-tutorial-app",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
+      "packageName": "heft-storybook-v9-react-tutorial-app",
+      "projectFolder": "build-tests-samples/heft-storybook-v9-react-tutorial-app",
       "reviewCategory": "tests",
       "shouldPublish": false
     },
@@ -770,7 +812,8 @@
       "packageName": "@rushstack/eslint-config",
       "projectFolder": "eslint/eslint-config",
       "reviewCategory": "libraries",
-      "shouldPublish": true
+      "shouldPublish": true,
+      "decoupledLocalDependencies": ["@rushstack/heft"]
     },
     {
       "packageName": "local-eslint-config",
@@ -1035,6 +1078,12 @@
       "shouldPublish": false
     },
     {
+      "packageName": "rush-package-manager-integration-test",
+      "projectFolder": "build-tests/rush-package-manager-integration-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
       "packageName": "rush-redis-cobuild-plugin-integration-test",
       "projectFolder": "build-tests/rush-redis-cobuild-plugin-integration-test",
       "reviewCategory": "tests",
@@ -1093,9 +1142,8 @@
     {
       "packageName": "@rushstack/heft-rspack-plugin",
       "projectFolder": "heft-plugins/heft-rspack-plugin",
-      "reviewCategory": "libraries"
-      // Not ready to publish yet
-      // "shouldPublish": true
+      "reviewCategory": "libraries",
+      "shouldPublish": true
     },
     {
       "packageName": "@rushstack/heft-sass-plugin",
@@ -1112,6 +1160,12 @@
     {
       "packageName": "@rushstack/heft-serverless-stack-plugin",
       "projectFolder": "heft-plugins/heft-serverless-stack-plugin",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/heft-static-asset-typings-plugin",
+      "projectFolder": "heft-plugins/heft-static-asset-typings-plugin",
       "reviewCategory": "libraries",
       "shouldPublish": true
     },
@@ -1180,6 +1234,12 @@
       "decoupledLocalDependencies": ["@rushstack/heft"]
     },
     {
+      "packageName": "@rushstack/rush-reporter",
+      "projectFolder": "libraries/reporter",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
       "packageName": "@rushstack/heft-config-file",
       "projectFolder": "libraries/heft-config-file",
       "reviewCategory": "libraries",
@@ -1231,6 +1291,24 @@
       "decoupledLocalDependencies": ["@rushstack/heft"]
     },
     {
+      "packageName": "@rushstack/rush-daemon",
+      "projectFolder": "libraries/rush-daemon",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-client-core",
+      "projectFolder": "libraries/rush-client-core",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-cli-client",
+      "projectFolder": "apps/rush-cli-client",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
       "packageName": "@rushstack/package-deps-hash",
       "projectFolder": "libraries/package-deps-hash",
       "reviewCategory": "libraries",
@@ -1266,6 +1344,30 @@
       "projectFolder": "libraries/rushell",
       "reviewCategory": "libraries",
       "shouldPublish": false
+    },
+    {
+      "packageName": "@rushstack/rush-daemon-protocol",
+      "projectFolder": "libraries/rush-daemon-protocol",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "rushd-wire-e2e-test",
+      "projectFolder": "build-tests/rushd-wire-e2e-test",
+      "reviewCategory": "tests",
+      "shouldPublish": false
+    },
+    {
+      "packageName": "@rushstack/rush-daemon-transport",
+      "projectFolder": "libraries/rush-daemon-transport",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-terminal-renderer",
+      "projectFolder": "libraries/rush-terminal-renderer",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
     },
     {
       "packageName": "@rushstack/stream-collator",
@@ -1448,6 +1550,12 @@
       "reviewCategory": "vscode-extensions",
       "tags": ["vsix"]
     },
+    {
+      "packageName": "playwright-local-browser-server",
+      "projectFolder": "vscode-extensions/playwright-local-browser-server-vscode-extension",
+      "reviewCategory": "vscode-extensions",
+      "tags": ["vsix"]
+    },
 
     // "webpack" folder (alphabetical order)
     {
@@ -1538,6 +1646,30 @@
     {
       "packageName": "@rushstack/rush-mcp-docs-plugin",
       "projectFolder": "rush-plugins/rush-mcp-docs-plugin",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-published-versions-json-plugin",
+      "projectFolder": "rush-plugins/rush-published-versions-json-plugin",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-pnpm-kit-v8",
+      "projectFolder": "libraries/rush-pnpm-kit-v8",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-pnpm-kit-v9",
+      "projectFolder": "libraries/rush-pnpm-kit-v9",
+      "reviewCategory": "libraries",
+      "shouldPublish": true
+    },
+    {
+      "packageName": "@rushstack/rush-pnpm-kit-v10",
+      "projectFolder": "libraries/rush-pnpm-kit-v10",
       "reviewCategory": "libraries",
       "shouldPublish": true
     }

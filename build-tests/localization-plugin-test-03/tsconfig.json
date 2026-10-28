@@ -1,7 +1,10 @@
 {
   "extends": "./node_modules/local-node-rig/profiles/default/tsconfig-base.json",
   "compilerOptions": {
+    "target": "ES2019",
     "module": "esnext",
+    "outDir": "lib-esm",
+    "declarationDir": "lib-dts",
     "moduleResolution": "node",
     "incremental": false,
     "rootDirs": ["src", "temp/loc-json-ts"]

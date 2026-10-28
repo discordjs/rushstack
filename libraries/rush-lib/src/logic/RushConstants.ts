@@ -3,6 +3,8 @@
 
 import type { RUSH_USER_FOLDER_NAME } from '@rushstack/credential-cache';
 
+export { NATIVE_RUSH_COMMANDS } from './RushCommandLineConstants';
+
 // Use the typing here to enforce consistency between the two libraries
 const rushUserConfigurationFolderName: typeof RUSH_USER_FOLDER_NAME = '.rush-user';
 
@@ -276,6 +278,12 @@ export class RushConstants {
   public static readonly globalCommandKind: 'global' = 'global';
 
   /**
+   * The value of the "commandKind" property for a plugin-only global command in command-line.json.
+   * This command kind can only be used in command-line.json files provided by Rush plugins.
+   */
+  public static readonly globalPluginCommandKind: 'globalPlugin' = 'globalPlugin';
+
+  /**
    * The value of the "commandKind" property for a phased command in command-line.json
    */
   public static readonly phasedCommandKind: 'phased' = 'phased';
@@ -363,4 +371,9 @@ export class RushConstants {
    * The filename ("pnpm-sync.json") used to store the state of the pnpm sync command.
    */
   public static readonly pnpmSyncFilename: '.pnpm-sync.json' = '.pnpm-sync.json';
+
+  /**
+   * The filename ("pnpm-workspace.yaml") used to store the state of the pnpm workspace configuration.
+   */
+  public static readonly pnpmWorkspaceFileName: 'pnpm-workspace.yaml' = 'pnpm-workspace.yaml';
 }

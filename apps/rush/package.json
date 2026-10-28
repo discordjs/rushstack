@@ -1,6 +1,6 @@
 {
   "name": "@microsoft/rush",
-  "version": "5.162.0",
+  "version": "5.181.0",
   "description": "A professional solution for consolidating all your JavaScript projects in one Git repo",
   "keywords": [
     "install",
@@ -19,7 +19,7 @@
     "directory": "apps/rush"
   },
   "engines": {
-    "node": ">=5.6.0"
+    "node": ">=20.9.0"
   },
   "engineStrict": true,
   "homepage": "https://rushjs.io",
@@ -27,6 +27,7 @@
     "build": "heft build --clean",
     "start": "node lib/start-dev-docs.js",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "bin": {
@@ -38,8 +39,9 @@
   "dependencies": {
     "@microsoft/rush-lib": "workspace:*",
     "@rushstack/node-core-library": "workspace:*",
+    "@rushstack/rush-reporter": "workspace:*",
     "@rushstack/terminal": "workspace:*",
-    "semver": "~7.5.4"
+    "semver": "~7.7.4"
   },
   "devDependencies": {
     "@rushstack/heft": "workspace:*",
@@ -48,7 +50,27 @@
     "@rushstack/rush-amazon-s3-build-cache-plugin": "workspace:*",
     "@rushstack/rush-azure-storage-build-cache-plugin": "workspace:*",
     "@rushstack/rush-http-build-cache-plugin": "workspace:*",
-    "@types/heft-jest": "1.0.1",
-    "@types/semver": "7.5.0"
-  }
+    "@rushstack/rush-serve-plugin": "workspace:*",
+    "@types/semver": "7.7.1"
+  },
+  "exports": {
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
+  "sideEffects": [
+    "lib-commonjs/start.js",
+    "lib-esm/start.js"
+  ]
 }

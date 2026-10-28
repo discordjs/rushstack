@@ -1,0 +1,250 @@
+# Change Log - @rushstack/heft-rspack-plugin
+
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 0.3.32
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 0.3.31
+Tue, 06 Oct 2026 00:04:37 GMT
+
+### Patches
+
+- In watch mode, wait up to 1 second for the file watcher to record pending changes before resuming, so Rspack no longer misses files that an upstream task just wrote or starts an extra compilation.
+
+## 0.3.30
+Mon, 28 Sep 2026 20:08:26 GMT
+
+_Version update only_
+
+## 0.3.29
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 0.3.28
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 0.3.27
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 0.3.26
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 0.3.25
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 0.3.24
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 0.3.23
+Tue, 21 Jul 2026 02:53:22 GMT
+
+_Version update only_
+
+## 0.3.22
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 0.3.21
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 0.3.20
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 0.3.19
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 0.3.18
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 0.3.17
+Mon, 20 Apr 2026 15:15:24 GMT
+
+_Version update only_
+
+## 0.3.16
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 0.3.15
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 0.3.14
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 0.3.13
+Fri, 10 Apr 2026 22:46:34 GMT
+
+_Version update only_
+
+## 0.3.12
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 0.3.11
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 0.3.10
+Thu, 02 Apr 2026 00:14:38 GMT
+
+_Version update only_
+
+## 0.3.9
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 0.3.8
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 0.3.7
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 0.3.6
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 0.3.5
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 0.3.4
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 0.3.3
+Mon, 23 Feb 2026 00:42:21 GMT
+
+_Version update only_
+
+## 0.3.2
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 0.3.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 0.3.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 0.2.9
+Sat, 07 Feb 2026 01:13:26 GMT
+
+_Version update only_
+
+## 0.2.8
+Thu, 05 Feb 2026 01:54:04 GMT
+
+### Patches
+
+- Bump `webpack` dependency version to `~5.105.0`
+
+## 0.2.7
+Thu, 05 Feb 2026 00:23:59 GMT
+
+### Patches
+
+- Bump `webpack` dependency version to `~5.104.1`
+
+## 0.2.6
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 0.2.5
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 0.2.4
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 0.2.3
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 0.2.2
+Wed, 07 Jan 2026 01:12:24 GMT
+
+_Version update only_
+
+## 0.2.1
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 0.2.0
+Thu, 18 Dec 2025 01:13:04 GMT
+
+### Minor changes
+
+- Update Webpack dependency to `~5.103.0`
+
+## 0.1.2
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 0.1.1
+Tue, 25 Nov 2025 17:03:49 GMT
+
+### Patches
+
+- Fix issue where ignoring ERR_MODULE_NOT_FOUND errors when importing the rspack config masks legitimate import issues.
+
+## 0.1.0
+Fri, 21 Nov 2025 16:13:55 GMT
+
+### Minor changes
+
+- Initial package release.
+

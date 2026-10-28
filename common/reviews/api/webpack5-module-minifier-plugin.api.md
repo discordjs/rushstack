@@ -22,7 +22,7 @@ export const CHUNK_MODULE_REGEX: RegExp;
 export const CHUNK_MODULE_TOKEN: '__WEBPACK_CHUNK_MODULE__';
 
 // @public
-export function generateLicenseFileForAsset(compilation: Compilation, asset: IAssetInfo): string;
+export function generateLicenseFileForAsset(compilation: Compilation, asset: IAssetInfo, inlineShortLicenses?: boolean): string;
 
 // @public
 export interface IAssetInfo {
@@ -59,6 +59,7 @@ export interface IFactoryMeta {
 // @public
 export interface IModuleInfo {
     id: string | number;
+    isShorthand?: boolean;
     module: Module;
     source: sources.Source;
 }
@@ -74,6 +75,7 @@ export interface IModuleMinifierPluginHooks {
 
 // @public
 export interface IModuleMinifierPluginOptions {
+    inlineShortLicenses?: boolean;
     minifier: IModuleMinifier;
     sourceMap?: boolean;
 }
@@ -109,6 +111,12 @@ export interface IRenderedModulePosition {
 
 // @public
 export const MODULE_WRAPPER_PREFIX: '__MINIFY_MODULE__(';
+
+// @public
+export const MODULE_WRAPPER_SHORTHAND_PREFIX: `${typeof MODULE_WRAPPER_PREFIX}{__DEFAULT_ID__`;
+
+// @public
+export const MODULE_WRAPPER_SHORTHAND_SUFFIX: `}${typeof MODULE_WRAPPER_SUFFIX}`;
 
 // @public
 export const MODULE_WRAPPER_SUFFIX: ');';

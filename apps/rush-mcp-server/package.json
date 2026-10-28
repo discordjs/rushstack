@@ -1,6 +1,6 @@
 {
   "name": "@rushstack/mcp-server",
-  "version": "0.3.4",
+  "version": "0.4.31",
   "description": "A Model Context Protocol server implementation for Rush",
   "keywords": [
     "rush",
@@ -9,21 +9,46 @@
     "monorepo",
     "server"
   ],
-  "main": "lib/index.js",
-  "typings": "dist/mcp-server.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/mcp-server.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/mcp-server.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*.schema.json": "./lib-commonjs/*.schema.json",
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/microsoft/rushstack.git",
     "directory": "apps/rush-mcp-server"
   },
   "engines": {
-    "node": ">=10.0.0"
+    "node": ">=20.9.0"
   },
   "engineStrict": true,
   "homepage": "https://rushstack.io",
   "scripts": {
     "build": "heft build --clean",
-    "_phase:build": "heft run --only build -- --clean"
+    "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack"
   },
   "bin": {
     "mcp-server": "./bin/mcp-server"
@@ -35,7 +60,7 @@
     "@rushstack/rush-sdk": "workspace:*",
     "@rushstack/ts-command-line": "workspace:*",
     "@modelcontextprotocol/sdk": "~1.10.2",
-    "zod": "~3.24.3"
+    "zod": "~3.25.76"
   },
   "devDependencies": {
     "@rushstack/heft": "workspace:*",
@@ -43,5 +68,9 @@
     "local-node-rig": "workspace:*",
     "typescript": "~5.8.2",
     "@types/node": "20.17.19"
-  }
+  },
+  "sideEffects": [
+    "lib-commonjs/start.js",
+    "lib-esm/start.js"
+  ]
 }

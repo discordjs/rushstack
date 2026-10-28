@@ -12,7 +12,29 @@
       }
     }
   },
+  "globalPeerDependencyRules": {
+    "allowedVersions": {
+      "react": "18"
+    },
+    "ignoreMissing": ["@babel/core"]
+  },
+  "globalAllowedDeprecatedVersions": {
+    "request": "*"
+  },
+  "globalPatchedDependencies": {
+    "lodash@4.17.21": "patches/lodash@4.17.21.patch"
+  },
   "globalNeverBuiltDependencies": ["fsevents", "level"],
+  "globalOnlyBuiltDependencies": ["esbuild", "playwright"],
+  "globalCatalogs": {
+    "default": {
+      "react": "^18.0.0",
+      "semver": "^7.5.4"
+    },
+    "test": {
+      "jest": "^29.0.0"
+    }
+  },
   "unsupportedPackageJsonSettings": {
     "pnpm": {
       "overrides": {

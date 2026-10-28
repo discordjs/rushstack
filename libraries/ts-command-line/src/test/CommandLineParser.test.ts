@@ -8,7 +8,7 @@ import { ensureHelpTextMatchesSnapshot } from './helpTestUtilities';
 
 class TestAction extends CommandLineAction {
   public done: boolean = false;
-  private _flag: CommandLineFlagParameter;
+  #flag: CommandLineFlagParameter;
 
   public constructor() {
     super({
@@ -17,14 +17,14 @@ class TestAction extends CommandLineAction {
       documentation: 'a longer description with sprintf-style escape characters, 100%'
     });
 
-    this._flag = this.defineFlagParameter({
+    this.#flag = this.defineFlagParameter({
       parameterLongName: '--flag',
       description: 'The flag'
     });
   }
 
   protected override async onExecuteAsync(): Promise<void> {
-    expect(this._flag.value).toEqual(true);
+    expect(this.#flag.value).toEqual(true);
     this.done = true;
   }
 }
@@ -57,5 +57,23 @@ describe(CommandLineParser.name, () => {
 
     const action: TestAction = commandLineParser.selectedAction as TestAction;
     expect(action.done).toBe(true);
+  });
+
+  it('can be instantiated directly without subclassing', () => {
+    // This test verifies that CommandLineParser can be instantiated directly,
+    // which is useful for test scenarios
+    const commandLineParser = new CommandLineParser({
+      toolFilename: 'test-tool',
+      toolDescription: 'A test tool'
+    });
+
+    expect(commandLineParser).toBeDefined();
+    expect(commandLineParser.actions).toEqual([]);
+
+    // Verify that addAction can be called on the direct instance
+    const action = new TestAction();
+    commandLineParser.addAction(action);
+    expect(commandLineParser.actions).toHaveLength(1);
+    expect(commandLineParser.actions[0]).toBe(action);
   });
 });

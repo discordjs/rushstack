@@ -68,6 +68,90 @@
   // "autoInstallPeers": false,
 
   /**
+   * The minimum number of minutes that must pass after a version is published before pnpm will install it.
+   * This setting helps reduce the risk of installing compromised packages, as malicious releases are typically
+   * discovered and removed within a short time frame.
+   *
+   * For example, the following setting ensures that only packages released at least one day ago can be installed:
+   *
+   * "minimumReleaseAgeMinutes": 1440
+   *
+   * (SUPPORTED ONLY IN PNPM 10.16.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#minimumreleaseage
+   *
+   * The default value is 0 (disabled).
+   */
+  // "minimumReleaseAgeMinutes": 1440,
+
+  /**
+   * An array of package names or patterns to exclude from the minimumReleaseAgeMinutes check.
+   * This allows certain trusted packages to be installed immediately after publication.
+   * Patterns are supported using glob syntax (e.g., "@myorg/*" to exclude all packages from an organization).
+   *
+   * For example:
+   *
+   * "minimumReleaseAgeExclude": ["webpack", "react", "@myorg/*"]
+   *
+   * (SUPPORTED ONLY IN PNPM 10.16.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#minimumreleaseageexclude
+   */
+  // "minimumReleaseAgeExclude": ["@myorg/*"],
+
+  /**
+   * The trust policy controls whether pnpm should block installation of package versions where
+   * the trust level has decreased (e.g., a package previously published with provenance is now
+   * published without it). Setting this to `"no-downgrade"` enables the protection.
+   *
+   * (SUPPORTED ONLY IN PNPM 10.21.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#trustpolicy
+   *
+   * Possible values are: `off` and `no-downgrade`.
+   * The default is `off`.
+   */
+  // "trustPolicy": "no-downgrade",
+
+  /**
+   * An array of package names or patterns to exclude from the trust policy check.
+   * These packages will be allowed to install even if their trust level has decreased.
+   * Patterns are supported using glob syntax (e.g., "@myorg/*" to exclude all packages
+   * from an organization).
+   *
+   * For example:
+   *
+   * "trustPolicyExclude": ["@babel/core@7.28.5", "chokidar@4.0.3", "@myorg/*"]
+   *
+   * (SUPPORTED ONLY IN PNPM 10.22.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#trustpolicyexclude
+   *
+   * The default value is [].
+   */
+  // "trustPolicyExclude": ["@myorg/*"],
+
+  /**
+   * The number of minutes after which pnpm will ignore trust level downgrades. Packages
+   * published longer ago than this threshold will not be blocked even if their trust level
+   * has decreased. This is useful when enabling strict trust policies, as it allows older versions
+   * of packages (which may lack a process for publishing with signatures or provenance) to be
+   * installed without manual exclusion, assuming they are safe due to their age.
+   *
+   * For example, the following setting ignores trust level changes for packages published
+   * more than 14 days ago:
+   *
+   * "trustPolicyIgnoreAfterMinutes": 20160
+   *
+   * (SUPPORTED ONLY IN PNPM 10.27.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#trustpolicyignoreafter
+   *
+   * The default value is undefined (no exclusion).
+   */
+  // "trustPolicyIgnoreAfterMinutes": 20160,
+
+  /**
    * If true, then Rush will add the `--strict-peer-dependencies` command-line parameter when
    * invoking PNPM.  This causes `rush update` to fail if there are unsatisfied peer dependencies,
    * which is an invalid state that can cause build failures or incompatible dependency versions.
@@ -206,13 +290,17 @@
     // has been closed and a new version of `npm-check` is published.
     "package-json": "^7",
 
-    // Remove these when decoupled dependencies are bumped
-    "@rushstack/eslint-config@4.4.1>@typescript-eslint/eslint-plugin": "~8.46.0",
-    "@rushstack/eslint-config@4.4.1>@typescript-eslint/utils": "~8.46.0",
-    "@rushstack/eslint-config@4.4.1>@typescript-eslint/parser": "~8.46.0",
-    "@rushstack/eslint-config@4.4.1>@typescript-eslint/typescript-estree": "~8.46.0",
-    "@rushstack/eslint-plugin@0.20.0>@typescript-eslint/utils": "~8.46.0",
-    "@rushstack/heft-node-rig@2.10.1>eslint": "~9.37.0"
+    // Force @types/estree to 1.0.8 for webpack 5.103.0 compatibility
+    "@types/estree": "1.0.8",
+
+    // The React 17 types depend on a specific version of the scheduler types
+    "@types/react@17.0.74>@types/scheduler": "0.16.8",
+
+    // `loader-utils@2.0.0` has a vulnerability
+    "loader-utils@^2.0.0": "2.0.4",
+
+    // `fast-xml-parser@5.3.3` has a vulnerability
+    "fast-xml-parser@^5.3.3": "5.3.5"
   },
 
   /**
@@ -252,6 +340,19 @@
    * PNPM documentation: https://pnpm.io/package_json#pnpmpackageextensions
    */
   "globalPackageExtensions": {
+    // "fork-ts-checker-webpack-plugin": {
+    //   "dependencies": {
+    //     "@babel/core": "1"
+    //   },
+    //   "peerDependencies": {
+    //     "eslint": ">= 6"
+    //   },
+    //   "peerDependenciesMeta": {
+    //     "eslint": {
+    //       "optional": true
+    //     }
+    //   }
+    // }
     "@emotion/core": {
       "peerDependencies": {
         "@types/react": ">=16"
@@ -273,6 +374,12 @@
     "@emotion/theming": {
       "peerDependencies": {
         "@types/react": ">=16"
+      }
+    },
+
+    "@emotion/utils": {
+      "dependencies": {
+        "@emotion/sheet": "^0.9.4"
       }
     },
 
@@ -387,6 +494,13 @@
       }
     },
 
+    "sass-embedded": {
+      "dependencies": {
+        // The types reference this package, which is a devDependency
+        "source-map-js": "^1.0.2"
+      }
+    },
+
     "scss-parser": {
       "dependencies": {
         "lodash": "~4.17.15"
@@ -433,8 +547,32 @@
    * PNPM documentation: https://pnpm.io/package_json#pnpmneverbuiltdependencies
    */
   "globalNeverBuiltDependencies": [
-    // "fsevents"
+    // The postinstall script redundantly downloads the platform binding, which PNPM installs as an optional dependency.
+    "unrs-resolver"
   ],
+
+  /**
+   * The `globalOnlyBuiltDependencies` setting specifies which dependencies are permitted to run
+   * build scripts (`preinstall`, `install`, and `postinstall` lifecycle events). This is the inverse
+   * of `globalNeverBuiltDependencies`. In PNPM 10.x, build scripts are disabled by default for
+   * security, so this setting is required to explicitly permit specific packages to run their
+   * build scripts. The settings are written to the `onlyBuiltDependencies` field of the
+   * `pnpm-workspace.yaml` file that is generated by Rush during installation.
+   *
+   * (SUPPORTED ONLY IN PNPM 10.1.0 AND NEWER)
+   *
+   * PNPM documentation: https://pnpm.io/settings#onlybuiltdependencies
+   *
+   * Example:
+   *   "globalOnlyBuiltDependencies": [
+   *     "esbuild",
+   *     "playwright",
+   *     "@swc/core"
+   *   ]
+   */
+  // "globalOnlyBuiltDependencies": [
+  //   "esbuild"
+  // ],
 
   /**
    * The `globalIgnoredOptionalDependencies` setting suppresses the installation of optional NPM

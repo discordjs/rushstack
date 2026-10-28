@@ -1,9 +1,32 @@
 {
   "name": "@rushstack/webpack5-module-minifier-plugin",
-  "version": "5.6.4",
+  "version": "5.9.0",
   "description": "This plugin splits minification of webpack compilations into smaller units.",
-  "main": "lib/index.js",
-  "typings": "dist/webpack5-module-minifier-plugin.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./dist/webpack5-module-minifier-plugin.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/webpack5-module-minifier-plugin.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -11,11 +34,12 @@
     "directory": "webpack/webpack5-module-minifier-plugin"
   },
   "engines": {
-    "node": ">=14.19.0"
+    "node": ">=20.9.0"
   },
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "peerDependencies": {
@@ -26,7 +50,7 @@
   "dependencies": {
     "@rushstack/worker-pool": "workspace:*",
     "@types/tapable": "1.0.6",
-    "@types/estree": "1.0.6",
+    "@types/estree": "1.0.8",
     "tapable": "2.2.1"
   },
   "devDependencies": {
@@ -36,7 +60,7 @@
     "eslint": "~9.37.0",
     "local-node-rig": "workspace:*",
     "memfs": "4.12.0",
-    "webpack": "~5.98.0"
+    "webpack": "~5.105.2"
   },
   "sideEffects": false,
   "peerDependenciesMeta": {

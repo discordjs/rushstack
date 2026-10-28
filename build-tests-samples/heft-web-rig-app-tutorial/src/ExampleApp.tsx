@@ -4,6 +4,8 @@
 import * as React from 'react';
 import { ToggleSwitch, type IToggleEventArgs } from 'heft-web-rig-library-tutorial';
 
+import exampleImage from './example-image.png';
+
 /**
  * This React component renders the application page.
  */
@@ -24,10 +26,7 @@ export class ExampleApp extends React.Component {
         <ToggleSwitch leftColor={'#800000'} rightColor={'#008000'} onToggle={this._onToggle} />
 
         <p>Here is an example image:</p>
-        <img
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          src={require('./example-image.png')}
-        />
+        <img src={exampleImage} />
       </div>
     );
   }
@@ -35,7 +34,7 @@ export class ExampleApp extends React.Component {
   // React event handlers should be represented as fields instead of methods to ensure the "this" pointer
   // is bound correctly.  This form does not work with virtual/override inheritance, so use regular methods
   // everywhere else.
-  private _onToggle = (sender: ToggleSwitch, args: IToggleEventArgs): void => {
+  protected _onToggle = (sender: ToggleSwitch, args: IToggleEventArgs): void => {
     // eslint-disable-next-line no-console
     console.log('Toggle switch changed: ' + args.sliderPosition);
   };

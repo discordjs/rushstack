@@ -35,7 +35,7 @@
     "eslint": "~9.37.0",
 
     // Updated minimatch and its types to latest major version to resolve ReDoS vulnerability
-    "minimatch": "10.0.3"
+    "minimatch": "10.2.3"
   },
 
   /**
@@ -106,8 +106,9 @@
       // For testing Heft with TS V4
       "~4.9.5",
 
+      "5.8.2",
       // API Extractor bundles a specific TypeScript version because it calls internal APIs
-      "5.8.2"
+      "6.0.3"
     ],
     "source-map": [
       "~0.6.1" // API Extractor is using an older version of source-map because newer versions are async
@@ -147,6 +148,19 @@
     "@rushstack/set-webpack-public-path-plugin": [
       // This is used by the webpack 4 localization plugin tests
       "^4.1.16"
-    ]
+    ],
+    "@pnpm/logger": [
+      // For pnpm kit v8
+      "~5.0.0",
+      // For pnpm kit v9, v10
+      "~1001.0.0"
+    ],
+    // These are used in heft-storybook-v6-react-tutorial-storykit and heft-storybook-v6-react-tutorial
+    "@types/react": ["17.0.74"],
+    "@types/react-dom": ["17.0.25"],
+    "react": ["~17.0.2"],
+    "react-dom": ["~17.0.2"],
+    "@storybook/cli": ["~6.4.18"],
+    "@storybook/react": ["~6.4.18"]
   }
 }

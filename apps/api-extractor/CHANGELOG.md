@@ -1,6 +1,244 @@
 # Change Log - @microsoft/api-extractor
 
-This log was last generated on Tue, 04 Nov 2025 08:15:14 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 7.60.0
+Tue, 27 Oct 2026 00:20:25 GMT
+
+### Minor changes
+
+- Upgrade the bundled compiler engine to TypeScript 6.0.3
+
+## 7.59.4
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 7.59.3
+Mon, 28 Sep 2026 20:08:26 GMT
+
+_Version update only_
+
+## 7.59.2
+Tue, 22 Sep 2026 17:35:41 GMT
+
+### Patches
+
+- Update the `@microsoft/tsdoc` dependency to `~0.17.0` and the `@microsoft/tsdoc-config` dependency to `~0.18.2`.
+
+## 7.59.1
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 7.59.0
+Fri, 21 Aug 2026 15:16:34 GMT
+
+### Minor changes
+
+- Report a new `ae-unresolved-import-path` message when an inline `import()` type with a relative path cannot be resolved, instead of silently emitting the unusable path into the .d.ts rollup.
+
+## 7.58.13
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 7.58.12
+Tue, 21 Jul 2026 02:53:22 GMT
+
+### Patches
+
+- Improve the performance of the internal excerpt token condensing algorithm from O(n^2) to O(n) by eliminating repeated array splicing and per-merge bookkeeping.
+
+## 7.58.11
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 7.58.10
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 7.58.9
+Sat, 13 Jun 2026 00:16:18 GMT
+
+_Version update only_
+
+## 7.58.8
+Mon, 08 Jun 2026 15:15:49 GMT
+
+### Patches
+
+- Add support for new d.ts extension format when using TS moduleResolution 'bundler' or 'nodenext'.
+
+## 7.58.7
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 7.58.6
+Mon, 20 Apr 2026 15:15:24 GMT
+
+### Patches
+
+- Fix an issue where empty lines were included in DTS rollups in place of API items that were trimmed.
+
+## 7.58.5
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 7.58.4
+Sat, 18 Apr 2026 00:15:16 GMT
+
+### Patches
+
+- Bump semver.
+
+## 7.58.3
+Fri, 17 Apr 2026 15:14:57 GMT
+
+### Patches
+
+- Remove dependecy on `lodash`.
+
+## 7.58.2
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 7.58.1
+Sat, 04 Apr 2026 00:14:00 GMT
+
+### Patches
+
+- Bump lodash 4.18.1 to address CVEs GHSA-r5fr-rjxr-66jc, GHSA-f23m-r3pf-42rh
+
+## 7.58.0
+Wed, 01 Apr 2026 15:13:38 GMT
+
+### Minor changes
+
+- Upgrade the bundled compiler engine to TypeScript 5.9.3
+
+## 7.57.8
+Tue, 31 Mar 2026 15:14:14 GMT
+
+_Version update only_
+
+## 7.57.7
+Mon, 09 Mar 2026 15:14:07 GMT
+
+### Patches
+
+- Bump `minimatch` version from `10.2.1` to `10.2.3` to address CVE-2026-27903.
+
+## 7.57.6
+Wed, 25 Feb 2026 21:39:42 GMT
+
+### Patches
+
+- Bump `@microsoft/tsdoc-config` to `~0.18.1` to mitigate CVE-2025-69873.
+
+## 7.57.5
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 7.57.4
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 7.57.3
+Mon, 23 Feb 2026 00:42:21 GMT
+
+### Patches
+
+- Add missing "./extends/*.json" to the package.json "exports" field so that "@microsoft/api-extractor/extends/tsdoc-base.json" is importable.
+
+## 7.57.2
+Fri, 20 Feb 2026 16:14:49 GMT
+
+### Patches
+
+- Bump minimatch from 10.1.2 to 10.2.1
+
+## 7.57.1
+Fri, 20 Feb 2026 00:15:03 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 7.57.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 7.56.3
+Sat, 07 Feb 2026 01:13:26 GMT
+
+### Patches
+
+- Upgrade `lodash` dependency from `~4.17.15` to `~4.17.23`.
+
+## 7.56.2
+Wed, 04 Feb 2026 20:42:47 GMT
+
+### Patches
+
+- Update minimatch dependency from 10.0.3 to 10.1.2
+
+## 7.56.1
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 7.56.0
+Fri, 30 Jan 2026 01:16:12 GMT
+
+### Minor changes
+
+- Fix an issue where destructured parameters produced an incorrect parameter name
+
+## 7.55.5
+Thu, 08 Jan 2026 01:12:30 GMT
+
+### Patches
+
+- Fix missing 'export' keyword for namespace re-exports that produced invalid TypeScript output
+
+## 7.55.4
+Wed, 07 Jan 2026 01:12:24 GMT
+
+_Version update only_
+
+## 7.55.3
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 7.55.2
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 7.55.1
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 7.55.0
+Wed, 12 Nov 2025 01:12:56 GMT
+
+### Minor changes
+
+- Bump the `@microsoft/tsdoc` dependency to `~0.16.0`.
+- Bump the `@microsoft/tsdoc-config` dependency to `~0.18.0`.
 
 ## 7.54.0
 Tue, 04 Nov 2025 08:15:14 GMT

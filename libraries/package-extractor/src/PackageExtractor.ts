@@ -108,6 +108,12 @@ export interface IExtractorSubspace {
    * transform the package.json prior to extraction.
    */
   transformPackageJson?: (packageJson: IPackageJson) => IPackageJson;
+  /**
+   * Whether PNPM hoisting is enabled for this subspace. When set to `false`,
+   * the extractor will skip looking for hoisted packages in the PNPM virtual store, since no
+   * hoisting symlinks will exist. Default is `true`.
+   */
+  pnpmNodeModulesHoistingEnabled?: boolean;
 }
 
 interface IExtractorState {
@@ -334,14 +340,27 @@ export class PackageExtractor {
       }
     );
     const npmPackFiles: string[] = await walkerPromise;
-    return npmPackFiles;
+
+    // npm-packlist@v5 (uses glob@v8) returns "./dist/index.js" for pattern: "./dist/index.js",
+    // whereas npm-packlist@v2 (uses glob@v7) returns an empty array.
+    // This may cause duplicate files in the result list, leading to copying conflicts
+    // in the AssetHandler.ts includeAssetAsync method.
+    //
+    // Temporary fix: normalize the file paths to be relative to the package root, and remove duplicates.
+    //
+    // TODO: A better long-term fix is to replace "npm-packlist" with "@pnpm/fs.packlist", notes here:
+    //       https://github.com/microsoft/rushstack/pull/5720/changes#r2984873283
+    const normalizedFiles: string[] = Array.from(
+      new Set(npmPackFiles.map((file) => path.posix.normalize(file)))
+    );
+    return normalizedFiles;
   }
 
   /**
    * Extract a package using the provided options
    */
   public async extractAsync(options: IExtractorOptions): Promise<void> {
-    options = PackageExtractor._normalizeOptions(options);
+    options = _normalizeOptions(options);
     const {
       terminal,
       projectConfigurations,
@@ -394,55 +413,25 @@ export class PackageExtractor {
       existingDependencyConfigurations.push(dependencyConfiguration);
     }
 
-    await this._performExtractionAsync(options, state);
+    await this.#performExtractionAsync(options, state);
     await state.assetHandler.finalizeAsync({
       onAfterExtractSymlinksAsync: async () => {
         // We need the symlinks to be created before attempting to create the bin links, since it requires
         // the node_modules folder to be realized. While we're here, we may as well perform some specific
         // link creation tasks and write the extractor-metadata.json file before the asset handler finalizes.
         if (linkCreation === 'default') {
-          await this._makeBinLinksAsync(options, state);
+          await this.#makeBinLinksAsync(options, state);
         } else if (linkCreation === 'script') {
-          await this._writeCreateLinksScriptAsync(options, state);
+          await this.#writeCreateLinksScriptAsync(options, state);
         }
 
         terminal.writeLine('Creating extractor-metadata.json');
-        await this._writeExtractorMetadataAsync(options, state);
+        await this.#writeExtractorMetadataAsync(options, state);
       }
     });
   }
 
-  private static _normalizeOptions(options: IExtractorOptions): IExtractorOptions {
-    if (options.subspaces) {
-      if (options.pnpmInstallFolder !== undefined) {
-        throw new Error(
-          'IExtractorOptions.pnpmInstallFolder cannot be combined with IExtractorOptions.subspaces'
-        );
-      }
-      if (options.transformPackageJson !== undefined) {
-        throw new Error(
-          'IExtractorOptions.transformPackageJson cannot be combined with IExtractorOptions.subspaces'
-        );
-      }
-      return options;
-    }
-
-    const normalizedOptions: IExtractorOptions = { ...options };
-    delete normalizedOptions.pnpmInstallFolder;
-    delete normalizedOptions.transformPackageJson;
-
-    normalizedOptions.subspaces = [
-      {
-        subspaceName: 'default',
-        pnpmInstallFolder: options.pnpmInstallFolder,
-        transformPackageJson: options.transformPackageJson
-      }
-    ];
-
-    return normalizedOptions;
-  }
-
-  private async _performExtractionAsync(options: IExtractorOptions, state: IExtractorState): Promise<void> {
+  async #performExtractionAsync(options: IExtractorOptions, state: IExtractorState): Promise<void> {
     const {
       terminal,
       mainProjectName,
@@ -476,10 +465,12 @@ export class PackageExtractor {
       }
     }
 
+    const startingFolders: string[] = [];
     for (const { projectName, projectFolder } of includedProjectsSet) {
       terminal.writeLine(Colorize.cyan(`Analyzing project: ${projectName}`));
-      await this._collectFoldersAsync(projectFolder, options, state);
+      startingFolders.push(projectFolder);
     }
+    await this.#collectFoldersAsync(startingFolders, options, state);
 
     if (!createArchiveOnly) {
       terminal.writeLine(`Copying folders to target folder "${targetRootFolder}"`);
@@ -487,7 +478,7 @@ export class PackageExtractor {
     await Async.forEachAsync(
       foldersToCopy,
       async (folderToCopy: string) => {
-        await this._extractFolderAsync(folderToCopy, options, state);
+        await this.#extractFolderAsync(folderToCopy, options, state);
       },
       {
         concurrency: MAX_CONCURRENCY
@@ -503,22 +494,22 @@ export class PackageExtractor {
         sourceRootFolder: additionalFolderPath,
         targetRootFolder
       };
-      await this._extractFolderAsync(additionalFolderPath, additionalFolderExtractorOptions, state);
+      await this.#extractFolderAsync(additionalFolderPath, additionalFolderExtractorOptions, state);
     }
   }
 
   /**
    * Recursively crawl the node_modules dependencies and collect the result in IExtractorState.foldersToCopy.
    */
-  private async _collectFoldersAsync(
-    packageJsonFolder: string,
+  async #collectFoldersAsync(
+    packageJsonFolders: string[],
     options: IExtractorOptions,
     state: IExtractorState
   ): Promise<void> {
     const { terminal, subspaces } = options;
     const { projectConfigurationsByPath } = state;
 
-    const packageJsonFolderPathQueue: AsyncQueue<string> = new AsyncQueue([packageJsonFolder]);
+    const packageJsonFolderPathQueue: AsyncQueue<string> = new AsyncQueue(packageJsonFolders);
 
     await Async.forEachAsync(
       packageJsonFolderPathQueue,
@@ -575,7 +566,7 @@ export class PackageExtractor {
             }
           }
 
-          this._applyDependencyFilters(
+          this.#applyDependencyFilters(
             terminal,
             dependencyNamesToProcess,
             projectConfiguration.additionalDependenciesToInclude,
@@ -611,9 +602,15 @@ export class PackageExtractor {
 
         // Replicate the links to the virtual store. Note that if the package has not been hoisted by
         // PNPM, the package will not be resolvable from here.
-        // Only apply this logic for packages that were actually installed under the common/temp folder.
+        // Only apply this logic for packages that were actually installed under the common/temp folder,
+        // and only when hoisting is enabled for the subspace.
         const realPnpmInstallFolder: string | undefined = targetSubspace?.pnpmInstallFolder;
-        if (realPnpmInstallFolder && Path.isUnder(packageJsonFolderPath, realPnpmInstallFolder)) {
+        const hoistingEnabled: boolean = targetSubspace?.pnpmNodeModulesHoistingEnabled !== false;
+        if (
+          hoistingEnabled &&
+          realPnpmInstallFolder &&
+          Path.isUnder(packageJsonFolderPath, realPnpmInstallFolder)
+        ) {
           try {
             // The PNPM virtual store links are created in this folder.  We will resolve the current package
             // from that location and collect any additional links encountered along the way.
@@ -656,7 +653,7 @@ export class PackageExtractor {
     );
   }
 
-  private _applyDependencyFilters(
+  #applyDependencyFilters(
     terminal: ITerminal,
     allDependencyNames: Set<string>,
     additionalDependenciesToInclude: string[] = [],
@@ -699,7 +696,7 @@ export class PackageExtractor {
   /**
    * Copy one package folder to the extractor target folder.
    */
-  private async _extractFolderAsync(
+  async #extractFolderAsync(
     sourceFolderPath: string,
     options: IExtractorOptions,
     state: IExtractorState
@@ -887,7 +884,7 @@ export class PackageExtractor {
   /**
    * Write the common/deploy/deploy-metadata.json file.
    */
-  private async _writeExtractorMetadataAsync(
+  async #writeExtractorMetadataAsync(
     options: IExtractorOptions,
     state: IExtractorState
   ): Promise<void> {
@@ -939,7 +936,7 @@ export class PackageExtractor {
     });
   }
 
-  private async _makeBinLinksAsync(options: IExtractorOptions, state: IExtractorState): Promise<void> {
+  async #makeBinLinksAsync(options: IExtractorOptions, state: IExtractorState): Promise<void> {
     const { terminal } = options;
 
     const extractedProjectFolderPaths: string[] = [];
@@ -961,7 +958,7 @@ export class PackageExtractor {
     );
   }
 
-  private async _writeCreateLinksScriptAsync(
+  async #writeCreateLinksScriptAsync(
     options: IExtractorOptions,
     state: IExtractorState
   ): Promise<void> {
@@ -984,4 +981,34 @@ export class PackageExtractor {
       targetFilePath: createLinksTargetFilePath
     });
   }
+}
+
+function _normalizeOptions(options: IExtractorOptions): IExtractorOptions {
+  if (options.subspaces) {
+    if (options.pnpmInstallFolder !== undefined) {
+      throw new Error(
+        'IExtractorOptions.pnpmInstallFolder cannot be combined with IExtractorOptions.subspaces'
+      );
+    }
+    if (options.transformPackageJson !== undefined) {
+      throw new Error(
+        'IExtractorOptions.transformPackageJson cannot be combined with IExtractorOptions.subspaces'
+      );
+    }
+    return options;
+  }
+
+  const normalizedOptions: IExtractorOptions = { ...options };
+  delete normalizedOptions.pnpmInstallFolder;
+  delete normalizedOptions.transformPackageJson;
+
+  normalizedOptions.subspaces = [
+    {
+      subspaceName: 'default',
+      pnpmInstallFolder: options.pnpmInstallFolder,
+      transformPackageJson: options.transformPackageJson
+    }
+  ];
+
+  return normalizedOptions;
 }

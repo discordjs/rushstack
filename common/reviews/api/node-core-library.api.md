@@ -42,8 +42,8 @@ export class Async {
     static mapAsync<TEntry extends IWeighted, TRetVal>(iterable: Iterable<TEntry> | AsyncIterable<TEntry>, callback: (entry: TEntry, arrayIndex: number) => Promise<TRetVal>, options: IAsyncParallelismOptions & {
         weighted: true;
     }): Promise<TRetVal[]>;
-    static runWithRetriesAsync<TResult>({ action, maxRetries, retryDelayMs }: IRunWithRetriesOptions<TResult>): Promise<TResult>;
-    static runWithTimeoutAsync<TResult>({ action, timeoutMs, timeoutMessage }: IRunWithTimeoutOptions<TResult>): Promise<TResult>;
+    static runWithRetriesAsync<TResult>(input: IRunWithRetriesOptions<TResult>): Promise<TResult>;
+    static runWithTimeoutAsync<TResult>(input: IRunWithTimeoutOptions<TResult>): Promise<TResult>;
     static sleepAsync(ms: number): Promise<void>;
     static validateWeightedIterable(operation: IWeighted): void;
 }
@@ -147,7 +147,6 @@ export class FileError extends Error {
     readonly projectFolder: string;
     // @internal (undocumented)
     static _sanitizedEnvironmentVariable: string | undefined;
-    // @override
     toString(): string;
 }
 
@@ -166,12 +165,15 @@ export class FileSystem {
     static copyFilesAsync(options: IFileSystemCopyFilesAsyncOptions): Promise<void>;
     static createHardLink(options: IFileSystemCreateLinkOptions): void;
     static createHardLinkAsync(options: IFileSystemCreateLinkOptions): Promise<void>;
+    static createReadStream(filePath: string): FileSystemReadStream;
     static createSymbolicLinkFile(options: IFileSystemCreateLinkOptions): void;
     static createSymbolicLinkFileAsync(options: IFileSystemCreateLinkOptions): Promise<void>;
     static createSymbolicLinkFolder(options: IFileSystemCreateLinkOptions): void;
     static createSymbolicLinkFolderAsync(options: IFileSystemCreateLinkOptions): Promise<void>;
     static createSymbolicLinkJunction(options: IFileSystemCreateLinkOptions): void;
     static createSymbolicLinkJunctionAsync(options: IFileSystemCreateLinkOptions): Promise<void>;
+    static createWriteStream(filePath: string, options?: IFileSystemCreateWriteStreamOptions): FileSystemWriteStream;
+    static createWriteStreamAsync(filePath: string, options?: IFileSystemCreateWriteStreamOptions): Promise<FileSystemWriteStream>;
     static deleteFile(filePath: string, options?: IFileSystemDeleteFileOptions): void;
     static deleteFileAsync(filePath: string, options?: IFileSystemDeleteFileOptions): Promise<void>;
     static deleteFolder(folderPath: string): void;
@@ -226,7 +228,13 @@ export type FileSystemCopyFilesAsyncFilter = (sourcePath: string, destinationPat
 export type FileSystemCopyFilesFilter = (sourcePath: string, destinationPath: string) => boolean;
 
 // @public
+export type FileSystemReadStream = fs.ReadStream;
+
+// @public
 export type FileSystemStats = fs.Stats;
+
+// @public
+export type FileSystemWriteStream = fs.WriteStream;
 
 // @public
 export class FileWriter {
@@ -337,14 +345,17 @@ export interface IFileSystemCreateLinkOptions {
 }
 
 // @public
+export interface IFileSystemCreateWriteStreamOptions extends IFileSystemWriteFileOptionsBase {
+}
+
+// @public
 export interface IFileSystemDeleteFileOptions {
     throwIfNotExists?: boolean;
 }
 
 // @public
-export interface IFileSystemMoveOptions {
+export interface IFileSystemMoveOptions extends IFileSystemWriteFileOptionsBase {
     destinationPath: string;
-    ensureFolderExists?: boolean;
     overwrite?: boolean;
     sourcePath: string;
 }
@@ -367,14 +378,18 @@ export interface IFileSystemUpdateTimeParameters {
 }
 
 // @public
-export interface IFileSystemWriteBinaryFileOptions {
-    ensureFolderExists?: boolean;
+export interface IFileSystemWriteBinaryFileOptions extends IFileSystemWriteFileOptionsBase {
 }
 
 // @public
 export interface IFileSystemWriteFileOptions extends IFileSystemWriteBinaryFileOptions {
     convertLineEndings?: NewlineKind;
     encoding?: Encoding;
+}
+
+// @public (undocumented)
+export interface IFileSystemWriteFileOptionsBase {
+    ensureFolderExists?: boolean;
 }
 
 // @public
@@ -462,6 +477,8 @@ export type IJsonSchemaFromObjectOptions = IJsonSchemaLoadOptions;
 export interface IJsonSchemaLoadOptions {
     customFormats?: Record<string, IJsonSchemaCustomFormat<string> | IJsonSchemaCustomFormat<number>>;
     dependentSchemas?: JsonSchema[];
+    // @beta
+    rejectVendorExtensionKeywords?: boolean;
     schemaVersion?: JsonSchemaVersion;
 }
 
@@ -516,7 +533,7 @@ export interface INodePackageJson {
 export class InternalError extends Error {
     constructor(message: string);
     static breakInDebugger: boolean;
-    // @override (undocumented)
+    // (undocumented)
     toString(): string;
     readonly unformattedMessage: string;
 }
@@ -662,6 +679,9 @@ export interface IRunWithTimeoutOptions<TResult> {
 }
 
 // @public
+function isRecord(value: unknown): value is Record<string, unknown>;
+
+// @public
 export interface IStringBuilder {
     append(text: string): void;
     toString(): string;
@@ -775,6 +795,7 @@ export class LockFile {
     get dirtyWhenAcquired(): boolean;
     get filePath(): string;
     static getLockFilePath(resourceFolder: string, resourceName: string, pid?: number): string;
+    static getLockFilePaths(resourceFolder: string, resourceName: string, pid?: number): ReadonlyArray<string>;
     get isReleased(): boolean;
     release(deleteFile?: boolean): void;
     static tryAcquire(resourceFolder: string, resourceName: string): LockFile | undefined;
@@ -787,6 +808,12 @@ export class MapExtensions {
         [key: string]: TValue;
     };
 }
+
+// @public
+function mergeWith<TTarget extends object, TSource extends object>(target: TTarget, source: TSource, customizer?: MergeWithCustomizer): TTarget;
+
+// @public
+type MergeWithCustomizer = (objValue: unknown, srcValue: unknown, key: string) => unknown;
 
 // @public
 export class MinimumHeap<T> {
@@ -806,7 +833,10 @@ export enum NewlineKind {
 
 declare namespace Objects {
     export {
-        areDeepEqual
+        areDeepEqual,
+        isRecord,
+        MergeWithCustomizer,
+        mergeWith
     }
 }
 export { Objects }
@@ -939,6 +969,7 @@ export class Text {
     static padStart(s: string, minimumLength: number, paddingCharacter?: string): string;
     static readLinesFromIterable(iterable: Iterable<string | Buffer | null>, options?: IReadLinesFromIterableOptions): Generator<string>;
     static readLinesFromIterableAsync(iterable: AsyncIterable<string | Buffer>, options?: IReadLinesFromIterableOptions): AsyncGenerator<string>;
+    // @deprecated
     static replaceAll(input: string, searchValue: string, replaceValue: string): string;
     static reverse(s: string): string;
     static splitByNewLines(s: undefined): undefined;

@@ -17,6 +17,11 @@ parameters:
         vsixPath: 'extension.vsix'
         manifestPath: 'extension.signature.manifest'
         projectPath: '$(Build.SourcesDirectory)/vscode-extensions/debug-certificate-manager-vscode-extension'
+      - key: 'playwright-local-browser-server-vscode-extension'
+        projectRelativeAssetsDir: dist/vsix
+        vsixPath: 'extension.vsix'
+        manifestPath: 'extension.signature.manifest'
+        projectPath: '$(Build.SourcesDirectory)/vscode-extensions/playwright-local-browser-server-vscode-extension'
       - key: 'rush-vscode-extension'
         projectRelativeAssetsDir: dist/vsix
         vsixPath: 'extension.vsix'
@@ -33,6 +38,8 @@ resources:
 extends:
   template: v1/1ES.Official.PipelineTemplate.yml@1esPipelines
   parameters:
+    settings:
+      networkIsolationPolicy: CFSClean,CFSClean2,CFSClean3,DefaultDeny
     pool:
       name: Azure-Pipelines-1ESPT-ExDShared
       os: windows
@@ -58,9 +65,6 @@ extends:
               - template: /common/config/azure-pipelines/templates/install-node.yaml@self
 
               - template: /common/config/azure-pipelines/templates/build.yaml@self
-                parameters:
-                  BuildParameters: >
-                    --to tag:vsix
 
               - ${{ if parameters.shouldPublish }}:
                   - task: AzureCLI@2
@@ -100,7 +104,7 @@ extends:
                                 }
                             ]
 
-                      - bash: node node_modules/@rushstack/heft/lib/start.js verify-signature --vsix-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.vsixPath }} --manifest-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.manifestPath }} --signature-path ${{ extension.projectRelativeAssetsDir }}/extension.signature.p7s
+                      - bash: node node_modules/@rushstack/heft/lib-commonjs/start.js verify-signature --vsix-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.vsixPath }} --manifest-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.manifestPath }} --signature-path ${{ extension.projectRelativeAssetsDir }}/extension.signature.p7s
                         displayName: 'Verify Signature: ${{ extension.key }}'
                         workingDirectory: ${{ extension.projectPath }}
 
@@ -112,6 +116,6 @@ extends:
                           scriptLocation: 'inlineScript'
                           workingDirectory: ${{ extension.projectPath }}
                           ${{ if parameters.publishUnsigned }}:
-                            inlineScript: node node_modules/@rushstack/heft/lib/start.js publish-vsix --vsix-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.vsixPath }} --publish-unsigned
+                            inlineScript: node node_modules/@rushstack/heft/lib-commonjs/start.js publish-vsix --vsix-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.vsixPath }} --publish-unsigned
                           ${{ else }}:
-                            inlineScript: node node_modules/@rushstack/heft/lib/start.js publish-vsix --vsix-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.vsixPath }} --manifest-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.manifestPath }} --signature-path ${{ extension.projectRelativeAssetsDir }}/extension.signature.p7s
+                            inlineScript: node node_modules/@rushstack/heft/lib-commonjs/start.js publish-vsix --vsix-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.vsixPath }} --manifest-path ${{ extension.projectRelativeAssetsDir }}/${{ extension.manifestPath }} --signature-path ${{ extension.projectRelativeAssetsDir }}/extension.signature.p7s

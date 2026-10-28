@@ -1,0 +1,14 @@
+{
+  "suppressions": [
+    {
+      "file": "src/index.ts",
+      "scopeId": ".",
+      "rule": "@typescript-eslint/naming-convention"
+    },
+    {
+      "file": "src/non-program.custom",
+      "scopeId": ".",
+      "rule": "no-undef"
+    }
+  ]
+}

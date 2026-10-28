@@ -3,13 +3,14 @@
 
 import path from 'node:path';
 
-import { DllPlugin, type Compiler, WebpackError, type Chunk, type NormalModule } from 'webpack';
+import { DllPlugin, type Compiler, type Chunk, type NormalModule, type ModuleGraph } from 'webpack';
 
 import { Async, FileSystem, LegacyAdapters, Path } from '@rushstack/node-core-library';
 
 const PLUGIN_NAME: 'DeepImportsPlugin' = 'DeepImportsPlugin';
 
 type DllPluginOptions = DllPlugin['options'];
+type IExportsInfo = ReturnType<ModuleGraph['getExportsInfo']>;
 
 /**
  * @public
@@ -65,10 +66,10 @@ function countSlashes(str: string): number {
  * @public
  */
 export class DeepImportsPlugin extends DllPlugin {
-  private readonly _inFolderName: string;
-  private readonly _outFolderName: string;
-  private readonly _pathsToIgnoreWithoutExtensions: Set<string>;
-  private readonly _dTsFilesInputFolderName: string | undefined;
+  readonly #inFolderName: string;
+  readonly #outFolderName: string;
+  readonly #pathsToIgnoreWithoutExtensions: Set<string>;
+  readonly #dTsFilesInputFolderName: string | undefined;
 
   public constructor(options: IDeepImportsPluginOptions) {
     const superOptions: DllPluginOptions = {
@@ -113,14 +114,16 @@ export class DeepImportsPlugin extends DllPlugin {
       pathsToIgnoreWithoutExtensions.add(normalizedPathToIgnore);
     }
 
-    this._inFolderName = options.inFolderName;
-    this._outFolderName = options.outFolderName;
-    this._pathsToIgnoreWithoutExtensions = pathsToIgnoreWithoutExtensions;
-    this._dTsFilesInputFolderName = dTsFilesInputFolderName;
+    this.#inFolderName = options.inFolderName;
+    this.#outFolderName = options.outFolderName;
+    this.#pathsToIgnoreWithoutExtensions = pathsToIgnoreWithoutExtensions;
+    this.#dTsFilesInputFolderName = dTsFilesInputFolderName;
   }
 
-  public apply(compiler: Compiler): void {
+  public override apply(compiler: Compiler): void {
     super.apply(compiler);
+
+    const { WebpackError } = compiler.webpack;
 
     compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation) => {
       compilation.hooks.processAssets.tapPromise(PLUGIN_NAME, async () => {
@@ -147,10 +150,11 @@ export class DeepImportsPlugin extends DllPlugin {
           libPathWithoutExtension: string;
           moduleId: string | number | null;
           secondaryChunkId: string | undefined;
+          exportsInfo: IExportsInfo;
         }
 
-        const pathsToIgnoreWithoutExtension: Set<string> = this._pathsToIgnoreWithoutExtensions;
-        const resolvedLibInFolder: string = path.join(compiler.context, this._inFolderName);
+        const pathsToIgnoreWithoutExtension: Set<string> = this.#pathsToIgnoreWithoutExtensions;
+        const resolvedLibInFolder: string = path.join(compiler.context, this.#inFolderName);
         const libModulesByChunk: Map<Chunk, ILibModuleDescriptor[]> = new Map();
         const encounteredLibPaths: Set<string> = new Set();
         for (const runtimeChunk of runtimeChunks) {
@@ -170,7 +174,8 @@ export class DeepImportsPlugin extends DllPlugin {
                       libModules.push({
                         libPathWithoutExtension: relativePathWithoutExtension,
                         moduleId: compilation.chunkGraph.getModuleId(runtimeChunkModule),
-                        secondaryChunkId
+                        secondaryChunkId,
+                        exportsInfo: compilation.moduleGraph.getExportsInfo(runtimeChunkModule) // Record exportsInfo to generate named exports placeholder code
                       });
 
                       encounteredLibPaths.add(relativePathWithoutExtension);
@@ -194,13 +199,13 @@ export class DeepImportsPlugin extends DllPlugin {
           libModulesByChunk.set(runtimeChunk, libModules);
         }
 
-        const resolvedLibOutFolder: string = path.join(compiler.context, this._outFolderName);
+        const resolvedLibOutFolder: string = path.join(compiler.context, this.#outFolderName);
         const outputPathRelativeLibOutFolder: string = Path.convertToSlashes(
           path.relative(outputPath, resolvedLibOutFolder)
         );
 
-        const resolvedDtsFilesInputFolderName: string | undefined = this._dTsFilesInputFolderName
-          ? path.join(compiler.context, this._dTsFilesInputFolderName)
+        const resolvedDtsFilesInputFolderName: string | undefined = this.#dTsFilesInputFolderName
+          ? path.join(compiler.context, this.#dTsFilesInputFolderName)
           : undefined;
 
         for (const [chunk, libModules] of libModulesByChunk) {
@@ -233,7 +238,7 @@ export class DeepImportsPlugin extends DllPlugin {
 
           await Async.forEachAsync(
             libModules,
-            async ({ libPathWithoutExtension, moduleId, secondaryChunkId }) => {
+            async ({ libPathWithoutExtension, moduleId, secondaryChunkId, exportsInfo }) => {
               const depth: number = countSlashes(libPathWithoutExtension);
               const requirePath: string = '../'.repeat(depth) + libOutFolderRelativeOutputPath;
               let moduleText: string;
@@ -254,6 +259,15 @@ export class DeepImportsPlugin extends DllPlugin {
                 `${outputPathRelativeLibOutFolder}/${libPathWithoutExtension}${JS_EXTENSION}`,
                 new compiler.webpack.sources.RawSource(moduleText)
               );
+
+              const providedExports: null | true | string[] = exportsInfo.getProvidedExports();
+              if (Array.isArray(providedExports) && providedExports.length > 0) {
+                const exportsJson: string = JSON.stringify({ moduleExports: providedExports }, undefined, 2);
+                compilation.emitAsset(
+                  `${outputPathRelativeLibOutFolder}/${libPathWithoutExtension}.exports.json`,
+                  new compiler.webpack.sources.RawSource(exportsJson)
+                );
+              }
 
               if (resolvedDtsFilesInputFolderName) {
                 const dtsFilePath: string = path.join(

@@ -21,16 +21,33 @@ const mockHashes: Map<string, string> = new Map([
   ['j/package.json', 'hash17'],
   ['rush.json', 'hash18']
 ]);
+
+// Mock function for customizing repo changes in each test
+const mockGetRepoChanges: jest.MockedFunction<typeof import('@rushstack/package-deps-hash').getRepoChanges> =
+  jest.fn();
+const mockOnGetDetailedRepoState: jest.Mock<void, []> = jest.fn();
+const mockHashFilesAsync: jest.Mock<ReadonlyMap<string, string>, [string, Iterable<string>]> = jest.fn(
+  (rootDirectory: string, filePaths: Iterable<string>) =>
+    new Map(Array.from(filePaths, (filePath: string) => [filePath, filePath]))
+);
+const mockCreateRepoStateCache: jest.Mock<void, [IRepoStateCacheOptions]> = jest.fn();
+const mockGetCachedRepoStateAsync: jest.Mock<
+  Promise<IDetailedRepoState>,
+  [ReadonlyArray<string> | undefined, ReadonlyArray<string> | undefined]
+> = jest.fn();
+
 jest.mock(`@rushstack/package-deps-hash`, () => {
   return {
     getRepoRoot(dir: string): string {
       return dir;
     },
     getDetailedRepoStateAsync(): IDetailedRepoState {
+      mockOnGetDetailedRepoState();
       return {
         hasSubmodules: false,
         hasUncommittedChanges: false,
-        files: mockHashes
+        files: mockHashes,
+        symlinks: new Map()
       };
     },
     getRepoChangesAsync(): ReadonlyMap<string, string> {
@@ -40,7 +57,72 @@ jest.mock(`@rushstack/package-deps-hash`, () => {
       return new Map(Array.from(filePaths, (filePath: string) => [filePath, filePath]));
     },
     hashFilesAsync(rootDirectory: string, filePaths: Iterable<string>): ReadonlyMap<string, string> {
-      return new Map(Array.from(filePaths, (filePath: string) => [filePath, filePath]));
+      return mockHashFilesAsync(rootDirectory, filePaths);
+    },
+    RepoStateCache: class MockRepoStateCache {
+      public constructor(options: IRepoStateCacheOptions) {
+        mockCreateRepoStateCache(options);
+      }
+
+      public async getDetailedRepoStateAsync(
+        additionalRelativePathsToHash?: ReadonlyArray<string>,
+        filterPath?: ReadonlyArray<string>
+      ): Promise<IDetailedRepoState> {
+        return await mockGetCachedRepoStateAsync(additionalRelativePathsToHash, filterPath);
+      }
+    },
+    getRepoChanges(
+      currentWorkingDirectory: string,
+      revision?: string,
+      gitPath?: string
+    ): Map<string, IFileDiffStatus> {
+      return mockGetRepoChanges(currentWorkingDirectory, revision, gitPath);
+    }
+  };
+});
+
+const { Git: OriginalGit } = jest.requireActual('../Git');
+
+// Mock function for getBlobContentAsync to be customized in each test
+const mockGetBlobContentAsync: jest.MockedFunction<
+  typeof import('../Git').Git.prototype.getBlobContentAsync
+> = jest.fn();
+
+/** Mock Git to test `getChangedProjectsAsync` */
+jest.mock('../Git', () => {
+  return {
+    Git: class MockGit extends OriginalGit {
+      public async determineIfRefIsACommitAsync(ref: string): Promise<boolean> {
+        return true;
+      }
+      public async getMergeBaseAsync(ref1: string, ref2: string): Promise<string> {
+        return 'merge-base-sha';
+      }
+      public async getBlobContentAsync(opts: { blobSpec: string; repositoryRoot: string }): Promise<string> {
+        return mockGetBlobContentAsync(opts);
+      }
+    }
+  };
+});
+
+const OriginalPnpmShrinkwrapFile: typeof PnpmShrinkwrapFile = jest.requireActual(
+  '../pnpm/PnpmShrinkwrapFile'
+).PnpmShrinkwrapFile;
+jest.mock('../pnpm/PnpmShrinkwrapFile', () => {
+  return {
+    PnpmShrinkwrapFile: {
+      loadFromFile: (fullShrinkwrapPath: string, options: ILoadFromFileOptions): PnpmShrinkwrapFile => {
+        return OriginalPnpmShrinkwrapFile.loadFromString(_getMockedPnpmShrinkwrapFile(), options);
+      },
+      loadFromString: (text: string, options: ILoadFromStringOptions): PnpmShrinkwrapFile => {
+        return OriginalPnpmShrinkwrapFile.loadFromString(
+          _getMockedPnpmShrinkwrapFile()
+            // Change dependencies version
+            .replace(/1\.0\.1/g, '1.0.0')
+            .replace(/foo_1_0_1/g, 'foo_1_0_0'),
+          options
+        );
+      }
     }
   };
 });
@@ -53,22 +135,41 @@ jest.mock('../incremental/InputsSnapshot', () => {
   };
 });
 
+import * as fs from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { IDetailedRepoState } from '@rushstack/package-deps-hash';
+import type {
+  IDetailedRepoState,
+  IFileDiffStatus,
+  IRepoStateCacheOptions
+} from '@rushstack/package-deps-hash';
 import { StringBufferTerminalProvider, Terminal } from '@rushstack/terminal';
 
-import { ProjectChangeAnalyzer } from '../ProjectChangeAnalyzer';
+import {
+  ProjectChangeAnalyzer,
+  isPackageJsonVersionBumpChange,
+  isPackageJsonVersionOnlyChange,
+  tryGetMissingProjectShrinkwrapFileErrorAsync
+} from '../ProjectChangeAnalyzer';
 import { RushConfiguration } from '../../api/RushConfiguration';
+import type { RushConfigurationProject } from '../../api/RushConfigurationProject';
+import type { RushProjectConfiguration } from '../../api/RushProjectConfiguration';
 import type {
   IInputsSnapshot,
   GetInputsSnapshotAsyncFn,
   IInputsSnapshotParameters
 } from '../incremental/InputsSnapshot';
+import type {
+  ILoadFromFileOptions,
+  ILoadFromStringOptions,
+  PnpmShrinkwrapFile
+} from '../pnpm/PnpmShrinkwrapFile';
 
 describe(ProjectChangeAnalyzer.name, () => {
   beforeEach(() => {
     mockSnapshot.mockClear();
+    mockGetBlobContentAsync.mockClear();
+    mockGetRepoChanges.mockClear();
   });
 
   describe(ProjectChangeAnalyzer.prototype._tryGetSnapshotProviderAsync.name, () => {
@@ -82,14 +183,21 @@ describe(ProjectChangeAnalyzer.name, () => {
       const terminal: Terminal = new Terminal(terminalProvider);
       const mockSnapshotValue: {} = {};
       mockSnapshot.mockImplementation(() => mockSnapshotValue);
+      let repoStateReadTimeMs: number | undefined;
+      mockOnGetDetailedRepoState.mockImplementationOnce(() => {
+        repoStateReadTimeMs = Date.now();
+        // Make sure that a time recorded after the working tree was read is later than this one
+        while (Date.now() <= repoStateReadTimeMs + 1) {
+          // Busy wait
+        }
+      });
       const snapshotProvider: GetInputsSnapshotAsyncFn | undefined =
         await projectChangeAnalyzer._tryGetSnapshotProviderAsync(new Map(), terminal);
+      const beforeSnapshotTimeMs: number = Date.now();
       const snapshot: IInputsSnapshot | undefined = await snapshotProvider?.();
 
       expect(snapshot).toBe(mockSnapshotValue);
-      expect(terminalProvider.getErrorOutput()).toEqual('');
-      expect(terminalProvider.getWarningOutput()).toEqual('');
-
+      expect(terminalProvider.getAllOutput(true)).toEqual({});
       expect(mockSnapshot).toHaveBeenCalledTimes(1);
 
       const mockInput: IInputsSnapshotParameters = mockSnapshot.mock.calls[0][0];
@@ -99,6 +207,1505 @@ describe(ProjectChangeAnalyzer.name, () => {
       expect(mockInput.hashes).toEqual(mockHashes);
       expect(mockInput.rootDir).toEqual(rootDir);
       expect(mockInput.additionalHashes).toEqual(new Map());
+      // The start time is recorded before Git reads the working tree
+      expect(mockInput.workingTreeReadStartTimeMs).toBeGreaterThanOrEqual(beforeSnapshotTimeMs);
+      expect(mockInput.workingTreeReadStartTimeMs).toBeLessThanOrEqual(repoStateReadTimeMs!);
+    });
+
+    describe('with PNPM project dependency files', () => {
+      let folder: string;
+      let rushConfiguration: RushConfiguration;
+      let terminalProvider: StringBufferTerminalProvider;
+      let terminal: Terminal;
+      // As Rush builds the path: the project's temp folder, then a slash and the file name
+      const dependencyFile = (name: string): string =>
+        `${resolve(folder, name, '.rush/temp')}/shrinkwrap-deps.json`;
+      const instruction = (name: string): string =>
+        `A project dependency file (${dependencyFile(name)}) is missing. ` +
+        'You may need to run "rush install" or "rush update".';
+      const gitFailure: () => never = () => {
+        throw new Error('git hash-object failed');
+      };
+      const hostOptions: { throwOnMissingProjectShrinkwrapFile: boolean } = {
+        throwOnMissingProjectShrinkwrapFile: true
+      };
+
+      beforeEach(() => {
+        // Change detection requires a Git working tree, which contains this folder.
+        folder = fs.mkdtempSync(resolve(__dirname, 'shrinkwrap-deps-'));
+        fs.writeFileSync(
+          resolve(folder, 'rush.json'),
+          JSON.stringify({
+            rushVersion: '5.162.0',
+            pnpmVersion: '9.15.9',
+            projects: ['a', 'b'].map((name) => ({ packageName: name, projectFolder: name }))
+          })
+        );
+        for (const name of ['a', 'b']) {
+          fs.mkdirSync(resolve(folder, name, '.rush/temp'), { recursive: true });
+          fs.writeFileSync(resolve(folder, name, 'package.json'), JSON.stringify({ name, version: '1.0.0' }));
+          fs.writeFileSync(dependencyFile(name), '{}');
+        }
+        rushConfiguration = RushConfiguration.loadFromConfigurationFile(resolve(folder, 'rush.json'));
+        terminalProvider = new StringBufferTerminalProvider();
+        terminal = new Terminal(terminalProvider);
+      });
+
+      afterEach(() => {
+        fs.rmSync(folder, { recursive: true, force: true });
+      });
+
+      it('warns and continues without a snapshot provider if a file is missing', async () => {
+        fs.rmSync(dependencyFile('b'));
+        const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        await expect(analyzer._tryGetSnapshotProviderAsync(new Map(), terminal)).resolves.toBeUndefined();
+        expect(terminalProvider.getWarningOutput()).toContain(instruction('b'));
+      });
+
+      it('throws the error of a missing file for a host that requires a snapshot', async () => {
+        fs.rmSync(dependencyFile('b'));
+        const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        await expect(
+          analyzer._tryGetSnapshotProviderAsync(new Map(), terminal, undefined, hostOptions)
+        ).rejects.toThrow(new Error(instruction('b')));
+        expect(terminalProvider.getWarningOutput()).toBe('');
+      });
+
+      it('reports a file that was removed after the provider was created instead of the Git failure', async () => {
+        const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const nativeProvider: GetInputsSnapshotAsyncFn | undefined =
+          await analyzer._tryGetSnapshotProviderAsync(new Map(), terminal);
+        const hostProvider: GetInputsSnapshotAsyncFn | undefined =
+          await analyzer._tryGetSnapshotProviderAsync(new Map(), terminal, undefined, hostOptions);
+        fs.rmSync(dependencyFile('a'));
+        mockOnGetDetailedRepoState.mockImplementationOnce(gitFailure).mockImplementationOnce(gitFailure);
+
+        await expect(nativeProvider!()).resolves.toBeUndefined();
+        expect(terminalProvider.getWarningOutput()).toContain(instruction('a'));
+        expect(terminalProvider.getWarningOutput()).not.toContain('git hash-object failed');
+        await expect(hostProvider!()).rejects.toThrow(new Error(instruction('a')));
+      });
+
+      it('continues without a snapshot after other failures, even for a host that requires one', async () => {
+        const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const hostProvider: GetInputsSnapshotAsyncFn | undefined =
+          await analyzer._tryGetSnapshotProviderAsync(new Map(), terminal, undefined, hostOptions);
+        mockOnGetDetailedRepoState.mockImplementationOnce(gitFailure);
+
+        await expect(hostProvider!()).resolves.toBeUndefined();
+        expect(terminalProvider.getWarningOutput()).toContain('git hash-object failed');
+      });
+
+      describe('when reusing unchanged inputs', () => {
+        const reuseOptions: { reuseUnchangedInputs: boolean } = { reuseUnchangedInputs: true };
+        let stateCount: number;
+
+        function createRepoState(): IDetailedRepoState {
+          stateCount++;
+          return {
+            hasSubmodules: false,
+            hasUncommittedChanges: false,
+            files: new Map([['a/package.json', `hash${stateCount}`]]),
+            symlinks: new Map()
+          };
+        }
+
+        function getProjectConfigurations(
+          dependsOnAdditionalFiles: string[]
+        ): Map<RushConfigurationProject, RushProjectConfiguration> {
+          const projectConfiguration: RushProjectConfiguration = {
+            operationSettingsByOperationName: new Map([
+              ['_phase:build', { operationName: '_phase:build', dependsOnAdditionalFiles }]
+            ])
+          } as unknown as RushProjectConfiguration;
+          return new Map([[rushConfiguration.getProjectByName('a')!, projectConfiguration]]);
+        }
+
+        beforeEach(() => {
+          stateCount = 0;
+          mockSnapshot.mockImplementation(() => ({}));
+          mockGetCachedRepoStateAsync.mockResolvedValue(createRepoState());
+        });
+
+        afterEach(() => {
+          mockGetCachedRepoStateAsync.mockReset();
+          delete process.env.PROJECT_CHANGE_ANALYZER_TEST;
+        });
+
+        it('returns the previous snapshot while its inputs are unchanged', async () => {
+          const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+          const provider: GetInputsSnapshotAsyncFn | undefined = await analyzer._tryGetSnapshotProviderAsync(
+            new Map(),
+            terminal,
+            undefined,
+            reuseOptions
+          );
+          const snapshot: IInputsSnapshot | undefined = await provider!();
+          expect(snapshot).toBeDefined();
+          await expect(provider!()).resolves.toBe(snapshot);
+          expect(mockSnapshot).toHaveBeenCalledTimes(1);
+          expect(mockOnGetDetailedRepoState).not.toHaveBeenCalled();
+          expect(mockGetCachedRepoStateAsync).toHaveBeenCalledTimes(2);
+          const [additionalRelativePathsToHash, filterPath] = mockGetCachedRepoStateAsync.mock.calls[1];
+          expect(Array.from(additionalRelativePathsToHash!).sort()).toEqual([
+            'a/.rush/temp/shrinkwrap-deps.json',
+            'b/.rush/temp/shrinkwrap-deps.json'
+          ]);
+          expect(filterPath).toEqual([]);
+          // There are no additional files to hash
+          expect(mockHashFilesAsync).not.toHaveBeenCalled();
+
+          // The state of the repository changed
+          mockGetCachedRepoStateAsync.mockResolvedValue(createRepoState());
+          const nextSnapshot: IInputsSnapshot | undefined = await provider!();
+          expect(nextSnapshot).not.toBe(snapshot);
+          await expect(provider!()).resolves.toBe(nextSnapshot);
+          expect(mockSnapshot).toHaveBeenCalledTimes(2);
+          expect(mockSnapshot.mock.calls[1][0].hashes).toBe(
+            (await mockGetCachedRepoStateAsync.mock.results[2].value).files
+          );
+          // The new snapshot can reuse the state of the projects whose inputs did not change
+          expect(mockSnapshot.mock.calls[0][0].previousSnapshot).toBeUndefined();
+          expect(mockSnapshot.mock.calls[1][0].previousSnapshot).toBe(snapshot);
+        });
+
+        it('takes a new snapshot when the environment changes', async () => {
+          const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+          const provider: GetInputsSnapshotAsyncFn | undefined = await analyzer._tryGetSnapshotProviderAsync(
+            new Map(),
+            terminal,
+            undefined,
+            reuseOptions
+          );
+          const snapshot: IInputsSnapshot | undefined = await provider!();
+          expect(mockSnapshot.mock.calls[0][0].environment).toEqual(process.env);
+
+          process.env.PROJECT_CHANGE_ANALYZER_TEST = '1';
+          const nextSnapshot: IInputsSnapshot | undefined = await provider!();
+          expect(nextSnapshot).not.toBe(snapshot);
+          expect(mockSnapshot.mock.calls[1][0].environment).toEqual(process.env);
+          await expect(provider!()).resolves.toBe(nextSnapshot);
+
+          process.env.PROJECT_CHANGE_ANALYZER_TEST = '2';
+          await expect(provider!()).resolves.not.toBe(nextSnapshot);
+          expect(mockSnapshot).toHaveBeenCalledTimes(3);
+          // The snapshot decides for itself which state of the previous one it can still use
+          expect(mockSnapshot.mock.calls[1][0].previousSnapshot).toBe(snapshot);
+          expect(mockSnapshot.mock.calls[2][0].previousSnapshot).toBe(nextSnapshot);
+        });
+
+        it('takes a new snapshot when the additional files or their hashes change', async () => {
+          fs.writeFileSync(resolve(folder, 'a/extra.txt'), 'extra');
+          const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+          const provider: GetInputsSnapshotAsyncFn | undefined = await analyzer._tryGetSnapshotProviderAsync(
+            getProjectConfigurations(['*.txt']),
+            terminal,
+            undefined,
+            reuseOptions
+          );
+          const snapshot: IInputsSnapshot | undefined = await provider!();
+          expect(mockSnapshot.mock.calls[0][0].additionalHashes).toEqual(
+            new Map([['a/extra.txt', 'a/extra.txt']])
+          );
+          await expect(provider!()).resolves.toBe(snapshot);
+
+          mockHashFilesAsync.mockImplementationOnce(() => new Map([['a/extra.txt', 'changed']]));
+          const changedHashSnapshot: IInputsSnapshot | undefined = await provider!();
+          expect(changedHashSnapshot).not.toBe(snapshot);
+
+          fs.writeFileSync(resolve(folder, 'a/other.txt'), 'other');
+          const addedFileSnapshot: IInputsSnapshot | undefined = await provider!();
+          expect(addedFileSnapshot).not.toBe(changedHashSnapshot);
+          await expect(provider!()).resolves.toBe(addedFileSnapshot);
+          expect(mockSnapshot).toHaveBeenCalledTimes(3);
+        });
+
+        it('takes a new snapshot when an operation depends on another tracked file', async () => {
+          const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+          const provider: GetInputsSnapshotAsyncFn | undefined = await analyzer._tryGetSnapshotProviderAsync(
+            getProjectConfigurations(['*.md']),
+            terminal,
+            undefined,
+            reuseOptions
+          );
+          const snapshot: IInputsSnapshot | undefined = await provider!();
+
+          // A tracked file is hashed with the rest of the repository, not as an additional file
+          fs.writeFileSync(resolve(folder, 'a/README.md'), 'readme');
+          mockGetCachedRepoStateAsync.mockImplementation(async () => {
+            const state: IDetailedRepoState = await mockGetCachedRepoStateAsync.mock.results[0].value;
+            state.files.set('a/README.md', 'readme');
+            return state;
+          });
+          await expect(provider!()).resolves.not.toBe(snapshot);
+          expect(mockHashFilesAsync).not.toHaveBeenCalled();
+          expect(mockSnapshot).toHaveBeenCalledTimes(2);
+        });
+
+        it('shares the cache of the repository between providers', async () => {
+          const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+          await analyzer._tryGetSnapshotProviderAsync(new Map(), terminal, undefined, reuseOptions);
+          await new ProjectChangeAnalyzer(rushConfiguration)._tryGetSnapshotProviderAsync(
+            new Map(),
+            terminal,
+            undefined,
+            reuseOptions
+          );
+          expect(mockCreateRepoStateCache).toHaveBeenCalledTimes(1);
+          expect(mockCreateRepoStateCache).toHaveBeenCalledWith({
+            rootDirectory: folder,
+            gitPath: expect.any(String),
+            temporaryFolderPath: rushConfiguration.commonTempFolder
+          });
+        });
+
+        it('takes a new snapshot each time without the option', async () => {
+          const analyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+          const provider: GetInputsSnapshotAsyncFn | undefined = await analyzer._tryGetSnapshotProviderAsync(
+            new Map(),
+            terminal
+          );
+          const snapshot: IInputsSnapshot | undefined = await provider!();
+          await expect(provider!()).resolves.not.toBe(snapshot);
+          expect(mockSnapshot).toHaveBeenCalledTimes(2);
+          expect(mockSnapshot.mock.calls[1][0].previousSnapshot).toBeUndefined();
+          expect(mockOnGetDetailedRepoState).toHaveBeenCalledTimes(2);
+          expect(mockGetCachedRepoStateAsync).not.toHaveBeenCalled();
+          expect(mockCreateRepoStateCache).not.toHaveBeenCalled();
+        });
+      });
+
+      it('finds the first missing file in project order', async () => {
+        await expect(
+          tryGetMissingProjectShrinkwrapFileErrorAsync(rushConfiguration)
+        ).resolves.toBeUndefined();
+        fs.rmSync(dependencyFile('b'));
+        fs.rmSync(dependencyFile('a'));
+        await expect(tryGetMissingProjectShrinkwrapFileErrorAsync(rushConfiguration)).resolves.toEqual(
+          new Error(instruction('a'))
+        );
+      });
+    });
+
+    it('never reports a missing project dependency file for a package manager that has none', async () => {
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(__dirname, 'repo', 'rush.json')
+      );
+      await expect(tryGetMissingProjectShrinkwrapFileErrorAsync(rushConfiguration)).resolves.toBeUndefined();
+    });
+  });
+
+  describe(ProjectChangeAnalyzer.prototype.getChangedProjectsAsync.name, () => {
+    it('Subspaces detects external changes', async () => {
+      // Set up mock repo changes for this test
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            // Test subspace lockfile change detection
+            'common/config/subspaces/project-change-analyzer-test-subspace/pnpm-lock.yaml',
+            {
+              mode: 'modified',
+              newhash: 'newhash',
+              oldhash: 'oldhash',
+              status: 'M'
+            }
+          ],
+          [
+            // Test lockfile deletion detection
+            'common/config/subspaces/default/pnpm-lock.yaml',
+            {
+              mode: 'deleted',
+              newhash: '',
+              oldhash: 'oldhash',
+              status: 'D'
+            }
+          ]
+        ])
+      );
+
+      const rootDir: string = resolve(__dirname, 'repoWithSubspaces');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+
+      const terminalProvider: StringBufferTerminalProvider = new StringBufferTerminalProvider(true);
+      const terminal: Terminal = new Terminal(terminalProvider);
+
+      const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: true,
+        targetBranchName: 'main',
+        terminal
+      });
+
+      // a,b,c is included because of change modifier is not modified
+      // d is included because its dependency foo version changed in the subspace lockfile
+      ['a', 'b', 'c', 'd'].forEach((projectName) => {
+        expect(changedProjects.has(rushConfiguration.getProjectByName(projectName)!)).toBe(true);
+      });
+
+      // e depends on d via workspace:*, but its calculated lockfile (e.g. "e/.rush/temp/shrinkwrap-deps.json") didn't change.
+      // So it's not included. e will be included by `expandConsumers` if needed.
+      ['e', 'f'].forEach((projectName) => {
+        expect(changedProjects.has(rushConfiguration.getProjectByName(projectName)!)).toBe(false);
+      });
+    });
+
+    it('excludeVersionOnlyChanges excludes projects with only version field changes', async () => {
+      const rootDir: string = resolve(__dirname, 'repo');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+
+      // Mock package.json with only version change
+      const oldPackageJsonContent = JSON.stringify(
+        {
+          name: 'a',
+          version: '1.0.0',
+          description: 'Test package',
+          dependencies: {
+            b: '1.0.0'
+          }
+        },
+        null,
+        2
+      );
+
+      const newPackageJsonContent = JSON.stringify(
+        {
+          name: 'a',
+          version: '1.0.1',
+          description: 'Test package',
+          dependencies: {
+            b: '1.0.0'
+          }
+        },
+        null,
+        2
+      );
+
+      // Set up mock repo changes - only package.json changed for project 'a'
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            'a/package.json',
+            {
+              mode: 'modified',
+              newhash: 'newhash1',
+              oldhash: 'oldhash1',
+              status: 'M'
+            }
+          ]
+        ])
+      );
+
+      // Mock the blob content to return different versions based on the hash
+      mockGetBlobContentAsync.mockImplementation((opts: { blobSpec: string; repositoryRoot: string }) => {
+        if (opts.blobSpec === 'oldhash1') {
+          return Promise.resolve(oldPackageJsonContent);
+        } else if (opts.blobSpec === 'newhash1') {
+          return Promise.resolve(newPackageJsonContent);
+        }
+        return Promise.resolve('');
+      });
+
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+      const terminalProvider: StringBufferTerminalProvider = new StringBufferTerminalProvider(true);
+      const terminal: Terminal = new Terminal(terminalProvider);
+
+      // Test without excludeVersionOnlyChanges - project should be detected as changed
+      const changedProjectsWithoutExclude = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal
+      });
+      expect(changedProjectsWithoutExclude.has(rushConfiguration.getProjectByName('a')!)).toBe(true);
+
+      // Test with excludeVersionOnlyChanges - project should NOT be detected as changed
+      const changedProjectsWithExclude = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal,
+        excludeVersionOnlyChanges: true
+      });
+      expect(changedProjectsWithExclude.has(rushConfiguration.getProjectByName('a')!)).toBe(false);
+    });
+
+    it('excludeVersionOnlyChanges does not exclude projects with non-version changes', async () => {
+      const rootDir: string = resolve(__dirname, 'repo');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+
+      // Mock package.json with version AND dependency change
+      const oldPackageJsonContent = JSON.stringify(
+        {
+          name: 'b',
+          version: '1.0.0',
+          description: 'Test package',
+          dependencies: {
+            a: '1.0.0'
+          }
+        },
+        null,
+        2
+      );
+
+      const newPackageJsonContent = JSON.stringify(
+        {
+          name: 'b',
+          version: '1.0.1',
+          description: 'Test package',
+          dependencies: {
+            a: '1.0.1' // Dependency version also changed
+          }
+        },
+        null,
+        2
+      );
+
+      // Set up mock repo changes - only package.json changed for project 'b'
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            'b/package.json',
+            {
+              mode: 'modified',
+              newhash: 'newhash2',
+              oldhash: 'oldhash2',
+              status: 'M'
+            }
+          ]
+        ])
+      );
+
+      // Mock the blob content to return different versions based on the hash
+      mockGetBlobContentAsync.mockImplementation((opts: { blobSpec: string; repositoryRoot: string }) => {
+        if (opts.blobSpec === 'oldhash2') {
+          return Promise.resolve(oldPackageJsonContent);
+        } else if (opts.blobSpec === 'newhash2') {
+          return Promise.resolve(newPackageJsonContent);
+        }
+        return Promise.resolve('');
+      });
+
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+      const terminalProvider: StringBufferTerminalProvider = new StringBufferTerminalProvider(true);
+      const terminal: Terminal = new Terminal(terminalProvider);
+
+      // Test with excludeVersionOnlyChanges - project should still be detected as changed
+      const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal,
+        excludeVersionOnlyChanges: true
+      });
+      expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(true);
+    });
+
+    it('excludeVersionOnlyChanges excludes arbitrary peer dependency changes with a version bump', async () => {
+      const rootDir: string = resolve(__dirname, 'repo');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            'b/package.json',
+            { mode: 'modified', newhash: 'newhash-b', oldhash: 'oldhash-b', status: 'M' }
+          ]
+        ])
+      );
+      const packageJsonByHash: Record<string, object> = {
+        'oldhash-b': { name: 'b', version: '2.0.0', peerDependencies: { external: '^1.0.0' } },
+        'newhash-b': { name: 'b', version: '2.0.1', peerDependencies: { external: '>=3.0.0' } }
+      };
+      mockGetBlobContentAsync.mockImplementation(({ blobSpec }) =>
+        Promise.resolve(JSON.stringify(packageJsonByHash[blobSpec]!))
+      );
+
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+      const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+      const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal,
+        excludeVersionOnlyChanges: true
+      });
+
+      expect(changedProjects.size).toBe(0);
+    });
+
+    it('excludeVersionOnlyChanges does not exclude projects when package.json and other files changed', async () => {
+      const rootDir: string = resolve(__dirname, 'repo');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+
+      // Mock package.json with only version change
+      const oldPackageJsonContent = JSON.stringify(
+        {
+          name: 'c',
+          version: '1.0.0',
+          description: 'Test package',
+          dependencies: {
+            a: '1.0.0'
+          }
+        },
+        null,
+        2
+      );
+
+      const newPackageJsonContent = JSON.stringify(
+        {
+          name: 'c',
+          version: '1.0.1',
+          description: 'Test package',
+          dependencies: {
+            a: '1.0.0'
+          }
+        },
+        null,
+        2
+      );
+
+      // Set up mock repo changes - package.json AND another file changed for project 'c'
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            'c/package.json',
+            {
+              mode: 'modified',
+              newhash: 'newhash3',
+              oldhash: 'oldhash3',
+              status: 'M'
+            }
+          ],
+          [
+            'c/src/index.ts',
+            {
+              mode: 'modified',
+              newhash: 'newhash4',
+              oldhash: 'oldhash4',
+              status: 'M'
+            }
+          ]
+        ])
+      );
+
+      // Mock the blob content to return different versions based on the hash
+      mockGetBlobContentAsync.mockImplementation((opts: { blobSpec: string; repositoryRoot: string }) => {
+        if (opts.blobSpec === 'oldhash3') {
+          return Promise.resolve(oldPackageJsonContent);
+        } else if (opts.blobSpec === 'newhash3') {
+          return Promise.resolve(newPackageJsonContent);
+        }
+        return Promise.resolve('');
+      });
+
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+      const terminalProvider: StringBufferTerminalProvider = new StringBufferTerminalProvider(true);
+      const terminal: Terminal = new Terminal(terminalProvider);
+
+      // Test with excludeVersionOnlyChanges - project should still be detected as changed because multiple files changed
+      const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal,
+        excludeVersionOnlyChanges: true
+      });
+      expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(true);
+    });
+
+    it('excludeVersionOnlyChanges ignores CHANGELOG.md and CHANGELOG.json files', async () => {
+      const rootDir: string = resolve(__dirname, 'repo');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+
+      // Mock package.json with only version change
+      const oldPackageJsonContent = JSON.stringify({
+        name: 'd',
+        version: '1.0.0',
+        description: 'Test package'
+      });
+
+      const newPackageJsonContent = JSON.stringify({
+        name: 'd',
+        version: '1.0.1',
+        description: 'Test package'
+      });
+
+      // Set up mock repo changes - package.json (version only), CHANGELOG.md, and CHANGELOG.json changed
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            'd/package.json',
+            {
+              mode: 'modified',
+              newhash: 'newhash4',
+              oldhash: 'oldhash4',
+              status: 'M'
+            }
+          ],
+          [
+            'd/CHANGELOG.md',
+            {
+              mode: 'modified',
+              newhash: 'newhash5',
+              oldhash: 'oldhash5',
+              status: 'M'
+            }
+          ],
+          [
+            'd/CHANGELOG.json',
+            {
+              mode: 'modified',
+              newhash: 'newhash6',
+              oldhash: 'oldhash6',
+              status: 'M'
+            }
+          ]
+        ])
+      );
+
+      // Mock the blob content to return different versions based on the hash
+      mockGetBlobContentAsync.mockImplementation((opts: { blobSpec: string; repositoryRoot: string }) => {
+        if (opts.blobSpec === 'oldhash4') {
+          return Promise.resolve(oldPackageJsonContent);
+        } else if (opts.blobSpec === 'newhash4') {
+          return Promise.resolve(newPackageJsonContent);
+        }
+        return Promise.resolve('');
+      });
+
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+      const terminalProvider: StringBufferTerminalProvider = new StringBufferTerminalProvider(true);
+      const terminal: Terminal = new Terminal(terminalProvider);
+
+      // Test with excludeVersionOnlyChanges - project should NOT be detected as changed
+      // because only version-only package.json and CHANGELOG files changed
+      const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal,
+        excludeVersionOnlyChanges: true
+      });
+      expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+    });
+
+    it('excludeVersionOnlyChanges does not ignore projects with CHANGELOG and other substantive changes', async () => {
+      const rootDir: string = resolve(__dirname, 'repo');
+      const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+        resolve(rootDir, 'rush.json')
+      );
+
+      // Set up mock repo changes - CHANGELOG.md and src file changed
+      mockGetRepoChanges.mockReturnValue(
+        new Map<string, IFileDiffStatus>([
+          [
+            'e/CHANGELOG.md',
+            {
+              mode: 'modified',
+              newhash: 'newhash7',
+              oldhash: 'oldhash7',
+              status: 'M'
+            }
+          ],
+          [
+            'e/src/index.ts',
+            {
+              mode: 'modified',
+              newhash: 'newhash8',
+              oldhash: 'oldhash8',
+              status: 'M'
+            }
+          ]
+        ])
+      );
+
+      const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+      const terminalProvider: StringBufferTerminalProvider = new StringBufferTerminalProvider(true);
+      const terminal: Terminal = new Terminal(terminalProvider);
+
+      // Test with excludeVersionOnlyChanges - project should be detected as changed
+      // because there's a substantive change in addition to CHANGELOG
+      const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+        enableFiltering: false,
+        includeExternalDependencies: false,
+        targetBranchName: 'main',
+        terminal,
+        excludeVersionOnlyChanges: true
+      });
+      expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(true);
+    });
+
+    describe('catalog change detection', () => {
+      function getCatalogRushConfiguration(): RushConfiguration {
+        return RushConfiguration.loadFromConfigurationFile(
+          resolve(__dirname, 'repoWithCatalogs', 'rush.json')
+        );
+      }
+
+      function mockPnpmConfigChanged(): void {
+        mockGetRepoChanges.mockReturnValue(
+          new Map<string, IFileDiffStatus>([
+            [
+              'common/config/rush/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash', oldhash: 'oldhash', status: 'M' }
+            ]
+          ])
+        );
+      }
+
+      function mockOldCatalogs(catalogs: Record<string, Record<string, string>>): void {
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.resolve(JSON.stringify({ globalCatalogs: catalogs }));
+        });
+      }
+
+      it('detects change to default catalog', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // react version bumped in the default catalog
+        mockOldCatalogs({
+          default: { react: '^17.0.0', semver: '^7.5.4' },
+          tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'a' uses "catalog:" (default) for react (changed) and semver
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(true);
+        // 'd' uses "catalog:" (default) for semver only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'b' uses "catalog:tools" only — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(false);
+        // 'e' uses "catalog:tools" for eslint only — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('detects change to named catalog', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // typescript version bumped in the tools catalog
+        mockOldCatalogs({
+          default: { react: '^18.0.0', semver: '^7.5.4' },
+          tools: { typescript: '~5.2.0', eslint: '^8.50.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'b' uses "catalog:tools" for typescript (changed)
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(true);
+        // 'e' uses "catalog:tools" for eslint only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'a' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(false);
+        // 'd' uses "catalog:" (default) for semver — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('no changes when catalogs are unchanged', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // Old catalogs are identical to current
+        mockOldCatalogs({
+          default: { react: '^18.0.0', semver: '^7.5.4' },
+          tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        expect(changedProjects.size).toBe(0);
+      });
+
+      it('only marks projects whose specific catalog package changed, not all projects in the same catalog namespace', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // Only react changed in the default catalog; semver is unchanged
+        mockOldCatalogs({
+          default: { react: '^17.0.0', semver: '^7.5.4' },
+          tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'a' uses "catalog:" for react (changed) and semver (unchanged) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(true);
+        // 'd' uses "catalog:" for semver only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'b' uses "catalog:tools" for typescript — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(false);
+        // 'e' uses "catalog:tools" for eslint — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('marks project when its specific package version changed in catalog, even if other packages in same catalog are unchanged', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // Only semver changed in the default catalog; react is unchanged
+        mockOldCatalogs({
+          default: { react: '^18.0.0', semver: '^7.4.0' },
+          tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'a' uses "catalog:" for react (unchanged) and semver (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(true);
+        // 'd' uses "catalog:" for semver (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(true);
+        // 'b' uses "catalog:tools" for typescript — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(false);
+        // 'e' uses "catalog:tools" for eslint — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('only marks projects whose specific named catalog package changed', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // Only typescript changed in the tools catalog; eslint is unchanged
+        mockOldCatalogs({
+          default: { react: '^18.0.0', semver: '^7.5.4' },
+          tools: { typescript: '~5.2.0', eslint: '^8.50.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'b' uses "catalog:tools" for typescript (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(true);
+        // 'e' uses "catalog:tools" for eslint only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'a' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(false);
+        // 'd' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('marks project when its specific named catalog package changed', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // Only eslint changed in the tools catalog; typescript is unchanged
+        mockOldCatalogs({
+          default: { react: '^18.0.0', semver: '^7.5.4' },
+          tools: { typescript: '~5.3.0', eslint: '^8.40.0' }
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'e' uses "catalog:tools" for eslint (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(true);
+        // 'b' uses "catalog:tools" for typescript only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(false);
+        // 'a' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(false);
+        // 'd' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('all catalog-using projects marked as changed when no old catalog existed', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        // Old file did not exist in git
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.reject(new Error('fatal: path not found'));
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // All catalog-using projects detected: 'a' (default: react, semver), 'b' (tools: typescript), 'd' (default: semver), 'e' (tools: eslint)
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(true);
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(true);
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(true);
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(true);
+        // 'c' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('parses pnpm-config.json blobs containing comments (regression #5813)', async () => {
+        const rushConfiguration: RushConfiguration = getCatalogRushConfiguration();
+        mockPnpmConfigChanged();
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.resolve(
+            `// banner comment from rush init template\n` +
+              `/* block comment */\n` +
+              JSON.stringify({
+                globalCatalogs: {
+                  default: { react: '^18.0.0', semver: '^7.5.4' },
+                  tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+                }
+              })
+          );
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        expect(changedProjects.size).toBe(0);
+      });
+    });
+
+    describe('subspace catalog change detection', () => {
+      function getSubspaceCatalogRushConfiguration(): RushConfiguration {
+        return RushConfiguration.loadFromConfigurationFile(
+          resolve(__dirname, 'repoWithSubspacesCatalogs', 'rush.json')
+        );
+      }
+
+      it('detects change to default catalog in subspace', async () => {
+        const rushConfiguration: RushConfiguration = getSubspaceCatalogRushConfiguration();
+
+        // Only the subspace pnpm-config.json changed
+        mockGetRepoChanges.mockReturnValue(
+          new Map<string, IFileDiffStatus>([
+            [
+              'common/config/subspaces/project-change-analyzer-test-subspace/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash', oldhash: 'oldhash', status: 'M' }
+            ]
+          ])
+        );
+
+        // foo version bumped in the default catalog
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.resolve(
+            JSON.stringify({
+              globalCatalogs: {
+                default: { foo: '~1.0.0', bar: '^3.0.0' },
+                tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+              }
+            })
+          );
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'd' uses "catalog:" (default) for foo (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(true);
+        // 'g' uses "catalog:" (default) for bar only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('g')!)).toBe(false);
+        // 'e' uses "catalog:tools" for typescript — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'h' uses "catalog:tools" for eslint — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('h')!)).toBe(false);
+        // 'f' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('f')!)).toBe(false);
+        // default subspace projects should not be affected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(false);
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(false);
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+      });
+
+      it('detects change to named catalog in subspace', async () => {
+        const rushConfiguration: RushConfiguration = getSubspaceCatalogRushConfiguration();
+
+        // Only the subspace pnpm-config.json changed
+        mockGetRepoChanges.mockReturnValue(
+          new Map<string, IFileDiffStatus>([
+            [
+              'common/config/subspaces/project-change-analyzer-test-subspace/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash', oldhash: 'oldhash', status: 'M' }
+            ]
+          ])
+        );
+
+        // typescript version bumped in the tools catalog
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.resolve(
+            JSON.stringify({
+              globalCatalogs: {
+                default: { foo: '~2.0.0', bar: '^3.0.0' },
+                tools: { typescript: '~5.2.0', eslint: '^8.50.0' }
+              }
+            })
+          );
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'e' uses "catalog:tools" for typescript (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(true);
+        // 'h' uses "catalog:tools" for eslint only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('h')!)).toBe(false);
+        // 'd' uses "catalog:" (default) for foo — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'g' uses "catalog:" (default) for bar — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('g')!)).toBe(false);
+        // 'f' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('f')!)).toBe(false);
+        // default subspace projects should not be affected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(false);
+      });
+
+      it('only marks subspace projects whose specific default catalog package changed', async () => {
+        const rushConfiguration: RushConfiguration = getSubspaceCatalogRushConfiguration();
+
+        mockGetRepoChanges.mockReturnValue(
+          new Map<string, IFileDiffStatus>([
+            [
+              'common/config/subspaces/project-change-analyzer-test-subspace/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash', oldhash: 'oldhash', status: 'M' }
+            ]
+          ])
+        );
+
+        // Only bar changed in the default catalog; foo is unchanged
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.resolve(
+            JSON.stringify({
+              globalCatalogs: {
+                default: { foo: '~2.0.0', bar: '^2.0.0' },
+                tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+              }
+            })
+          );
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'g' uses "catalog:" for bar (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('g')!)).toBe(true);
+        // 'd' uses "catalog:" for foo only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'e' uses "catalog:tools" — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'h' uses "catalog:tools" — tools catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('h')!)).toBe(false);
+        // 'f' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('f')!)).toBe(false);
+      });
+
+      it('only marks subspace projects whose specific named catalog package changed', async () => {
+        const rushConfiguration: RushConfiguration = getSubspaceCatalogRushConfiguration();
+
+        mockGetRepoChanges.mockReturnValue(
+          new Map<string, IFileDiffStatus>([
+            [
+              'common/config/subspaces/project-change-analyzer-test-subspace/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash', oldhash: 'oldhash', status: 'M' }
+            ]
+          ])
+        );
+
+        // Only eslint changed in the tools catalog; typescript is unchanged
+        mockGetBlobContentAsync.mockImplementation(() => {
+          return Promise.resolve(
+            JSON.stringify({
+              globalCatalogs: {
+                default: { foo: '~2.0.0', bar: '^3.0.0' },
+                tools: { typescript: '~5.3.0', eslint: '^8.40.0' }
+              }
+            })
+          );
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'h' uses "catalog:tools" for eslint (changed) — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('h')!)).toBe(true);
+        // 'e' uses "catalog:tools" for typescript only (unchanged) — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'd' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(false);
+        // 'g' uses "catalog:" (default) — default catalog is unchanged
+        expect(changedProjects.has(rushConfiguration.getProjectByName('g')!)).toBe(false);
+        // 'f' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('f')!)).toBe(false);
+      });
+
+      it('detects changes when multiple subspace pnpm-configs have catalog changes', async () => {
+        const rushConfiguration: RushConfiguration = getSubspaceCatalogRushConfiguration();
+
+        // Both the default subspace and named subspace pnpm-config.json files changed
+        mockGetRepoChanges.mockReturnValue(
+          new Map<string, IFileDiffStatus>([
+            [
+              'common/config/subspaces/default/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash1', oldhash: 'oldhash1', status: 'M' }
+            ],
+            [
+              'common/config/subspaces/project-change-analyzer-test-subspace/pnpm-config.json',
+              { mode: 'modified', newhash: 'newhash2', oldhash: 'oldhash2', status: 'M' }
+            ]
+          ])
+        );
+
+        // Return old catalogs based on which config is being read
+        mockGetBlobContentAsync.mockImplementation((opts: { blobSpec: string; repositoryRoot: string }) => {
+          if (opts.blobSpec.includes('default/pnpm-config.json')) {
+            // react version bumped in the default subspace
+            return Promise.resolve(JSON.stringify({ globalCatalogs: { default: { react: '^17.0.0' } } }));
+          }
+          if (opts.blobSpec.includes('project-change-analyzer-test-subspace/pnpm-config.json')) {
+            // foo version bumped in the named subspace; bar, tools unchanged
+            return Promise.resolve(
+              JSON.stringify({
+                globalCatalogs: {
+                  default: { foo: '~1.0.0', bar: '^3.0.0' },
+                  tools: { typescript: '~5.3.0', eslint: '^8.50.0' }
+                }
+              })
+            );
+          }
+          return Promise.resolve('{}');
+        });
+
+        const projectChangeAnalyzer: ProjectChangeAnalyzer = new ProjectChangeAnalyzer(rushConfiguration);
+        const terminal: Terminal = new Terminal(new StringBufferTerminalProvider(true));
+
+        const changedProjects = await projectChangeAnalyzer.getChangedProjectsAsync({
+          enableFiltering: false,
+          includeExternalDependencies: false,
+          targetBranchName: 'main',
+          terminal
+        });
+
+        // 'a' uses "catalog:" (default) for react in the default subspace — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('a')!)).toBe(true);
+        // 'd' uses "catalog:" (default) for foo (changed) in the named subspace — should be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('d')!)).toBe(true);
+        // 'g' uses "catalog:" (default) for bar (unchanged) in the named subspace — should NOT be detected
+        expect(changedProjects.has(rushConfiguration.getProjectByName('g')!)).toBe(false);
+        // 'b' has no catalog deps in default subspace
+        expect(changedProjects.has(rushConfiguration.getProjectByName('b')!)).toBe(false);
+        // 'c' has no catalog deps in default subspace
+        expect(changedProjects.has(rushConfiguration.getProjectByName('c')!)).toBe(false);
+        // 'e' uses "catalog:tools" for typescript — tools catalog is unchanged in the named subspace
+        expect(changedProjects.has(rushConfiguration.getProjectByName('e')!)).toBe(false);
+        // 'h' uses "catalog:tools" for eslint — tools catalog is unchanged in the named subspace
+        expect(changedProjects.has(rushConfiguration.getProjectByName('h')!)).toBe(false);
+        // 'f' has no catalog deps
+        expect(changedProjects.has(rushConfiguration.getProjectByName('f')!)).toBe(false);
+      });
+    });
+  });
+
+  describe('isPackageJsonVersionOnlyChange', () => {
+    it('returns true when only version field changed', () => {
+      const oldContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.0',
+        description: 'Test package',
+        dependencies: { foo: '1.0.0' }
+      });
+      const newContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.1',
+        description: 'Test package',
+        dependencies: { foo: '1.0.0' }
+      });
+
+      expect(isPackageJsonVersionOnlyChange(oldContent, newContent)).toBe(true);
+    });
+
+    it('returns false when other fields changed', () => {
+      const oldContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.0',
+        description: 'Test package',
+        dependencies: { foo: '1.0.0' }
+      });
+      const newContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.1',
+        description: 'Test package',
+        dependencies: { foo: '1.0.1' }
+      });
+
+      expect(isPackageJsonVersionOnlyChange(oldContent, newContent)).toBe(false);
+    });
+
+    it('returns false when version field is missing in old content', () => {
+      const oldContent = JSON.stringify({
+        name: 'test-package',
+        description: 'Test package'
+      });
+      const newContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.1',
+        description: 'Test package'
+      });
+
+      expect(isPackageJsonVersionOnlyChange(oldContent, newContent)).toBe(false);
+    });
+
+    it('returns false when version field is missing in new content', () => {
+      const oldContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.0',
+        description: 'Test package'
+      });
+      const newContent = JSON.stringify({
+        name: 'test-package',
+        description: 'Test package'
+      });
+
+      expect(isPackageJsonVersionOnlyChange(oldContent, newContent)).toBe(false);
+    });
+
+    it('returns false when JSON is invalid', () => {
+      const oldContent = 'invalid json';
+      const newContent = '{ "name": "test" }';
+
+      expect(isPackageJsonVersionOnlyChange(oldContent, newContent)).toBe(false);
+    });
+
+    it('returns true even with whitespace differences', () => {
+      const oldContent = JSON.stringify(
+        {
+          name: 'test-package',
+          version: '1.0.0',
+          description: 'Test package'
+        },
+        null,
+        2
+      );
+      const newContent = JSON.stringify({
+        name: 'test-package',
+        version: '1.0.1',
+        description: 'Test package'
+      });
+
+      expect(isPackageJsonVersionOnlyChange(oldContent, newContent)).toBe(true);
+    });
+  });
+
+  describe('isPackageJsonVersionBumpChange', () => {
+    it('accepts arbitrary peer dependency changes with a version bump', () => {
+      expect(
+        isPackageJsonVersionBumpChange(
+          {
+            name: 'consumer',
+            version: '1.0.0',
+            peerDependencies: { dependency: '^1.0.0' }
+          },
+          {
+            name: 'consumer',
+            version: '1.0.1',
+            peerDependencies: {
+              anotherDependency: 'workspace:*',
+              dependency: 'file:../dependency'
+            }
+          }
+        )
+      ).toBe(true);
+    });
+
+    it('rejects peer dependency changes without a version bump', () => {
+      expect(
+        isPackageJsonVersionBumpChange(
+          {
+            name: 'consumer',
+            version: '1.0.0',
+            peerDependencies: { dependency: '^1.0.0' }
+          },
+          {
+            name: 'consumer',
+            version: '1.0.0',
+            peerDependencies: { dependency: '^2.0.0' }
+          }
+        )
+      ).toBe(false);
+    });
+
+    it.each(['dependencies', 'devDependencies', 'optionalDependencies'] as const)(
+      'rejects a version bump with a %s change',
+      (dependencyFieldName) => {
+        expect(
+          isPackageJsonVersionBumpChange(
+            {
+              name: 'consumer',
+              version: '1.0.0',
+              [dependencyFieldName]: { dependency: '^1.0.0' }
+            },
+            {
+              name: 'consumer',
+              version: '1.0.1',
+              [dependencyFieldName]: { dependency: '^2.0.0' }
+            }
+          )
+        ).toBe(false);
+      }
+    );
+
+    it('rejects a version bump with an unrelated field change', () => {
+      expect(
+        isPackageJsonVersionBumpChange(
+          {
+            name: 'consumer',
+            version: '1.0.0',
+            description: 'Old description'
+          },
+          {
+            name: 'consumer',
+            version: '1.0.1',
+            description: 'New description'
+          }
+        )
+      ).toBe(false);
     });
   });
 });
+
+/**
+ * Create a fake pnpm-lock.yaml content matches "libraries/rush-lib/src/logic/test/repoWithSubspaces" test repo
+ */
+function _getMockedPnpmShrinkwrapFile(): string {
+  return `lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: false
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  ../../../d:
+    dependencies:
+      foo:
+        specifier: ~1.0.0
+        version: 1.0.1
+
+  ../../../e:
+    dependencies:
+      d:
+        specifier: workspace:*
+        version: link:../../../d
+
+  ../../../f:
+    dependencies:
+
+packages:
+
+  foo@1.0.1:
+    resolution: {integrity: 'foo_1_0_1'}
+
+snapshots:
+
+  foo@1.0.1: {}
+`;
+}

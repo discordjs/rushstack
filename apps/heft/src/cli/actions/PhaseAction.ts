@@ -15,39 +15,41 @@ export interface IPhaseActionOptions extends IHeftActionOptions {
 export class PhaseAction extends CommandLineAction implements IHeftAction {
   public readonly watch: boolean;
 
-  private readonly _actionRunner: HeftActionRunner;
-  private readonly _phase: HeftPhase;
-  private _selectedPhases: Set<HeftPhase> | undefined;
+  readonly #actionRunner: HeftActionRunner;
+  readonly #phase: HeftPhase;
+  #selectedPhases: Set<HeftPhase> | undefined;
 
   public constructor(options: IPhaseActionOptions) {
+    const { phase, watch = false } = options;
+    const { phaseName, phaseDescription } = phase;
     super({
-      actionName: `${options.phase.phaseName}${options.watch ? '-watch' : ''}`,
+      actionName: `${phaseName}${watch ? '-watch' : ''}`,
       documentation:
-        `Runs to the ${options.phase.phaseName} phase, including all transitive dependencies` +
-        (options.watch ? ', in watch mode.' : '.') +
-        (options.phase.phaseDescription ? `  ${options.phase.phaseDescription}` : ''),
+        `Runs to the ${phaseName} phase, including all transitive dependencies` +
+        (watch ? ', in watch mode.' : '.') +
+        (phaseDescription ? `  ${phaseDescription}` : ''),
       summary:
-        `Runs to the ${options.phase.phaseName} phase, including all transitive dependencies` +
-        (options.watch ? ', in watch mode.' : '.')
+        `Runs to the ${phaseName} phase, including all transitive dependencies` +
+        (watch ? ', in watch mode.' : '.')
     });
 
-    this.watch = options.watch ?? false;
-    this._phase = options.phase;
-    this._actionRunner = new HeftActionRunner({ action: this, ...options });
-    this._actionRunner.defineParameters();
+    this.watch = watch;
+    this.#phase = phase;
+    this.#actionRunner = new HeftActionRunner({ action: this, ...options });
+    this.#actionRunner.defineParameters();
   }
 
   public get selectedPhases(): ReadonlySet<HeftPhase> {
-    if (!this._selectedPhases) {
-      this._selectedPhases = Selection.recursiveExpand(
-        [this._phase],
+    if (!this.#selectedPhases) {
+      this.#selectedPhases = Selection.recursiveExpand(
+        [this.#phase],
         (phase: HeftPhase) => phase.dependencyPhases
       );
     }
-    return this._selectedPhases;
+    return this.#selectedPhases;
   }
 
   protected override async onExecuteAsync(): Promise<void> {
-    await this._actionRunner.executeAsync();
+    await this.#actionRunner.executeAsync();
   }
 }

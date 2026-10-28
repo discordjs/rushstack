@@ -1,6 +1,253 @@
 # Change Log - @rushstack/heft-jest-plugin
 
-This log was last generated on Tue, 04 Nov 2025 08:15:14 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 2.0.21
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 2.0.20
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 2.0.19
+Mon, 28 Sep 2026 20:08:27 GMT
+
+_Version update only_
+
+## 2.0.18
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 2.0.17
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 2.0.16
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 2.0.15
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 2.0.14
+Thu, 20 Aug 2026 00:16:38 GMT
+
+### Patches
+
+- Compile package output for ES2022.
+
+## 2.0.13
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 2.0.12
+Tue, 21 Jul 2026 02:53:22 GMT
+
+_Version update only_
+
+## 2.0.11
+Fri, 17 Jul 2026 00:15:59 GMT
+
+### Patches
+
+- Replace `@override` with the `override` keyword.
+
+## 2.0.10
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 2.0.9
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 2.0.8
+Wed, 10 Jun 2026 00:15:42 GMT
+
+### Patches
+
+- Fix an issue where the `--test-path-pattern` parameter was ignored, causing all tests to run. In Jest 30 the `Config.Argv` field was renamed from `testPathPattern` to `testPathPatterns`.
+
+## 2.0.7
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 2.0.6
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 2.0.5
+Mon, 20 Apr 2026 15:15:24 GMT
+
+_Version update only_
+
+## 2.0.4
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 2.0.3
+Sat, 18 Apr 2026 00:15:17 GMT
+
+_Version update only_
+
+## 2.0.2
+Fri, 17 Apr 2026 15:14:57 GMT
+
+### Patches
+
+- Remove dependecy on `lodash`.
+
+## 2.0.1
+Wed, 15 Apr 2026 17:59:12 GMT
+
+### Patches
+
+- Remove the built-in `jest-global-setup` script as Jest 30 ships with the `mocked` function as `jest.mocked`, so including it as a global is now nonstandard.
+
+## 2.0.0
+Tue, 14 Apr 2026 01:25:46 GMT
+
+### Breaking changes
+
+- Bump jest to 30.3.0 to address CVE GHSA-vpq2-c234-7xj6
+
+## 1.2.12
+Fri, 10 Apr 2026 22:46:34 GMT
+
+_Version update only_
+
+## 1.2.11
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 1.2.10
+Sat, 04 Apr 2026 00:14:00 GMT
+
+### Patches
+
+- Bump lodash 4.18.1 to address CVEs GHSA-r5fr-rjxr-66jc, GHSA-f23m-r3pf-42rh
+
+## 1.2.9
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 1.2.8
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 1.2.7
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 1.2.6
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 1.2.5
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 1.2.4
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 1.2.3
+Mon, 23 Feb 2026 00:42:21 GMT
+
+### Patches
+
+- Add missing "./includes/*.json" to the package.json "exports" field so that Jest config files like "@rushstack/heft-jest-plugin/includes/jest-shared.config.json" are importable.
+
+## 1.2.2
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 1.2.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 1.2.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 1.1.14
+Sat, 07 Feb 2026 01:13:26 GMT
+
+### Patches
+
+- Upgrade `lodash` dependency from `~4.17.15` to `~4.17.23`.
+
+## 1.1.13
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 1.1.12
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 1.1.11
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 1.1.10
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 1.1.9
+Wed, 07 Jan 2026 01:12:25 GMT
+
+_Version update only_
+
+## 1.1.8
+Mon, 05 Jan 2026 16:12:50 GMT
+
+_Version update only_
+
+## 1.1.7
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 1.1.6
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 1.1.5
+Wed, 12 Nov 2025 01:12:56 GMT
+
+_Version update only_
 
 ## 1.1.4
 Tue, 04 Nov 2025 08:15:14 GMT

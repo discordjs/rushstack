@@ -3,8 +3,29 @@
   "version": "1.0.0",
   "private": true,
   "description": "API Documenter plugin used with the rushstack.io website",
-  "main": "lib/index.js",
-  "typings": "lib/index.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./lib-dts/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib-dts/index.d.ts",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "scripts": {
     "build": "heft build --clean",
@@ -13,9 +34,9 @@
   "dependencies": {
     "@microsoft/api-documenter": "workspace:*",
     "@microsoft/api-extractor-model": "workspace:*",
-    "@microsoft/tsdoc": "~0.15.1",
+    "@microsoft/tsdoc": "~0.17.0",
     "@rushstack/node-core-library": "workspace:*",
-    "js-yaml": "~4.1.0"
+    "js-yaml": "~4.3.2"
   },
   "devDependencies": {
     "@rushstack/heft": "workspace:*",

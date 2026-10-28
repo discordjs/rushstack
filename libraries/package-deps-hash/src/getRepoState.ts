@@ -2,10 +2,14 @@
 // See LICENSE in the project root for license information.
 
 import type * as child_process from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { once } from 'node:events';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { Readable, pipeline } from 'node:stream';
 
-import { Executable, FileSystem, type IExecutableSpawnOptions } from '@rushstack/node-core-library';
+import { Executable, type IExecutableSpawnOptions } from '@rushstack/node-core-library/lib/Executable';
+import { FileSystem } from '@rushstack/node-core-library/lib/FileSystem';
 
 export interface IGitVersion {
   major: number;
@@ -15,11 +19,15 @@ export interface IGitVersion {
 
 const MINIMUM_GIT_VERSION: IGitVersion = {
   major: 2,
-  minor: 20,
+  minor: 35,
   patch: 0
 };
 
-const STANDARD_GIT_OPTIONS: readonly string[] = [
+/**
+ * The options for every read-only Git command.
+ * @internal
+ */
+export const STANDARD_GIT_OPTIONS: readonly string[] = [
   // Don't request any optional file locks
   '--no-optional-locks',
   // Ensure that commands don't run automatic maintenance, since performance of the command itself is paramount
@@ -27,17 +35,73 @@ const STANDARD_GIT_OPTIONS: readonly string[] = [
   'maintenance.auto=false'
 ];
 
-interface IGitTreeState {
+// Windows reserved device names (case-insensitive). A file whose final path segment matches one
+// of these (with or without an extension) cannot be opened by name on Windows, so passing it to
+// `git hash-object` aborts the process. Such files are typically untracked artifacts left behind
+// by tooling (e.g. stray `nul` from a shell redirect).
+const WINDOWS_RESERVED_BASENAMES: ReadonlySet<string> = new Set([
+  'CON',
+  'PRN',
+  'AUX',
+  'NUL',
+  'COM1',
+  'COM2',
+  'COM3',
+  'COM4',
+  'COM5',
+  'COM6',
+  'COM7',
+  'COM8',
+  'COM9',
+  'LPT1',
+  'LPT2',
+  'LPT3',
+  'LPT4',
+  'LPT5',
+  'LPT6',
+  'LPT7',
+  'LPT8',
+  'LPT9'
+]);
+
+/**
+ * Returns `true` if `filePath`'s final path segment is a Windows reserved device name
+ * (with or without an extension), case-insensitively. Exported for tests.
+ * @internal
+ */
+export function isWindowsReservedPath(filePath: string): boolean {
+  const lastSlash: number = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+  const basename: string = lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
+  const dot: number = basename.indexOf('.');
+  const stem: string = (dot >= 0 ? basename.slice(0, dot) : basename).toUpperCase();
+  return WINDOWS_RESERVED_BASENAMES.has(stem);
+}
+
+const OBJECTMODE_SUBMODULE: '160000' = '160000';
+const OBJECTMODE_SYMLINK: '120000' = '120000';
+const OBJECTMODE_FILE_NONEXECUTABLE: '100644' = '100644';
+const OBJECTMODE_FILE_EXECUTABLE: '100755' = '100755';
+
+// Note that `type` is a stub that is being ignored by the parser in favor of using `mode` to infer, since `%(objecttype)` requires git 2.51.0+
+// e.g. 10644 blob <hash>\t<path>
+const GIT_LSTREE_FORMAT: string = '%(objectmode) type %(objectname)%x09%(path)';
+
+/**
+ * @internal
+ */
+export interface IGitTreeState {
   files: Map<string, string>; // type "blob"
+  symlinks: Map<string, string>; // type "link"
   submodules: Map<string, string>; // type "commit"
 }
 
 /**
- * Parses the output of the "git ls-tree -r -z" command
+ * Parses the output of the "git ls-tree -r -z" command or of other commands that have been coerced to match its format.
  * @internal
  */
 export function parseGitLsTree(output: string): IGitTreeState {
   const files: Map<string, string> = new Map();
+  const symlinks: Map<string, string> = new Map();
   const submodules: Map<string, string> = new Map();
 
   // Parse the output
@@ -57,16 +121,21 @@ export function parseGitLsTree(output: string): IGitTreeState {
     // The newHash will be all zeros if the file is deleted, or a hash if it exists
     const hash: string = item.slice(tabIndex - 40, tabIndex);
 
-    const spaceIndex: number = item.lastIndexOf(' ', tabIndex - 42);
+    const mode: string = item.slice(0, item.indexOf(' '));
 
-    const type: string = item.slice(spaceIndex + 1, tabIndex - 41);
-
-    switch (type) {
-      case 'commit': {
+    switch (mode) {
+      case OBJECTMODE_SUBMODULE: {
+        // This is a submodule
         submodules.set(filePath, hash);
         break;
       }
-      case 'blob':
+      case OBJECTMODE_SYMLINK: {
+        // This is a symbolic link
+        symlinks.set(filePath, hash);
+        break;
+      }
+      case OBJECTMODE_FILE_NONEXECUTABLE:
+      case OBJECTMODE_FILE_EXECUTABLE:
       default: {
         files.set(filePath, hash);
         break;
@@ -79,6 +148,7 @@ export function parseGitLsTree(output: string): IGitTreeState {
 
   return {
     files,
+    symlinks,
     submodules
   };
 }
@@ -176,14 +246,25 @@ export function parseGitDiffIndex(output: string): Map<string, IFileDiffStatus> 
 }
 
 /**
+ * What `git status` reports about a path:
+ * - `deleted`: the path is deleted in the working tree, or deleted in the index and not modified in the working tree.
+ * - `indexOnly`: only the index differs from HEAD. Git uses the object in the index for the working tree, and
+ *   doesn't read the file if sparse checkout leaves it out or if the index marks it "assume unchanged" or
+ *   "skip worktree", so the file may not be on disk.
+ * - `workingTree`: the working tree differs from the index, or the path is untracked or unmerged.
+ * @internal
+ */
+export type GitStatusKind = 'deleted' | 'indexOnly' | 'workingTree';
+
+/**
  * Parses the output of `git status -z -u` to extract the set of files that have changed since HEAD.
  *
  * @param output - The raw output from Git
- * @returns a map of file path to if it exists
+ * @returns a map of file path to what `git status` reports about it
  * @internal
  */
-export function parseGitStatus(output: string): Map<string, boolean> {
-  const result: Map<string, boolean> = new Map();
+export function parseGitStatus(output: string): Map<string, GitStatusKind> {
+  const result: Map<string, GitStatusKind> = new Map();
 
   // Parse the output
   // With the -z modifier, paths are delimited by nulls
@@ -197,12 +278,18 @@ export function parseGitStatus(output: string): Map<string, boolean> {
     // We passed --no-renames above, so a rename will be a delete of the old location and an add at the new.
     // charAt(startOfLine) is the index status, charAt(startOfLine + 1) is the working tree status
     const workingTreeStatus: string = output.charAt(startOfLine + 1);
-    // Deleted in working tree, or not modified in working tree and deleted in index
-    const deleted: boolean =
-      workingTreeStatus === 'D' || (workingTreeStatus === ' ' && output.charAt(startOfLine) === 'D');
+    let kind: GitStatusKind;
+    if (workingTreeStatus === 'D' || (workingTreeStatus === ' ' && output.charAt(startOfLine) === 'D')) {
+      // Deleted in working tree, or not modified in working tree and deleted in index
+      kind = 'deleted';
+    } else if (workingTreeStatus === ' ') {
+      kind = 'indexOnly';
+    } else {
+      kind = 'workingTree';
+    }
 
     const filePath: string = output.slice(startOfLine + 3, eolIndex);
-    result.set(filePath, !deleted);
+    result.set(filePath, kind);
 
     startOfLine = eolIndex + 1;
     eolIndex = output.indexOf('\0', startOfLine);
@@ -212,6 +299,17 @@ export function parseGitStatus(output: string): Map<string, boolean> {
 }
 
 const repoRootCache: Map<string, string> = new Map();
+
+/**
+ * Strip GIT_DIR/GIT_WORK_TREE: git hooks in linked worktrees set GIT_DIR to the per-worktree metadata dir, causing
+ * rev-parse --show-toplevel to return CWD instead of the worktree root.
+ * @internal
+ */
+export function getCleanGitEnvironment(): NodeJS.ProcessEnv {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { GIT_DIR, GIT_WORK_TREE, ...trimmedEnv } = process.env;
+  return trimmedEnv;
+}
 
 /**
  * Finds the root of the current Git repository
@@ -229,7 +327,8 @@ export function getRepoRoot(currentWorkingDirectory: string, gitPath?: string): 
       gitPath || 'git',
       ['--no-optional-locks', 'rev-parse', '--show-toplevel'],
       {
-        currentWorkingDirectory
+        currentWorkingDirectory,
+        environment: getCleanGitEnvironment()
       }
     );
 
@@ -255,16 +354,20 @@ export function getRepoRoot(currentWorkingDirectory: string, gitPath?: string): 
  * @param args - The process arguments
  * @param currentWorkingDirectory - The working directory. Should be the repository root.
  * @param stdin - An optional Readable stream to use as stdin to the process.
+ * @param environment - The environment of the process. Defaults to {@link getCleanGitEnvironment}.
+ * @internal
  */
-async function spawnGitAsync(
+export async function spawnGitAsync(
   gitPath: string | undefined,
   args: string[],
   currentWorkingDirectory: string,
-  stdin?: Readable
+  stdin?: Readable,
+  environment: NodeJS.ProcessEnv = getCleanGitEnvironment()
 ): Promise<string> {
   const spawnOptions: IExecutableSpawnOptions = {
     currentWorkingDirectory,
-    stdio: ['pipe', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe'],
+    environment
   };
 
   let stdout: string = '';
@@ -292,10 +395,29 @@ async function spawnGitAsync(
 
   const [status] = await once(proc, 'close');
   if (status !== 0) {
-    throw new Error(`git ${args[0]} exited with code ${status}:\n${stderr}`);
+    ensureGitMinimumVersion(gitPath);
+
+    throw new Error(`git ${getGitCommandName(args)} exited with code ${status}:\n${stderr}`);
   }
 
   return stdout;
+}
+
+/**
+ * Returns the Git command in the arguments, rather than the first of the options in front of it.
+ */
+function getGitCommandName(args: ReadonlyArray<string>): string | undefined {
+  for (let i: number = 0; i < args.length; i++) {
+    const arg: string = args[i];
+    if (arg === '-c') {
+      // Skip the value of a configuration option
+      i++;
+    } else if (!arg.startsWith('-')) {
+      return arg;
+    }
+  }
+
+  return undefined;
 }
 
 function isIterable<T>(value: Iterable<T> | AsyncIterable<T>): value is Iterable<T> {
@@ -354,6 +476,124 @@ export async function hashFilesAsync(
 }
 
 /**
+ * If the path is a symbolic link that doesn't lead to a regular file, returns the object that `git add` records for
+ * it: a blob of the text of the link. Otherwise returns `undefined`.
+ *
+ * @remarks
+ * `git hash-object` follows symbolic links. It fails if the target is missing, is a folder or is a loop of links, and
+ * it waits for a named pipe to be written. A symbolic link to a regular file is left to it.
+ * @param fullPath - The full path of the file
+ * @internal
+ */
+export async function tryGetSymbolicLinkHashAsync(fullPath: string): Promise<string | undefined> {
+  let linkText: Buffer;
+  try {
+    // The text may not be valid UTF-8
+    linkText = await fs.promises.readlink(fullPath, { encoding: 'buffer' });
+  } catch {
+    // Not a symbolic link. "git hash-object" reports any error.
+    return undefined;
+  }
+
+  try {
+    if ((await fs.promises.stat(fullPath)).isFile()) {
+      return undefined;
+    }
+  } catch {
+    // The target is missing, or can't be reached
+  }
+
+  return createHash('sha1').update(`blob ${linkText.length}\0`).update(linkText).digest('hex');
+}
+
+/**
+ * The arguments of the `git ls-files` command that lists the files in the index in the format of `git ls-tree`.
+ * @internal
+ */
+export function getGitLsFilesArgs(filterPath: ReadonlyArray<string> | undefined): string[] {
+  return [
+    'ls-files',
+    // Read from the index only
+    '--cached',
+    // Use NUL as the separator
+    '-z',
+    // Specify the full path to files relative to the root
+    '--full-name',
+    // Match the format of "git ls-tree". The %(objecttype) placeholder requires git 2.51.0+, so not using yet.
+    `--format=${GIT_LSTREE_FORMAT}`,
+    '--',
+    ...(filterPath ?? [])
+  ];
+}
+
+/**
+ * The arguments of the `git status` command that lists the files that differ from the index or from HEAD, and the
+ * untracked files. Its output is parsed by {@link parseGitStatus}.
+ * @internal
+ */
+export function getGitStatusArgs(filterPath: ReadonlyArray<string> | undefined): string[] {
+  return [
+    'status',
+    // Use NUL as the separator
+    '-z',
+    // Include untracked files
+    '-u',
+    // Disable rename detection so that renames show up as add + delete
+    '--no-renames',
+    // Don't process submodules with this command; they'll be handled individually
+    '--ignore-submodules',
+    // Don't compare against the remote
+    '--no-ahead-behind',
+    '--',
+    ...(filterPath ?? [])
+  ];
+}
+
+/**
+ * The locally modified files that `git status` reports, split into those to hash with `git hash-object` and those
+ * to remove from the state of the repository.
+ * @internal
+ */
+export interface ILocallyModifiedFiles {
+  filesToHash: string[];
+  filesToRemove: string[];
+}
+
+/**
+ * Splits the locally modified files that `git status` reports into those to hash and those to remove from the
+ * state of the repository: the deleted files and the files that the index records as symbolic links. A path whose
+ * working tree column is blank is in neither list, so that it keeps the object that the index records for it.
+ * @internal
+ */
+export function classifyLocallyModifiedFiles(
+  locallyModified: ReadonlyMap<string, GitStatusKind>,
+  symlinks: ReadonlyMap<string, string>
+): ILocallyModifiedFiles {
+  const filesToHash: string[] = [];
+  const filesToRemove: string[] = [];
+  const isWindows: boolean = process.platform === 'win32';
+  for (const [filePath, kind] of locallyModified) {
+    if (kind === 'indexOnly') {
+      // Git uses the object in the index, which the list of the index already has. The file may not be on disk.
+      continue;
+    }
+
+    if (kind === 'workingTree' && !symlinks.has(filePath)) {
+      // Skip Windows reserved device names. `git hash-object` cannot open them and would abort
+      // the entire repo-state computation. These are almost always stray artifacts (e.g. a `nul`
+      // file produced by a misdirected shell redirect) rather than meaningful inputs.
+      if (!isWindows || !isWindowsReservedPath(filePath)) {
+        filesToHash.push(filePath);
+      }
+    } else {
+      filesToRemove.push(filePath);
+    }
+  }
+
+  return { filesToHash, filesToRemove };
+}
+
+/**
  * Gets the object hashes for all files in the Git repo, combining the current commit with working tree state.
  * Uses async operations and runs all primary Git calls in parallel.
  * @param rootDirectory - The root directory of the Git repository
@@ -384,8 +624,16 @@ export async function getRepoStateAsync(
 export interface IDetailedRepoState {
   /**
    * The Git file hashes for all files in the repository, including uncommitted changes.
+   *
+   * @remarks
+   * A symbolic link that the index doesn't record as one, such as an untracked link, has the hash of the regular file
+   * that it leads to. If it doesn't lead to a regular file, it has the hash of its text, which `git add` would record.
    */
   files: Map<string, string>;
+  /**
+   * The Git file hashes for all symbolic links in the repository, including uncommitted changes.
+   */
+  symlinks: Map<string, string>;
   /**
    * A boolean indicating whether the repository has submodules.
    */
@@ -412,57 +660,49 @@ export async function getDetailedRepoStateAsync(
 ): Promise<IDetailedRepoState> {
   const statePromise: Promise<IGitTreeState> = spawnGitAsync(
     gitPath,
-    STANDARD_GIT_OPTIONS.concat([
-      'ls-tree',
-      // Recursively expand trees
-      '-r',
-      // Use NUL as the separator
-      '-z',
-      // Specify the full path to files relative to the root
-      '--full-name',
-      // As of last commit
-      'HEAD',
-      '--',
-      ...(filterPath ?? [])
-    ]),
+    STANDARD_GIT_OPTIONS.concat(getGitLsFilesArgs(filterPath)),
     rootDirectory
   ).then(parseGitLsTree);
-  const locallyModifiedPromise: Promise<Map<string, boolean>> = spawnGitAsync(
+  const locallyModifiedPromise: Promise<Map<string, GitStatusKind>> = spawnGitAsync(
     gitPath,
-    STANDARD_GIT_OPTIONS.concat([
-      'status',
-      // Use NUL as the separator
-      '-z',
-      // Include untracked files
-      '-u',
-      // Disable rename detection so that renames show up as add + delete
-      '--no-renames',
-      // Don't process submodules with this command; they'll be handled individually
-      '--ignore-submodules',
-      // Don't compare against the remote
-      '--no-ahead-behind',
-      '--',
-      ...(filterPath ?? [])
-    ]),
+    STANDARD_GIT_OPTIONS.concat(getGitStatusArgs(filterPath)),
     rootDirectory
   ).then(parseGitStatus);
 
-  async function* getFilesToHash(): AsyncIterableIterator<string> {
-    if (additionalRelativePathsToHash) {
-      for (const file of additionalRelativePathsToHash) {
-        yield file;
-      }
-    }
+  // Every path to hash, in order, and the hashes of the symbolic links that "git hash-object" can't follow
+  const pathsToHash: string[] = [];
+  const symbolicLinkHashes: Map<string, string> = new Map();
 
-    const [{ files }, locallyModified] = await Promise.all([statePromise, locallyModifiedPromise]);
-
-    for (const [filePath, exists] of locallyModified) {
-      if (exists) {
+  async function* filterSymbolicLinksAsync(filePaths: ReadonlyArray<string>): AsyncIterableIterator<string> {
+    const linkHashes: (string | undefined)[] = await Promise.all(
+      filePaths.map((filePath: string) => tryGetSymbolicLinkHashAsync(path.resolve(rootDirectory, filePath)))
+    );
+    for (let i: number = 0; i < filePaths.length; i++) {
+      const filePath: string = filePaths[i];
+      const linkHash: string | undefined = linkHashes[i];
+      pathsToHash.push(filePath);
+      if (linkHash === undefined) {
         yield filePath;
       } else {
-        files.delete(filePath);
+        symbolicLinkHashes.set(filePath, linkHash);
       }
     }
+  }
+
+  async function* getFilesToHash(): AsyncIterableIterator<string> {
+    if (additionalRelativePathsToHash) {
+      yield* filterSymbolicLinksAsync(additionalRelativePathsToHash);
+    }
+
+    const [{ files, symlinks }, locallyModified] = await Promise.all([statePromise, locallyModifiedPromise]);
+
+    const { filesToHash, filesToRemove } = classifyLocallyModifiedFiles(locallyModified, symlinks);
+    for (const filePath of filesToRemove) {
+      files.delete(filePath);
+      symlinks.delete(filePath);
+    }
+
+    yield* filterSymbolicLinksAsync(filesToHash);
   }
 
   const hashObjectPromise: Promise<Iterable<[string, string]>> = hashFilesAsync(
@@ -471,14 +711,22 @@ export async function getDetailedRepoStateAsync(
     gitPath
   );
 
-  const [{ files, submodules }, locallyModifiedFiles] = await Promise.all([
+  // Await all three at once. `git hash-object` can fail before the other two finish, for example on an additional
+  // path that does not exist. Its rejection needs a handler right away, or Node reports it as unhandled and exits.
+  const [{ files, symlinks, submodules }, locallyModifiedFiles, hashObjectResult] = await Promise.all([
     statePromise,
-    locallyModifiedPromise
+    locallyModifiedPromise,
+    hashObjectPromise
   ]);
 
-  // The result of "git hash-object" will be a list of file hashes delimited by newlines
-  for (const [filePath, hash] of await hashObjectPromise) {
-    files.set(filePath, hash);
+  // The result of "git hash-object" will be a list of file hashes delimited by newlines. Set the hashes in the order
+  // of the paths, so that new paths are in the same order as in RepoStateCache.
+  const hashes: Map<string, string> = new Map(hashObjectResult);
+  for (const filePath of pathsToHash) {
+    const hash: string | undefined = symbolicLinkHashes.get(filePath) ?? hashes.get(filePath);
+    if (hash !== undefined) {
+      files.set(filePath, hash);
+    }
   }
 
   // Existence check for the .gitmodules file
@@ -502,7 +750,8 @@ export async function getDetailedRepoStateAsync(
   return {
     hasSubmodules,
     hasUncommittedChanges: locallyModifiedFiles.size > 0,
-    files
+    files,
+    symlinks
   };
 }
 
@@ -535,7 +784,8 @@ export function getRepoChanges(
       '--'
     ]),
     {
-      currentWorkingDirectory: rootDirectory
+      currentWorkingDirectory: rootDirectory,
+      environment: getCleanGitEnvironment()
     }
   );
 

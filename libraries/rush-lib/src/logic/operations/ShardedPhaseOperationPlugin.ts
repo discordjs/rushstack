@@ -1,7 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved. Licensed under the MIT license.
 // See LICENSE in the project root for license information.
 
-import type { IPhase } from '../../api/CommandLineConfiguration';
 import type { IOperationSettings, RushProjectConfiguration } from '../../api/RushProjectConfiguration';
 import type {
   ICreateOperationsContext,
@@ -13,7 +12,8 @@ import { NullOperationRunner } from './NullOperationRunner';
 import { Operation } from './Operation';
 import { OperationStatus } from './OperationStatus';
 import {
-  getCustomParameterValuesByPhase,
+  getCustomParameterValuesByOperation,
+  type ICustomParameterValuesForOperation,
   getDisplayName,
   initializeShellOperationRunner
 } from './ShellOperationRunnerPlugin';
@@ -39,15 +39,15 @@ const TemplateStringRegexes = {
  */
 export class ShardedPhasedOperationPlugin implements IPhasedCommandPlugin {
   public apply(hooks: PhasedCommandHooks): void {
-    hooks.createOperations.tap(PLUGIN_NAME, spliceShards);
+    hooks.createOperationsAsync.tap(PLUGIN_NAME, spliceShards);
   }
 }
 
 function spliceShards(existingOperations: Set<Operation>, context: ICreateOperationsContext): Set<Operation> {
   const { rushConfiguration, projectConfigurations } = context;
 
-  const getCustomParameterValuesForPhase: (phase: IPhase) => ReadonlyArray<string> =
-    getCustomParameterValuesByPhase();
+  const getCustomParameterValues: (operation: Operation) => ICustomParameterValuesForOperation =
+    getCustomParameterValuesByOperation();
 
   for (const operation of existingOperations) {
     const {
@@ -119,10 +119,11 @@ function spliceShards(existingOperations: Set<Operation>, context: ICreateOperat
 
       const collatorDisplayName: string = `${getDisplayName(phase, project)} - collate`;
 
-      const customParameters: readonly string[] = getCustomParameterValuesForPhase(phase);
+      // Get the custom parameter values for the collator, filtered according to the operation settings
+      const { parameterValues: customParameterValues, ignoredParameterValues } =
+        getCustomParameterValues(operation);
 
-      const collatorParameters: string[] = [
-        ...customParameters,
+      const collatorArguments: string[] = [
         `--shard-parent-folder="${parentFolder}"`,
         `--shard-count="${shards}"`
       ];
@@ -136,8 +137,11 @@ function spliceShards(existingOperations: Set<Operation>, context: ICreateOperat
         project,
         displayName: collatorDisplayName,
         rushConfiguration,
-        commandToRun,
-        customParameterValues: collatorParameters
+        initialCommand: commandToRun,
+        incrementalCommand: undefined,
+        customParameterValues,
+        preformattedArguments: collatorArguments,
+        ignoredParameterValues
       });
 
       const shardOperationName: string = `${phase.name}:shard`;
@@ -193,21 +197,20 @@ function spliceShards(existingOperations: Set<Operation>, context: ICreateOperat
           shard.toString()
         );
 
-        const shardedParameters: string[] = [
-          ...customParameters,
-          shardArgument,
-          outputDirectoryArgumentWithShard
-        ];
+        const shardArguments: string[] = [shardArgument, outputDirectoryArgumentWithShard];
 
         const shardDisplayName: string = `${getDisplayName(phase, project)} - shard ${shard}/${shards}`;
 
         shardOperation.runner = initializeShellOperationRunner({
           phase,
           project,
-          commandToRun: baseCommand,
-          customParameterValues: shardedParameters,
+          initialCommand: baseCommand,
+          incrementalCommand: undefined,
+          customParameterValues,
+          preformattedArguments: shardArguments,
           displayName: shardDisplayName,
-          rushConfiguration
+          rushConfiguration,
+          ignoredParameterValues
         });
 
         shardOperation.addDependency(preShardOperation);

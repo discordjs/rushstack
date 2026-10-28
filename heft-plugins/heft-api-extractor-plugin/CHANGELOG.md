@@ -1,6 +1,222 @@
 # Change Log - @rushstack/heft-api-extractor-plugin
 
-This log was last generated on Tue, 04 Nov 2025 08:15:14 GMT and should not be manually modified.
+This log was last generated on Tue, 27 Oct 2026 00:20:25 GMT and should not be manually modified.
+
+## 1.3.31
+Tue, 27 Oct 2026 00:20:25 GMT
+
+_Version update only_
+
+## 1.3.30
+Tue, 06 Oct 2026 00:04:37 GMT
+
+_Version update only_
+
+## 1.3.29
+Mon, 28 Sep 2026 20:08:27 GMT
+
+_Version update only_
+
+## 1.3.28
+Tue, 22 Sep 2026 17:35:41 GMT
+
+_Version update only_
+
+## 1.3.27
+Mon, 14 Sep 2026 22:42:32 GMT
+
+_Version update only_
+
+## 1.3.26
+Sat, 05 Sep 2026 00:15:08 GMT
+
+_Version update only_
+
+## 1.3.25
+Fri, 21 Aug 2026 15:16:34 GMT
+
+_Version update only_
+
+## 1.3.24
+Thu, 20 Aug 2026 00:16:38 GMT
+
+_Version update only_
+
+## 1.3.23
+Fri, 14 Aug 2026 00:18:07 GMT
+
+_Version update only_
+
+## 1.3.22
+Tue, 21 Jul 2026 02:53:23 GMT
+
+_Version update only_
+
+## 1.3.21
+Fri, 17 Jul 2026 00:15:59 GMT
+
+_Version update only_
+
+## 1.3.20
+Thu, 16 Jul 2026 00:16:13 GMT
+
+_Version update only_
+
+## 1.3.19
+Sat, 13 Jun 2026 00:16:19 GMT
+
+_Version update only_
+
+## 1.3.18
+Mon, 08 Jun 2026 15:15:50 GMT
+
+_Version update only_
+
+## 1.3.17
+Mon, 20 Apr 2026 23:31:13 GMT
+
+_Version update only_
+
+## 1.3.16
+Mon, 20 Apr 2026 15:15:24 GMT
+
+_Version update only_
+
+## 1.3.15
+Sat, 18 Apr 2026 03:47:10 GMT
+
+_Version update only_
+
+## 1.3.14
+Sat, 18 Apr 2026 00:15:16 GMT
+
+### Patches
+
+- Bump semver.
+
+## 1.3.13
+Fri, 17 Apr 2026 15:14:57 GMT
+
+_Version update only_
+
+## 1.3.12
+Fri, 10 Apr 2026 22:46:34 GMT
+
+_Version update only_
+
+## 1.3.11
+Thu, 09 Apr 2026 00:15:07 GMT
+
+_Version update only_
+
+## 1.3.10
+Sat, 04 Apr 2026 00:14:00 GMT
+
+_Version update only_
+
+## 1.3.9
+Wed, 01 Apr 2026 15:13:38 GMT
+
+_Version update only_
+
+## 1.3.8
+Tue, 31 Mar 2026 15:14:15 GMT
+
+_Version update only_
+
+## 1.3.7
+Mon, 09 Mar 2026 15:14:08 GMT
+
+_Version update only_
+
+## 1.3.6
+Wed, 25 Feb 2026 21:39:42 GMT
+
+_Version update only_
+
+## 1.3.5
+Wed, 25 Feb 2026 00:34:29 GMT
+
+_Version update only_
+
+## 1.3.4
+Tue, 24 Feb 2026 01:13:27 GMT
+
+_Version update only_
+
+## 1.3.3
+Mon, 23 Feb 2026 00:42:21 GMT
+
+_Version update only_
+
+## 1.3.2
+Fri, 20 Feb 2026 16:14:49 GMT
+
+_Version update only_
+
+## 1.3.1
+Fri, 20 Feb 2026 00:15:04 GMT
+
+### Patches
+
+- Add `"node"` condition before `"import"` in the `"exports"` map so that Node.js uses the CJS output (which handles extensionless imports), while bundlers still use ESM via `"import"`. Fixes https://github.com/microsoft/rushstack/issues/5644.
+
+## 1.3.0
+Thu, 19 Feb 2026 00:04:52 GMT
+
+### Minor changes
+
+- Normalize package layout. CommonJS is now under `lib-commonjs`, DTS is now under `lib-dts`, and ESM is now under `lib-esm`. Imports to `lib` still work as before, handled by the `"exports"` field in `package.json`.
+
+## 1.2.10
+Sat, 07 Feb 2026 01:13:26 GMT
+
+_Version update only_
+
+## 1.2.9
+Wed, 04 Feb 2026 20:42:47 GMT
+
+_Version update only_
+
+## 1.2.8
+Wed, 04 Feb 2026 16:13:27 GMT
+
+_Version update only_
+
+## 1.2.7
+Fri, 30 Jan 2026 01:16:13 GMT
+
+_Version update only_
+
+## 1.2.6
+Thu, 08 Jan 2026 01:12:30 GMT
+
+_Version update only_
+
+## 1.2.5
+Wed, 07 Jan 2026 01:12:25 GMT
+
+_Version update only_
+
+## 1.2.4
+Mon, 05 Jan 2026 16:12:49 GMT
+
+_Version update only_
+
+## 1.2.3
+Sat, 06 Dec 2025 01:12:28 GMT
+
+_Version update only_
+
+## 1.2.2
+Fri, 21 Nov 2025 16:13:56 GMT
+
+_Version update only_
+
+## 1.2.1
+Wed, 12 Nov 2025 01:12:56 GMT
+
+_Version update only_
 
 ## 1.2.0
 Tue, 04 Nov 2025 08:15:14 GMT

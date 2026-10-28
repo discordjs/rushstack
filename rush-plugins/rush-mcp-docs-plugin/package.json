@@ -1,19 +1,46 @@
 {
   "name": "@rushstack/rush-mcp-docs-plugin",
-  "version": "0.2.4",
+  "version": "0.3.31",
   "description": "Docs plugin for @rushstack/mcp-server",
   "repository": {
     "url": "https://github.com/microsoft/rushstack.git",
     "type": "git",
     "directory": "rush-plugins/rush-mcp-docs-plugin"
   },
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "homepage": "https://rushjs.io",
-  "main": "lib/index.js",
-  "types": "lib/index.d.ts",
+  "main": "./lib-commonjs/index.js",
+  "module": "./lib-esm/index.js",
+  "types": "./lib-dts/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib-dts/index.d.ts",
+      "node": "./lib-commonjs/index.js",
+      "import": "./lib-esm/index.js",
+      "require": "./lib-commonjs/index.js"
+    },
+    "./lib/*": {
+      "types": "./lib-dts/*.d.ts",
+      "node": "./lib-commonjs/*.js",
+      "import": "./lib-esm/*.js",
+      "require": "./lib-commonjs/*.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "typesVersions": {
+    "*": {
+      "lib/*": [
+        "lib-dts/*"
+      ]
+    }
+  },
   "license": "MIT",
   "scripts": {
     "build": "heft build --clean",
     "_phase:build": "heft run --only build -- --clean",
+    "_phase:pack": "rush-pnpm pack",
     "_phase:test": "heft run --only test -- --clean"
   },
   "dependencies": {
@@ -25,5 +52,6 @@
     "eslint": "~9.37.0",
     "local-node-rig": "workspace:*",
     "local-eslint-config": "workspace:*"
-  }
+  },
+  "sideEffects": false
 }

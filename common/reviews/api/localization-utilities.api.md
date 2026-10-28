@@ -5,6 +5,7 @@
 ```ts
 
 import { IExportAsDefaultOptions } from '@rushstack/typings-generator';
+import type { ISourcePosition } from '@rushstack/typings-generator';
 import type { ITerminal } from '@rushstack/terminal';
 import { ITypingsGeneratorBaseOptions } from '@rushstack/typings-generator';
 import { NewlineKind } from '@rushstack/node-core-library';
@@ -31,6 +32,7 @@ export interface ILocalizationFile {
 export interface ILocalizedString {
     // (undocumented)
     comment?: string;
+    sourcePosition?: ISourcePosition;
     // (undocumented)
     value: string;
 }
@@ -96,10 +98,10 @@ export interface ITypingsGeneratorOptions extends ITypingsGeneratorBaseOptions {
 export function parseLocFile(options: IParseLocFileOptions): ILocalizationFile;
 
 // @public (undocumented)
-export function parseLocJson({ content, filePath, ignoreString }: IParseFileOptions): ILocalizationFile;
+export function parseLocJson(input: IParseFileOptions): ILocalizationFile;
 
 // @public (undocumented)
-export function parseResJson({ content, ignoreString, filePath }: IParseFileOptions): ILocalizationFile;
+export function parseResJson(input: IParseFileOptions): ILocalizationFile;
 
 // @public (undocumented)
 export function parseResx(options: IParseResxOptions): ILocalizationFile;

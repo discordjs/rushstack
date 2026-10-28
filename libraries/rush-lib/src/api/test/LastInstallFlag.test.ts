@@ -6,7 +6,7 @@ import { FileSystem } from '@rushstack/node-core-library';
 
 import { LastInstallFlag } from '../LastInstallFlag';
 
-const TEMP_DIR_PATH: string = `${__dirname}/temp`;
+const TEMP_DIR_PATH: string = `${__dirname}/temp-${LastInstallFlag.name}`;
 
 describe(LastInstallFlag.name, () => {
   beforeEach(() => {
@@ -89,7 +89,7 @@ describe(LastInstallFlag.name, () => {
     await flag1.createAsync();
     await expect(async () => {
       await flag2.checkValidAndReportStoreIssuesAsync({ rushVerb: 'install' });
-    }).rejects.toThrowError(/PNPM store path/);
+    }).rejects.toThrow(/PNPM store path/);
   });
 
   it("doesn't throw an error if conditions for error aren't met", async () => {

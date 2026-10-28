@@ -5,9 +5,8 @@ import { CommandLineParser } from '@rushstack/ts-command-line';
 import { ConsoleTerminalProvider, type ITerminal, Terminal } from '@rushstack/terminal';
 
 import { ReadmeAction } from './actions/ReadmeAction';
-import { RecordVersionsAction } from './actions/RecordVersionsAction';
 import { BumpDecoupledLocalDependencies } from './actions/BumpDecoupledLocalDependencies';
-import { CollectJsonSchemasAction } from './actions/CollectJsonSchemasAction';
+import { CollectProjectFilesAction } from './actions/CollectProjectFilesAction';
 
 export class ToolboxCommandLine extends CommandLineParser {
   public constructor() {
@@ -19,8 +18,7 @@ export class ToolboxCommandLine extends CommandLineParser {
     const terminal: ITerminal = new Terminal(new ConsoleTerminalProvider());
 
     this.addAction(new ReadmeAction(terminal));
-    this.addAction(new RecordVersionsAction(terminal));
     this.addAction(new BumpDecoupledLocalDependencies(terminal));
-    this.addAction(new CollectJsonSchemasAction(terminal));
+    this.addAction(new CollectProjectFilesAction(terminal));
   }
 }

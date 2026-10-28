@@ -2,7 +2,7 @@
 // See LICENSE in the project root for license information.
 
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { execSync, type ChildProcess, type SpawnSyncReturns } from 'node:child_process';
 
 import {
   getDetailedRepoStateAsync,
@@ -12,9 +12,11 @@ import {
   parseGitHashObject
 } from '../getRepoState';
 
-import { FileSystem } from '@rushstack/node-core-library';
+import { Executable, FileSystem, type IExecutableSpawnOptions } from '@rushstack/node-core-library';
 
-const SOURCE_PATH: string = path.join(__dirname).replace(path.join('lib', 'test'), path.join('src', 'test'));
+const SOURCE_PATH: string = path
+  .join(__dirname)
+  .replace(path.join('lib-commonjs', 'test'), path.join('src', 'test'));
 
 const TEST_PREFIX: string = `libraries/package-deps-hash/src/test/`;
 const TEST_PROJECT_PATH: string = path.join(SOURCE_PATH, 'testProject');
@@ -43,6 +45,59 @@ describe(getRepoRoot.name, () => {
     const expectedRoot: string = path.resolve(__dirname, '../../../..').replace(/\\/g, '/');
     expect(root).toEqual(expectedRoot);
   });
+
+  it(`strips GIT_DIR and GIT_WORK_TREE before invoking git`, () => {
+    // Regression test for the linked-worktree bug. When git runs a hook it injects GIT_DIR (and
+    // sometimes GIT_WORK_TREE) into the environment; in a linked worktree GIT_DIR points at the
+    // per-worktree metadata directory, which makes `git rev-parse --show-toplevel` resolve against
+    // the current directory instead of the true repository root. getRepoRoot must therefore invoke
+    // git with those variables removed, so the root is derived solely from currentWorkingDirectory.
+    //
+    // This is asserted at the spawn boundary rather than by mutating process.env and shelling out for
+    // real: the Jest environment does not propagate in-process process.env writes to child processes,
+    // so an end-to-end variant would pass whether or not the stripping actually happens.
+    const fakeRoot: string = '/fake/repo/root';
+    const mockResult: SpawnSyncReturns<string> = {
+      pid: 0,
+      output: [],
+      stdout: fakeRoot,
+      stderr: '',
+      status: 0,
+      signal: null
+    };
+    const spawnSyncSpy: jest.SpyInstance = jest.spyOn(Executable, 'spawnSync').mockReturnValue(mockResult);
+
+    const originalGitDir: string | undefined = process.env.GIT_DIR;
+    const originalGitWorkTree: string | undefined = process.env.GIT_WORK_TREE;
+    try {
+      process.env.GIT_DIR = '/repo/.git/worktrees/feature';
+      process.env.GIT_WORK_TREE = '/repo/work/tree';
+
+      // A unique cwd that no other test resolves, so getRepoRoot's module-level cache can't satisfy
+      // this from a previous call and skip the spawn.
+      getRepoRoot('/nonexistent/getRepoRoot-strips-git-env');
+
+      expect(spawnSyncSpy).toHaveBeenCalledTimes(1);
+      const passedEnvironment: NodeJS.ProcessEnv | undefined = spawnSyncSpy.mock.calls[0][2]?.environment;
+      // The fix passes an explicit environment (pre-fix code passed none) that omits both variables,
+      // while leaving the rest of process.env intact.
+      expect(passedEnvironment).toBeDefined();
+      expect(passedEnvironment).not.toHaveProperty('GIT_DIR');
+      expect(passedEnvironment).not.toHaveProperty('GIT_WORK_TREE');
+    } finally {
+      spawnSyncSpy.mockRestore();
+      if (originalGitDir === undefined) {
+        delete process.env.GIT_DIR;
+      } else {
+        process.env.GIT_DIR = originalGitDir;
+      }
+      if (originalGitWorkTree === undefined) {
+        delete process.env.GIT_WORK_TREE;
+      } else {
+        process.env.GIT_WORK_TREE = originalGitWorkTree;
+      }
+    }
+  });
 });
 
 describe(parseGitLsTree.name, () => {
@@ -51,10 +106,27 @@ describe(parseGitLsTree.name, () => {
     const hash: string = '3451bccdc831cb43d7a70ed8e628dcf9c7f888c8';
 
     const output: string = `100644 blob ${hash}\t${filename}\x00`;
-    const { files } = parseGitLsTree(output);
+    const { files, symlinks, submodules } = parseGitLsTree(output);
+
+    expect(symlinks.size).toEqual(0); // Expect there to be exactly 0 symlinks
+    expect(submodules.size).toEqual(0); // Expect there to be exactly 0 submodules
 
     expect(files.size).toEqual(1); // Expect there to be exactly 1 change
     expect(files.get(filename)).toEqual(hash); // Expect the hash to be ${hash}
+  });
+
+  it('can handle a symlink', () => {
+    const filename: string = 'src/symlink';
+    const hash: string = '3451bccdc831cb43d7a70ed8e628dcf9c7f888c8';
+
+    const output: string = `120000 link ${hash}\t${filename}\x00`;
+    const { files, symlinks, submodules } = parseGitLsTree(output);
+
+    expect(files.size).toEqual(0); // Expect there to be exactly 0 files
+    expect(submodules.size).toEqual(0); // Expect there to be exactly 0 submodules
+
+    expect(symlinks.size).toEqual(1); // Expect there to be exactly 1 symlink
+    expect(symlinks.get(filename)).toEqual(hash); // Expect the hash to be ${hash}
   });
 
   it('can handle a submodule', () => {
@@ -78,14 +150,16 @@ describe(parseGitLsTree.name, () => {
     const filename3: string = 'submodule/src/index.ts';
     const hash3: string = 'fedcba9876543210fedcba9876543210fedcba98';
 
-    const output: string = `100644 blob ${hash1}\t${filename1}\x00100666 blob ${hash2}\t${filename2}\x00106666 commit ${hash3}\t${filename3}\0`;
-    const { files, submodules } = parseGitLsTree(output);
+    const output: string = `100644 blob ${hash1}\t${filename1}\x00100666 blob ${hash2}\t${filename2}\x00160000 commit ${hash3}\t${filename3}\0`;
+    const { files, symlinks, submodules } = parseGitLsTree(output);
 
-    expect(files.size).toEqual(2); // Expect there to be exactly 2 changes
+    expect(files.size).toEqual(2); // Expect there to be exactly 2 files
     expect(files.get(filename1)).toEqual(hash1); // Expect the hash to be ${hash1}
     expect(files.get(filename2)).toEqual(hash2); // Expect the hash to be ${hash2}
 
-    expect(submodules.size).toEqual(1); // Expect there to be exactly 1 submodule changes
+    expect(symlinks.size).toEqual(0); // Expect there to be exactly 0 symlink changes
+
+    expect(submodules.size).toEqual(1); // Expect there to be exactly 1 submodule
     expect(submodules.get(filename3)).toEqual(hash3); // Expect the hash to be ${hash3}
   });
 });
@@ -250,6 +324,78 @@ describe(getDetailedRepoStateAsync.name, () => {
       checkSnapshot(results);
     } finally {
       FileSystem.deleteFile(tempFilePath1);
+    }
+  });
+
+  it('rejects when git hash-object fails, without waiting for git ls-files and git status', async () => {
+    // `git hash-object` fails fast on an additional path that does not exist. Its promise used to be awaited only
+    // after `git ls-files` and `git status` finished, so until then its rejection had no handler. Under Node's
+    // default `--unhandled-rejections=throw`, that ended the process (a Rush daemon, in the reported crash).
+    //
+    // To make the ordering deterministic, the 'close' events of ls-files and status are held back until the end.
+    let releaseHeldProcesses: () => void = () => {};
+    const heldProcessesReleased: Promise<void> = new Promise((resolve) => {
+      releaseHeldProcesses = resolve;
+    });
+    let onHashObjectClosed: () => void = () => {};
+    const hashObjectClosed: Promise<void> = new Promise((resolve) => {
+      onHashObjectClosed = resolve;
+    });
+
+    const spawn: typeof Executable.spawn = Executable.spawn.bind(Executable);
+    const spawnSpy: jest.SpyInstance = jest
+      .spyOn(Executable, 'spawn')
+      .mockImplementation(
+        (filename: string, args: string[], options?: IExecutableSpawnOptions): ChildProcess => {
+          const childProcess: ChildProcess = spawn(filename, args, options);
+          const emit: ChildProcess['emit'] = childProcess.emit.bind(childProcess);
+          const isHashObject: boolean = args.includes('hash-object');
+          childProcess.emit = ((eventName: string | symbol, ...eventArgs: unknown[]): boolean => {
+            if (eventName === 'close' && !isHashObject) {
+              void heldProcessesReleased.then(() => emit(eventName, ...eventArgs));
+              return true;
+            }
+            const hadListeners: boolean = emit(eventName, ...eventArgs);
+            if (eventName === 'close') {
+              onHashObjectClosed();
+            }
+            return hadListeners;
+          }) as ChildProcess['emit'];
+          return childProcess;
+        }
+      );
+
+    let outcome: { error: unknown } | undefined;
+    const settled: Promise<void> = getDetailedRepoStateAsync(
+      SOURCE_PATH,
+      [`${TEST_PREFIX}testProject/does-not-exist.txt`],
+      undefined,
+      FILTERS
+    ).then(
+      () => {
+        outcome = { error: undefined };
+      },
+      (error: unknown) => {
+        outcome = { error };
+      }
+    );
+
+    try {
+      await hashObjectClosed;
+      // Every step from the hash-object exit to the rejection runs as a microtask, so one macrotask is enough.
+      await new Promise<void>((resolve) => setImmediate(resolve));
+
+      expect(spawnSpy).toHaveBeenCalledTimes(3);
+      // Before the fix, the promise was still pending at this point.
+      expect(outcome).toEqual({
+        error: expect.objectContaining({
+          message: expect.stringMatching(/^git hash-object exited with code 128:[\s\S]*does-not-exist\.txt/)
+        })
+      });
+    } finally {
+      releaseHeldProcesses();
+      await settled;
+      spawnSpy.mockRestore();
     }
   });
 });

@@ -10,7 +10,8 @@ jest.mock(`@rushstack/package-deps-hash`, () => {
       return {
         hasSubmodules: false,
         hasUncommittedChanges: false,
-        files: new Map([['common/config/rush/npm-shrinkwrap.json', 'hash']])
+        files: new Map([['common/config/rush/npm-shrinkwrap.json', 'hash']]),
+        symlinks: new Map()
       };
     },
     getRepoChangesAsync(): ReadonlyMap<string, string> {
@@ -19,45 +20,180 @@ jest.mock(`@rushstack/package-deps-hash`, () => {
     getGitHashForFiles(filePaths: Iterable<string>): ReadonlyMap<string, string> {
       return new Map(Array.from(filePaths, (filePath: string) => [filePath, filePath]));
     },
-    hashFilesAsync(rootDirectory: string, filePaths: Iterable<string>): ReadonlyMap<string, string> {
-      return new Map(Array.from(filePaths, (filePath: string) => [filePath, filePath]));
+    hashFilesAsync(rootDirectory: string, filePaths: Iterable<string>): Promise<ReadonlyMap<string, string>> {
+      return Promise.resolve(new Map(Array.from(filePaths, (filePath: string) => [filePath, filePath])));
     }
   };
 });
 
 import './mockRushCommandLineParser';
 
-import { FileSystem, JsonFile, Path } from '@rushstack/node-core-library';
+import type { SpawnOptions } from 'node:child_process';
+import { FileSystem, JsonFile, LockFile, Path } from '@rushstack/node-core-library';
 import type { IDetailedRepoState } from '@rushstack/package-deps-hash';
+import type { IReporterEmitEventInput, IReporterEventSink } from '@rushstack/rush-reporter';
+import type { CommandLineAction } from '@rushstack/ts-command-line';
+import { RushConfiguration } from '../../api/RushConfiguration';
 import { Autoinstaller } from '../../logic/Autoinstaller';
+import type { IOperationGraphRequestResult } from '../../logic/operations/IOperationGraph';
+import { OperationStatus } from '../../logic/operations/OperationStatus';
+import type { IRepositoryLockWait } from '../../logic/RepositoryLockWait';
 import type { ITelemetryData } from '../../logic/Telemetry';
-import { getCommandLineParserInstanceAsync } from './TestUtils';
-import { EnvironmentConfiguration } from '../../api/EnvironmentConfiguration';
+import type { RushCommandLineParser as RushCommandLineParserType } from '../RushCommandLineParser';
+import {
+  getCommandLineParserInstanceAsync,
+  setSpawnMock,
+  type IParserTestInstance,
+  type SpawnMockArgs,
+  type SpawnMockCall,
+  isolateEnvironmentConfigurationForTests,
+  type IEnvironmentConfigIsolation
+} from './TestUtils';
+import { IS_WINDOWS } from '../../utilities/executionUtilities';
+import { AnsiEscape, StringBufferTerminalProvider } from '@rushstack/terminal';
 
-function pathEquals(actual: string, expected: string): void {
-  expect(Path.convertToSlashes(actual)).toEqual(Path.convertToSlashes(expected));
+// Ordinals into the `mock.calls` array referencing each of the arguments to `spawn`. Note that
+// the exact structure of these arguments differs between Windows and non-Windows platforms, so
+// we only reference the one that is common.
+const SPAWN_ARG_OPTIONS: number = 2;
+
+class CapturingReporterSink implements IReporterEventSink {
+  public readonly inputs: IReporterEmitEventInput<unknown>[] = [];
+
+  public emit<TPayload>(event: IReporterEmitEventInput<TPayload>): string {
+    this.inputs.push(event);
+    return `event-${this.inputs.length}`;
+  }
 }
 
-// Ordinals into the `mock.calls` array referencing each of the arguments to `spawn`
-const SPAWN_ARG_ARGS: number = 1;
-const SPAWN_ARG_OPTIONS: number = 2;
+function spawnOptionEquals<TOption extends keyof SpawnOptions, TExepcted>(
+  spawnCall: SpawnMockCall,
+  optionName: TOption,
+  expected: TExepcted,
+  tweakActual: (actual: SpawnOptions[TOption]) => TExepcted = (x) => x as TExepcted
+): void {
+  const spawnOptions: SpawnOptions = spawnCall[SPAWN_ARG_OPTIONS] as SpawnOptions;
+  expect(spawnOptions).toEqual(expect.any(Object));
+  expect(tweakActual(spawnOptions[optionName])).toEqual(expected);
+}
+
+function cwdOptionEquals(spawnCall: SpawnMockCall, expected: string): void {
+  spawnOptionEquals(spawnCall, 'cwd', Path.convertToSlashes(expected), (actual) =>
+    Path.convertToSlashes(String(actual))
+  );
+}
+
+jest.setTimeout(1000000);
+
+function expectSpawnToMatchRegexp(spawnCall: SpawnMockCall, expectedRegexp: RegExp): void {
+  if (IS_WINDOWS) {
+    // Phased runners supply an explicit environment, so Windows uses that environment's shell.
+    spawnOptionEquals(spawnCall, 'shell', process.env.COMSPEC || process.env.comspec || 'cmd.exe');
+    expect(spawnCall[0]).toMatch(expectedRegexp);
+  } else {
+    expect(spawnCall[1]).toEqual(expect.arrayContaining([expect.stringMatching(expectedRegexp)]));
+  }
+}
+
+async function expectInitializationFailureAsync(repoName: string, expectedMessage: string): Promise<void> {
+  const originalExitCode: string | number | undefined = process.exitCode;
+  const exitSpy = jest.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+  const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+  try {
+    const { parser, spawnMock } = await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
+    await expect(parser.executeAsync()).resolves.toBe(false);
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(exitSpy).toHaveBeenCalledTimes(1);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+    expect(process.exitCode).toBe(1);
+    expect(spawnMock).not.toHaveBeenCalled();
+    const errors: string = AnsiEscape.removeCodes(
+      errorSpy.mock.calls.map((args) => args.join(' ')).join('\n')
+    ).replace(/\s+/g, ' ');
+    expect(errors).toContain(expectedMessage);
+  } finally {
+    exitSpy.mockRestore();
+    errorSpy.mockRestore();
+    process.exitCode = originalExitCode;
+  }
+}
+
+function captureRequestResults(parser: IParserTestInstance['parser']): IOperationGraphRequestResult[] {
+  const requests: IOperationGraphRequestResult[] = [];
+  parser.rushSession.hooks.runAnyPhasedCommand.tap('RequestHookTest', (command) => {
+    command.hooks.onGraphCreatedAsync.tap('RequestHookTest', (graph) => {
+      graph.hooks.afterExecuteRequestAsync.tapPromise(
+        'RequestHookTest',
+        async (request: IOperationGraphRequestResult) => {
+          requests.push(request);
+        }
+      );
+    });
+  });
+  return requests;
+}
+
+function getStatusByProjectName(request: IOperationGraphRequestResult): Record<string, OperationStatus> {
+  return Object.fromEntries(
+    Array.from(request.operationResults, ([operation, { status }]) => [
+      operation.associatedProject.packageName,
+      status
+    ])
+  );
+}
 
 describe('RushCommandLineParser', () => {
   describe('execute', () => {
+    let _envIsolation: IEnvironmentConfigIsolation;
+
+    beforeEach(() => {
+      _envIsolation = isolateEnvironmentConfigurationForTests();
+    });
+
     afterEach(() => {
       jest.clearAllMocks();
-      EnvironmentConfiguration.reset();
-      jest
-        .spyOn(EnvironmentConfiguration, 'buildCacheOverrideJsonFilePath', 'get')
-        .mockReturnValue(undefined);
-      jest.spyOn(EnvironmentConfiguration, 'buildCacheOverrideJson', 'get').mockReturnValue(undefined);
+      _envIsolation.restore();
     });
 
     describe('in basic repo', () => {
       describe("'build' action", () => {
+        if (IS_WINDOWS) {
+          it.each([
+            { comspec: 'C:\\Native shell\\cmd.exe', expectedShell: 'C:\\Native shell\\cmd.exe' },
+            { comspec: undefined, expectedShell: 'cmd.exe' }
+          ])(
+            'uses exactly $expectedShell for an explicit Windows runner environment',
+            async ({ comspec, expectedShell }) => {
+              const { parser, spawnMock } = await getCommandLineParserInstanceAsync(
+                'basicAndRunBuildActionRepo',
+                'build'
+              );
+              const originalComspec: string | undefined = process.env.COMSPEC;
+              try {
+                if (comspec === undefined) delete process.env.COMSPEC;
+                else process.env.COMSPEC = comspec;
+
+                await expect(parser.executeAsync()).resolves.toEqual(true);
+
+                expect(spawnMock.mock.calls).toHaveLength(2);
+                for (const spawnCall of spawnMock.mock.calls) {
+                  spawnOptionEquals(spawnCall, 'shell', expectedShell);
+                }
+              } finally {
+                if (originalComspec === undefined) delete process.env.COMSPEC;
+                else process.env.COMSPEC = originalComspec;
+              }
+            }
+          );
+        }
+
         it(`executes the package's 'build' script`, async () => {
           const repoName: string = 'basicAndRunBuildActionRepo';
-          const { parser, spawnMock, repoPath } = await getCommandLineParserInstanceAsync(repoName, 'build');
+          const reporterSink: CapturingReporterSink = new CapturingReporterSink();
+          const { parser, spawnMock, repoPath } = await getCommandLineParserInstanceAsync(repoName, 'build', {
+            eventSink: reporterSink,
+            sessionId: 'parser-shadow'
+          });
 
           await expect(parser.executeAsync()).resolves.toEqual(true);
 
@@ -68,21 +204,416 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockArgs = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
+          const secondSpawn: SpawnMockArgs = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
+
+          const eventTypes: string[] = reporterSink.inputs.map(({ type }) => type);
+          expect(eventTypes[0]).toBe('sessionStarted');
+          expect(eventTypes[1]).toBe('commandStarted');
+          expect(eventTypes).toContain('operationRegistered');
+          expect(eventTypes).toContain('operationStatusChanged');
+          expect(eventTypes.slice(-3)).toEqual(['commandResult', 'commandCompleted', 'sessionCompleted']);
+          expect(reporterSink.inputs.at(-3)?.payload).toMatchObject({
+            commandName: 'build',
+            succeeded: true,
+            exitCode: 0
+          });
+          for (const event of reporterSink.inputs.filter(({ type }) => type === 'operationRegistered')) {
+            const scope = event.scope!;
+            expect(scope.operationId).toBe(`${scope.projectName}#${scope.phaseName}`);
+          }
+          expect(reporterSink.inputs.some(({ type }) => type === 'externalOutput')).toBe(false);
+        });
+
+        it('makes the opted-in reporter stream the sole visible operation writer', async () => {
+          const reporterSink: CapturingReporterSink = new CapturingReporterSink();
+          const stdoutSpy: jest.SpiedFunction<typeof process.stdout.write> = jest
+            .spyOn(process.stdout, 'write')
+            .mockImplementation(() => true);
+          const stderrSpy: jest.SpiedFunction<typeof process.stderr.write> = jest
+            .spyOn(process.stderr, 'write')
+            .mockImplementation(() => true);
+          try {
+            const { parser } = await getCommandLineParserInstanceAsync(
+              'basicAndRunBuildActionRepo',
+              'build',
+              {
+                eventSink: reporterSink,
+                sessionId: 'parser-visible-cutover',
+                operationStreamEnabled: true
+              }
+            );
+
+            await expect(parser.executeAsync()).resolves.toEqual(true);
+
+            expect(stdoutSpy).not.toHaveBeenCalled();
+            expect(stderrSpy).not.toHaveBeenCalled();
+            expect(reporterSink.inputs.some(({ type }) => type === 'operationCompleted')).toBe(true);
+          } finally {
+            stdoutSpy.mockRestore();
+            stderrSpy.mockRestore();
+          }
+        });
+
+        it('preserves the actionable lock contention reason in reporter mode', async () => {
+          const reporterSink: CapturingReporterSink = new CapturingReporterSink();
+          const lockSpy: jest.SpiedFunction<typeof LockFile.tryAcquire> = jest
+            .spyOn(LockFile, 'tryAcquire')
+            .mockReturnValue(undefined);
+          const exitSpy: jest.SpiedFunction<typeof process.exit> = jest
+            .spyOn(process, 'exit')
+            .mockImplementation(() => undefined as never);
+          try {
+            const { parser } = await getCommandLineParserInstanceAsync(
+              'basicAndRunBuildActionRepo',
+              'build',
+              {
+                eventSink: reporterSink,
+                sessionId: 'parser-lock-conflict',
+                operationStreamEnabled: true
+              }
+            );
+
+            await parser.executeAsync();
+            await new Promise<void>((resolve: () => void) => setImmediate(resolve));
+
+            expect(reporterSink.inputs).toContainEqual(
+              expect.objectContaining({
+                type: 'messageEmitted',
+                payload: expect.objectContaining({
+                  severity: 'error',
+                  text: expect.stringContaining('Another Rush command is already running')
+                })
+              })
+            );
+          } finally {
+            exitSpy.mockRestore();
+            lockSpy.mockRestore();
+          }
+        });
+
+        // The file's default timeout is about 17 minutes, so each lock-wait test, which takes a few seconds, sets
+        // its own: a wait that never ends then fails the test in a minute.
+        it('waits for the lock until the deadline that rush-client set, and names the daemon that holds it', async () => {
+          const daemonPid: number = process.pid + 1;
+          const deadlineMs: number = Date.now() + 60000;
+          process.env._RUSH_LOCK_WAIT_DEADLINE = `${deadlineMs}`;
+          process.env._RUSH_LOCK_WAIT_DAEMON_PID = `${daemonPid}`;
+          const reporterSink: CapturingReporterSink = new CapturingReporterSink();
+          let attempts: number = 0;
+          const lockSpy: jest.SpiedFunction<typeof LockFile.tryAcquire> = jest
+            .spyOn(LockFile, 'tryAcquire')
+            .mockImplementation(() => {
+              // The wait below tries every 100 ms for 300 ms. One that never stopped would outlive this test.
+              if (++attempts > 100) throw new Error(`tryAcquire was called ${attempts} times`);
+              return undefined;
+            });
+          const exitSpy: jest.SpiedFunction<typeof process.exit> = jest
+            .spyOn(process, 'exit')
+            .mockImplementation(() => undefined as never);
+          try {
+            const { parser } = await getCommandLineParserInstanceAsync(
+              'basicAndRunBuildActionRepo',
+              'build',
+              {
+                eventSink: reporterSink,
+                sessionId: 'parser-lock-wait-expired',
+                operationStreamEnabled: true
+              }
+            );
+            // The command's operations must not inherit the wait.
+            expect(process.env._RUSH_LOCK_WAIT_DEADLINE).toBeUndefined();
+            expect(process.env._RUSH_LOCK_WAIT_DAEMON_PID).toBeUndefined();
+            expect(parser.repositoryLockWait).toEqual({ deadlineMs, daemonPid });
+            // A deadline that starts now does not depend on how long the parser took to start.
+            const shortDeadlineMs: number = Date.now() + 300;
+            (parser as unknown as { repositoryLockWait: IRepositoryLockWait }).repositoryLockWait = {
+              deadlineMs: shortDeadlineMs,
+              daemonPid
+            };
+            FileSystem.writeFile(
+              `${parser.rushConfiguration.commonTempFolder}/rush#${daemonPid}.lock`,
+              'start time',
+              { ensureFolderExists: true }
+            );
+
+            await parser.executeAsync();
+            await new Promise<void>((resolve: () => void) => setImmediate(resolve));
+
+            expect(Date.now()).toBeGreaterThanOrEqual(shortDeadlineMs);
+            expect(
+              lockSpy.mock.calls.filter(([, resourceName]) => resourceName === 'rush').length
+            ).toBeGreaterThan(1);
+            const messages: unknown[] = reporterSink.inputs
+              .filter(({ type }) => type === 'messageEmitted')
+              .map(({ payload }) => payload);
+            expect(messages).toContainEqual(
+              expect.objectContaining({
+                severity: 'warning',
+                text: expect.stringContaining(
+                  `Waiting up to 1 s for the Rush daemon (PID ${daemonPid}) to release this repository's lock.`
+                )
+              })
+            );
+            expect(messages).toContainEqual(
+              expect.objectContaining({
+                severity: 'error',
+                text: expect.stringContaining(
+                  'Another Rush command is already running in this repository. ' +
+                    `The Rush daemon (PID ${daemonPid}) still holds this repository's lock.`
+                )
+              })
+            );
+          } finally {
+            delete process.env._RUSH_LOCK_WAIT_DEADLINE;
+            delete process.env._RUSH_LOCK_WAIT_DAEMON_PID;
+            exitSpy.mockRestore();
+            lockSpy.mockRestore();
+          }
+        }, 60000);
+
+        it('runs the command once the lock is released before the deadline that rush-client set', async () => {
+          process.env._RUSH_LOCK_WAIT_DEADLINE = `${Date.now() + 60000}`;
+          const reporterSink: CapturingReporterSink = new CapturingReporterSink();
+          const lockSpy: jest.SpiedFunction<typeof LockFile.tryAcquire> = jest
+            .spyOn(LockFile, 'tryAcquire')
+            .mockReturnValueOnce(undefined)
+            .mockReturnValueOnce(undefined);
+          // A command that fails exits the process, which would end this test file instead of this test.
+          const exitSpy: jest.SpiedFunction<typeof process.exit> = jest
+            .spyOn(process, 'exit')
+            .mockImplementation(() => undefined as never);
+          try {
+            const { parser } = await getCommandLineParserInstanceAsync(
+              'basicAndRunBuildActionRepo',
+              'build',
+              {
+                eventSink: reporterSink,
+                sessionId: 'parser-lock-wait-released',
+                operationStreamEnabled: true
+              }
+            );
+
+            await expect(parser.executeAsync()).resolves.toEqual(true);
+
+            expect(exitSpy).not.toHaveBeenCalled();
+            expect(lockSpy.mock.calls.filter(([, resourceName]) => resourceName === 'rush')).toHaveLength(3);
+            expect(reporterSink.inputs).toContainEqual(
+              expect.objectContaining({
+                type: 'messageEmitted',
+                payload: expect.objectContaining({
+                  severity: 'warning',
+                  text: expect.stringMatching(
+                    /Waiting up to \d+ s for another Rush process to release this repository's lock\./
+                  )
+                })
+              })
+            );
+            expect(reporterSink.inputs.at(-3)?.payload).toMatchObject({ succeeded: true, exitCode: 0 });
+          } finally {
+            delete process.env._RUSH_LOCK_WAIT_DEADLINE;
+            exitSpy.mockRestore();
+            lockSpy.mockRestore();
+          }
+        }, 60000);
+
+        it('leaves the wait that rush-client set alone in an engine host, whose environment is not the request', async () => {
+          process.env._RUSH_LOCK_WAIT_DEADLINE = '1000';
+          process.env._RUSH_LOCK_WAIT_DAEMON_PID = '42';
+          try {
+            const { RushCommandLineParser } = await import('../RushCommandLineParser');
+            const rushConfiguration: RushConfiguration = RushConfiguration.loadFromConfigurationFile(
+              `${__dirname}/basicAndRunBuildActionRepo/rush.json`
+            );
+            const parser: RushCommandLineParserType = new RushCommandLineParser({
+              cwd: rushConfiguration.rushJsonFolder,
+              engine: { rushConfiguration, terminalProvider: new StringBufferTerminalProvider() }
+            });
+
+            expect(parser.repositoryLockWait).toBeUndefined();
+            expect(process.env._RUSH_LOCK_WAIT_DEADLINE).toBe('1000');
+            expect(process.env._RUSH_LOCK_WAIT_DAEMON_PID).toBe('42');
+          } finally {
+            delete process.env._RUSH_LOCK_WAIT_DEADLINE;
+            delete process.env._RUSH_LOCK_WAIT_DAEMON_PID;
+          }
+        });
+
+        it('invokes afterExecuteRequestAsync once, after afterExecuteIterationAsync, with the command results', async () => {
+          const { parser } = await getCommandLineParserInstanceAsync('basicAndRunBuildActionRepo', 'build');
+          const hookOrder: string[] = [];
+          const requests: IOperationGraphRequestResult[] = [];
+          parser.rushSession.hooks.runAnyPhasedCommand.tap('RequestHookTest', (command) => {
+            command.hooks.onGraphCreatedAsync.tap('RequestHookTest', (graph) => {
+              graph.hooks.afterExecuteIterationAsync.tap(
+                { name: 'RequestHookTest', stage: Number.MAX_SAFE_INTEGER },
+                (status: OperationStatus) => {
+                  hookOrder.push('afterExecuteIterationAsync');
+                  return status;
+                }
+              );
+              graph.hooks.afterExecuteRequestAsync.tapPromise(
+                'RequestHookTest',
+                async (request: IOperationGraphRequestResult) => {
+                  hookOrder.push('afterExecuteRequestAsync');
+                  requests.push(request);
+                }
+              );
+            });
+          });
+
+          await expect(parser.executeAsync()).resolves.toEqual(true);
+
+          expect(hookOrder).toEqual(['afterExecuteIterationAsync', 'afterExecuteRequestAsync']);
+          expect(requests).toHaveLength(1);
+          const [request] = requests;
+          expect(request).toMatchObject({
+            commandName: 'build',
+            requestId: undefined,
+            status: OperationStatus.Success
+          });
+          expect(request.environment).toBe(process.env);
+          expect(request.terminal).toBeDefined();
+          expect(Array.from(request.operationResults.values(), ({ status }) => status)).toEqual([
+            OperationStatus.Success,
+            OperationStatus.Success
+          ]);
+        });
+
+        it('invokes afterExecuteRequestAsync with the Failure status when an operation fails', async () => {
+          const originalExitCode: typeof process.exitCode = process.exitCode;
+          let onExit!: () => void;
+          const exited: Promise<void> = new Promise<void>((resolve: () => void) => {
+            onExit = resolve;
+          });
+          // Rush exits after it reports the failure, so wait for that before restoring process.exit.
+          const exitSpy: jest.SpiedFunction<typeof process.exit> = jest
+            .spyOn(process, 'exit')
+            .mockImplementation((): never => {
+              onExit();
+              return undefined as never;
+            });
+          const stderrSpy: jest.SpiedFunction<typeof process.stderr.write> = jest
+            .spyOn(process.stderr, 'write')
+            .mockImplementation(() => true);
+          try {
+            const { parser } = await getCommandLineParserInstanceAsync('basicAndRunBuildActionRepo', 'build');
+            const requests: IOperationGraphRequestResult[] = captureRequestResults(parser);
+            setSpawnMock({ emitError: false, returnCode: 1 });
+
+            await parser.executeAsync();
+            await exited;
+
+            expect(exitSpy).toHaveBeenCalledWith(1);
+            expect(requests).toHaveLength(1);
+            const [request] = requests;
+            expect(request).toMatchObject({
+              commandName: 'build',
+              requestId: undefined,
+              status: OperationStatus.Failure
+            });
+            expect(getStatusByProjectName(request)).toEqual({
+              a: OperationStatus.Failure,
+              b: OperationStatus.Blocked
+            });
+          } finally {
+            stderrSpy.mockRestore();
+            exitSpy.mockRestore();
+            process.exitCode = originalExitCode;
+          }
+        });
+      });
+
+      describe("'custom-output' action", () => {
+        it('preserves custom parameters that overlap reporter controls', async () => {
+          const { parser, repoPath } = await getCommandLineParserInstanceAsync(
+            'basicAndRunBuildActionRepo',
+            'custom-output'
           );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          process.argv.push(
+            '--reporter',
+            'junit',
+            '--output',
+            'custom-artifact.zip',
+            '--log-level',
+            'custom-level',
+            '--verbose'
+          );
+
+          await expect(parser.executeAsync()).resolves.toEqual(true);
+
+          expect(JsonFile.load(`${repoPath}/custom-output-args.json`)).toEqual([
+            '--reporter',
+            'junit',
+            '--output',
+            'custom-artifact.zip',
+            '--log-level',
+            'custom-level',
+            '--verbose'
+          ]);
+        });
+      });
+
+      describe("'custom-short-name' action", () => {
+        it('accepts a custom parameter by its long name when its short name is also the global -d', async () => {
+          const { parser, repoPath } = await getCommandLineParserInstanceAsync(
+            'basicAndRunBuildActionRepo',
+            'custom-short-name'
+          );
+          process.argv.push('--stale-after-days', '3');
+
+          await expect(parser.executeAsync()).resolves.toEqual(true);
+
+          expect(JsonFile.load(`${repoPath}/custom-output-args.json`)).toEqual(['--stale-after-days', '3']);
+        });
+      });
+
+      describe("'update-cloud-credentials' action", () => {
+        it('accepts --delete, whose short name -d is also the global --debug parameter', async () => {
+          const { parser } = await getCommandLineParserInstanceAsync(
+            'basicAndRunBuildActionRepo',
+            'update-cloud-credentials'
+          );
+          process.argv.push('--delete');
+          const action: CommandLineAction = parser.getAction('update-cloud-credentials');
+          // Stop before the action loads the build cache configuration, which this repo doesn't have
+          const runSpy: jest.SpyInstance = jest
+            .spyOn(action as unknown as { runAsync(): Promise<void> }, 'runAsync')
+            .mockResolvedValue(undefined);
+
+          await expect(parser.executeAsync()).resolves.toEqual(true);
+
+          expect(runSpy).toHaveBeenCalledTimes(1);
+          expect(action.getFlagParameter('--delete').value).toBe(true);
+          expect(parser.getFlagParameter('--debug').value).toBe(false);
+        });
+
+        it('reports -d after the action name as ambiguous', async () => {
+          const { parser } = await getCommandLineParserInstanceAsync(
+            'basicAndRunBuildActionRepo',
+            'update-cloud-credentials'
+          );
+          process.argv.push('-d');
+          const originalExitCode: string | number | undefined = process.exitCode;
+          const errorSpy: jest.SpyInstance = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+          const logSpy: jest.SpyInstance = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+          try {
+            await expect(parser.executeAsync()).resolves.toEqual(false);
+
+            expect(process.exitCode).toBe(1);
+            expect(errorSpy).toHaveBeenCalledWith(
+              'Error: rush update-cloud-credentials: error: Ambiguous option: "-d".\n'
+            );
+          } finally {
+            errorSpy.mockRestore();
+            logSpy.mockRestore();
+            process.exitCode = originalExitCode;
+          }
         });
       });
 
@@ -103,21 +634,49 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
+        });
+
+        it('invokes afterExecuteRequestAsync with the rebuild command name', async () => {
+          const { parser } = await getCommandLineParserInstanceAsync(
+            'basicAndRunRebuildActionRepo',
+            'rebuild'
           );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const requests: IOperationGraphRequestResult[] = captureRequestResults(parser);
+
+          await expect(parser.executeAsync()).resolves.toEqual(true);
+
+          expect(requests).toHaveLength(1);
+          const [request] = requests;
+          expect(request).toMatchObject({
+            commandName: 'rebuild',
+            requestId: undefined,
+            status: OperationStatus.Success
+          });
+          expect(getStatusByProjectName(request)).toEqual({
+            a: OperationStatus.Success,
+            b: OperationStatus.Success
+          });
+        });
+      });
+
+      describe("'custom-reporter-flag' action", () => {
+        it('preserves a value-less custom reporter flag', async () => {
+          const { parser, repoPath } = await getCommandLineParserInstanceAsync(
+            'basicAndRunRebuildActionRepo',
+            'custom-reporter-flag'
+          );
+          process.argv.push('--reporter');
+
+          await expect(parser.executeAsync()).resolves.toEqual(true);
+
+          expect(JsonFile.load(`${repoPath}/custom-reporter-flag-args.json`)).toEqual(['--reporter']);
         });
       });
     });
@@ -137,21 +696,13 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
 
@@ -172,21 +723,13 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_REbuild_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
     });
@@ -205,21 +748,13 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
 
@@ -240,69 +775,49 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
     });
 
     describe("in repo with 'build' command overridden as a global command", () => {
-      it(`throws an error when starting Rush`, async () => {
-        const repoName: string = 'overrideBuildAsGlobalCommandRepo';
-
-        await expect(async () => {
-          await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
-        }).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"command-line.json defines a command \\"build\\" using the command kind \\"global\\". This command can only be designated as a command kind \\"bulk\\" or \\"phased\\"."`
+      it('reports an error and refuses execution when starting Rush', async () => {
+        await expectInitializationFailureAsync(
+          'overrideBuildAsGlobalCommandRepo',
+          'command-line.json defines a command "build" using the command kind "global". This command can only be designated as a command kind "bulk" or "phased".'
         );
       });
     });
 
     describe("in repo with 'rebuild' command overridden as a global command", () => {
-      it(`throws an error when starting Rush`, async () => {
-        const repoName: string = 'overrideRebuildAsGlobalCommandRepo';
-
-        await expect(async () => {
-          await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
-        }).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"command-line.json defines a command \\"rebuild\\" using the command kind \\"global\\". This command can only be designated as a command kind \\"bulk\\" or \\"phased\\"."`
+      it('reports an error and refuses execution when starting Rush', async () => {
+        await expectInitializationFailureAsync(
+          'overrideRebuildAsGlobalCommandRepo',
+          'command-line.json defines a command "rebuild" using the command kind "global". This command can only be designated as a command kind "bulk" or "phased".'
         );
       });
     });
 
     describe("in repo with 'build' command overridden with 'safeForSimultaneousRushProcesses=true'", () => {
-      it(`throws an error when starting Rush`, async () => {
-        const repoName: string = 'overrideBuildWithSimultaneousProcessesRepo';
-
-        await expect(async () => {
-          await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
-        }).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"command-line.json defines a command \\"build\\" using \\"safeForSimultaneousRushProcesses=true\\". This configuration is not supported for \\"build\\"."`
+      it('reports an error and refuses execution when starting Rush', async () => {
+        await expectInitializationFailureAsync(
+          'overrideBuildWithSimultaneousProcessesRepo',
+          'command-line.json defines a command "build" using "safeForSimultaneousRushProcesses=true". This configuration is not supported for "build".'
         );
       });
     });
 
     describe("in repo with 'rebuild' command overridden with 'safeForSimultaneousRushProcesses=true'", () => {
-      it(`throws an error when starting Rush`, async () => {
-        const repoName: string = 'overrideRebuildWithSimultaneousProcessesRepo';
-
-        await expect(async () => {
-          await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
-        }).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"command-line.json defines a command \\"rebuild\\" using \\"safeForSimultaneousRushProcesses=true\\". This configuration is not supported for \\"rebuild\\"."`
+      it('reports an error and refuses execution when starting Rush', async () => {
+        await expectInitializationFailureAsync(
+          'overrideRebuildWithSimultaneousProcessesRepo',
+          'command-line.json defines a command "rebuild" using "safeForSimultaneousRushProcesses=true". This configuration is not supported for "rebuild".'
         );
       });
     });
@@ -329,6 +844,27 @@ describe('RushCommandLineParser', () => {
       });
     });
 
+    describe('in repo plugin that produces no operations', () => {
+      it('succeeds when a plugin returns an empty operation set', async () => {
+        // Regression test: `@rushstack/rush-buildxl-graph-plugin` writes the build graph to disk in
+        // response to `--drop-graph` and then returns an empty operation set, because there is
+        // nothing left for Rush to execute. An iteration with zero operations resolves to
+        // `OperationStatus.NoOp`, which must not be reported as a failure.
+        const repoName: string = 'clearOperationsAndRunBuildActionRepo';
+        const { parser, spawnMock } = await getCommandLineParserInstanceAsync(repoName, 'build');
+
+        /**
+         * The plugin is copied into the autoinstaller folder using an option in /config/heft.json
+         */
+        jest.spyOn(Autoinstaller.prototype, 'prepareAsync').mockImplementation(async function () {});
+
+        await expect(parser.executeAsync()).resolves.toEqual(true);
+
+        // Nothing should have been executed, since the plugin removed every operation.
+        expect(spawnMock.mock.calls.length).toEqual(0);
+      });
+    });
+
     describe('in repo plugin with build command', () => {
       describe("'build' action", () => {
         it(`executes the package's 'build' script`, async () => {
@@ -347,21 +883,13 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
 
@@ -382,21 +910,13 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
     });
@@ -418,21 +938,13 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_build_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
 
@@ -453,45 +965,31 @@ describe('RushCommandLineParser', () => {
           // Use regex for task name in case spaces were prepended or appended to spawned command
           const expectedBuildTaskRegexp: RegExp = /fake_REbuild_task_but_works_with_mock/;
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const firstSpawn: any[] = spawnMock.mock.calls[0];
-          expect(firstSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(firstSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(firstSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/a`);
+          const firstSpawn: SpawnMockCall = spawnMock.mock.calls[0];
+          expectSpawnToMatchRegexp(firstSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(firstSpawn, `${repoPath}/a`);
 
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const secondSpawn: any[] = spawnMock.mock.calls[1];
-          expect(secondSpawn[SPAWN_ARG_ARGS]).toEqual(
-            expect.arrayContaining([expect.stringMatching(expectedBuildTaskRegexp)])
-          );
-          expect(secondSpawn[SPAWN_ARG_OPTIONS]).toEqual(expect.any(Object));
-          pathEquals(secondSpawn[SPAWN_ARG_OPTIONS].cwd, `${repoPath}/b`);
+          const secondSpawn: SpawnMockCall = spawnMock.mock.calls[1];
+          expectSpawnToMatchRegexp(secondSpawn, expectedBuildTaskRegexp);
+          cwdOptionEquals(secondSpawn, `${repoPath}/b`);
         });
       });
     });
 
     describe('in repo plugin with conflict build command', () => {
-      it(`throws an error when starting Rush`, async () => {
-        const repoName: string = 'pluginWithConflictBuildCommandRepo';
-
-        await expect(async () => {
-          await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
-        }).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"Error from plugin rush-build-command-plugin by rush-build-command-plugin: Error: command-line.json defines a command \\"build\\" using a name that already exists"`
+      it('reports an error and refuses execution when starting Rush', async () => {
+        await expectInitializationFailureAsync(
+          'pluginWithConflictBuildCommandRepo',
+          'Error from plugin rush-build-command-plugin by rush-build-command-plugin: Error: command-line.json defines a command "build" using a name that already exists'
         );
       });
     });
 
     describe("in repo plugin with conflict rebuild command'", () => {
-      it(`throws an error when starting Rush`, async () => {
-        const repoName: string = 'pluginWithConflictRebuildCommandRepo';
-
-        await expect(async () => {
-          await getCommandLineParserInstanceAsync(repoName, 'doesnt-matter');
-        }).rejects.toThrowErrorMatchingInlineSnapshot(
-          `"command-line.json defines a parameter \\"--no-color\\" that is associated with a command \\"build\\" that is not defined in this file."`
+      it('reports an error and refuses execution when starting Rush', async () => {
+        await expectInitializationFailureAsync(
+          'pluginWithConflictRebuildCommandRepo',
+          'command-line.json defines a parameter "--no-color" that is associated with a command "build" that is not defined in this file.'
         );
       });
     });

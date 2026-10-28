@@ -60,26 +60,26 @@ export class AliasCommandLineAction extends CommandLineAction {
    */
   public readonly defaultParameters: ReadonlyArray<string>;
 
-  private _parameterKeyMap: Map<string, string> = new Map();
+  #parameterKeyMap: Map<string, string> = new Map();
 
   public constructor(options: IAliasCommandLineActionOptions) {
-    const toolFilename: string = options.toolFilename;
-    const targetActionName: string = options.targetAction.actionName;
-    const defaultParametersString: string = (options.defaultParameters || []).join(' ');
+    const { toolFilename, targetAction, defaultParameters: defaultParams = [], aliasName } = options;
+    const targetActionName: string = targetAction.actionName;
+    const defaultParametersString: string = defaultParams.join(' ');
     const summary: string = `An alias for "${toolFilename} ${targetActionName}${
       defaultParametersString ? ` ${defaultParametersString}` : ''
     }".`;
 
     super({
-      actionName: options.aliasName,
+      actionName: aliasName,
       summary,
       documentation:
         `${summary} For more information on the aliased command, use ` +
         `"${toolFilename} ${targetActionName} --help".`
     });
 
-    this.targetAction = options.targetAction;
-    this.defaultParameters = options.defaultParameters || [];
+    this.targetAction = targetAction;
+    this.defaultParameters = defaultParams;
   }
 
   /** @internal */
@@ -130,14 +130,14 @@ export class AliasCommandLineAction extends CommandLineAction {
 
       // We know the parserKey is defined because the underlying _defineParameter method sets it,
       // and all parameters that we have access to have already been defined.
-      this._parameterKeyMap.set(aliasParameter._parserKey!, parameter._parserKey!);
+      this.#parameterKeyMap.set(aliasParameter._parserKey!, parameter._parserKey!);
     }
 
     // We also need to register the remainder parameter if the target action has one. The parser
     // key for this parameter is constant.
     if (this.targetAction.remainder) {
       this.defineCommandLineRemainder(this.targetAction.remainder);
-      this._parameterKeyMap.set(argparse.Const.REMAINDER, argparse.Const.REMAINDER);
+      this.#parameterKeyMap.set(argparse.Const.REMAINDER, argparse.Const.REMAINDER);
     }
 
     // Finally, register the parameters with the parser. We need to make sure that the target action
@@ -154,7 +154,7 @@ export class AliasCommandLineAction extends CommandLineAction {
 
       // If we have a mapping for the specified key, then use it. Otherwise, use the key as-is.
       if (targetParserKey) {
-        this._parameterKeyMap.set(parserKey, targetParserKey);
+        this.#parameterKeyMap.set(parserKey, targetParserKey);
       }
     }
   }
@@ -176,7 +176,7 @@ export class AliasCommandLineAction extends CommandLineAction {
       if (key === 'action') {
         continue;
       }
-      const targetKey: string | undefined = this._parameterKeyMap.get(key);
+      const targetKey: string | undefined = this.#parameterKeyMap.get(key);
       targetData[targetKey ?? key] = value;
     }
     this.targetAction._processParsedData(parserOptions, targetData);
